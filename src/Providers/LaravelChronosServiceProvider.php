@@ -32,6 +32,6 @@ final class LaravelChronosServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../../aatabase/Migrations');
     }
 }
