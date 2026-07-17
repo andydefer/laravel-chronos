@@ -42,19 +42,19 @@ final class ScheduleRepository extends AbstractRepository
         }
 
         if ($filters->start_datetime_from !== null) {
-            $query->where('start_datetime', '>=', $filters->start_datetime_from);
+            $query->where('start_datetime', '>=', $filters->start_datetime_from->toDateTimeString());
         }
 
         if ($filters->start_datetime_to !== null) {
-            $query->where('start_datetime', '<=', $filters->start_datetime_to);
+            $query->where('start_datetime', '<=', $filters->start_datetime_to->toDateTimeString());
         }
 
         if ($filters->end_datetime_from !== null) {
-            $query->where('end_datetime', '>=', $filters->end_datetime_from);
+            $query->where('end_datetime', '>=', $filters->end_datetime_from->toDateTimeString());
         }
 
         if ($filters->end_datetime_to !== null) {
-            $query->where('end_datetime', '<=', $filters->end_datetime_to);
+            $query->where('end_datetime', '<=', $filters->end_datetime_to->toDateTimeString());
         }
 
         if ($filters->withTrashed === true) {

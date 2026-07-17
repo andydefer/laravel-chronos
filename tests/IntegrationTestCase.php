@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace AndyDefer\LaravelHermes\Tests;
 
-use AndyDefer\LaravelHermes\Providers\HermesServiceProvider;
-use AndyDefer\LaravelIndexer\Providers\IndexerServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 abstract class IntegrationTestCase extends Orchestra
@@ -20,7 +18,7 @@ abstract class IntegrationTestCase extends Orchestra
     protected function getPackageProviders($app): array
     {
         return [
-            
+
         ];
     }
 

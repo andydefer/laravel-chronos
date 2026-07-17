@@ -38,15 +38,15 @@ final class AvailabilityRepository extends AbstractRepository
         }
 
         if ($filters->days !== null) {
-            $query->whereJsonContains('days', $filters->days);
+            $query->whereJsonContains('days', $filters->days->toStrings());
         }
 
         if ($filters->validity_start !== null) {
-            $query->where('validity_start', '>=', $filters->validity_start);
+            $query->where('validity_start', '>=', $filters->validity_start->toDateTimeString());
         }
 
         if ($filters->validity_end !== null) {
-            $query->where('validity_end', '<=', $filters->validity_end);
+            $query->where('validity_end', '<=', $filters->validity_end->toDateTimeString());
         }
 
         if ($filters->withTrashed === true) {

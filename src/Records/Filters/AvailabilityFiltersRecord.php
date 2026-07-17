@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace AndyDefer\LaravelChronos\Records\Filters;
 
 use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
-use DateTimeInterface;
+use AndyDefer\LaravelChronos\Collections\WeekDayCollection;
+use AndyDefer\PhpVo\ValueObjects\DateTimeVO;
 
 final class AvailabilityFiltersRecord extends AbstractRecord
 {
@@ -14,9 +15,9 @@ final class AvailabilityFiltersRecord extends AbstractRecord
         public readonly ?string $name = null,
         public readonly ?string $schedulable_type = null,
         public readonly ?int $schedulable_id = null,
-        public readonly ?array $days = null,
-        public readonly ?DateTimeInterface $validity_start = null,
-        public readonly ?DateTimeInterface $validity_end = null,
+        public readonly ?WeekDayCollection $days = null,
+        public readonly ?DateTimeVO $validity_start = null,
+        public readonly ?DateTimeVO $validity_end = null,
         public readonly ?bool $withTrashed = false,
     ) {}
 }
