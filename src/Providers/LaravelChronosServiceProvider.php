@@ -4,16 +4,30 @@ declare(strict_types=1);
 
 namespace AndyDefer\LaravelChronos\Providers;
 
+use AndyDefer\LaravelChronos\Configs\ChronosConfig;
+use AndyDefer\LaravelChronos\Contracts\Configs\ChronosConfigInterface;
 use AndyDefer\LaravelChronos\Repositories\AvailabilityRepository;
 use AndyDefer\LaravelChronos\Repositories\ImpedimentRepository;
 use AndyDefer\LaravelChronos\Repositories\ScheduleRepository;
+use AndyDefer\LaravelChronos\Validation\Validator;
 use Illuminate\Support\ServiceProvider;
 
 final class LaravelChronosServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Bind repositories
+        // Configuration
+        $this->mergeConfigFrom(
+            __DIR__.'/../../config/chronos.php',
+            'chronos'
+        );
+
+        $this->app->singleton(
+            ChronosConfigInterface::class,
+            ChronosConfig::class
+        );
+
+        // Repositories
         $this->app->singleton(
             AvailabilityRepository::class,
             fn ($app) => new AvailabilityRepository
@@ -28,10 +42,30 @@ final class LaravelChronosServiceProvider extends ServiceProvider
             ImpedimentRepository::class,
             fn ($app) => new ImpedimentRepository
         );
+
+        // Validator
+        $this->app->singleton(Validator::class, function ($app) {
+            return new Validator;
+        });
     }
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../../aatabase/Migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../../database/Migrations');
+
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__.'/../../config/chronos.php' => config_path('chronos.php'),
+            ], 'chronos-config');
+
+            $this->publishes([
+                __DIR__.'/../../database/Migrations' => database_path('migrations'),
+            ], 'chronos-migrations');
+
+            $this->publishes([
+                __DIR__.'/../../config/chronos.php' => config_path('chronos.php'),
+                __DIR__.'/../../database/Migrations' => database_path('migrations'),
+            ], 'chronos-all');
+        }
     }
 }
