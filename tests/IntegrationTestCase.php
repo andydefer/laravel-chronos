@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\LaravelChronos\Tests;
 
+use AndyDefer\Directive\DirectiveServiceProvider;
 use AndyDefer\LaravelChronos\Providers\LaravelChronosServiceProvider;
 use AndyDefer\Repository\RepositoryServiceProvider;
 use Carbon\Carbon;
@@ -36,6 +37,7 @@ abstract class IntegrationTestCase extends Orchestra
     protected function getPackageProviders($app): array
     {
         return [
+            DirectiveServiceProvider::class,
             RepositoryServiceProvider::class,
             LaravelChronosServiceProvider::class,
         ];
