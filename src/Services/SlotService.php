@@ -439,9 +439,6 @@ final class SlotService implements SlotServiceInterface
             return [];
         }
 
-        // Créer les slots en fonction des périodes bloquées
-        $currentStart = $dayStart;
-
         // Filtrer les périodes bloquées qui chevauchent ce jour
         $dayBlocked = array_filter($blockedPeriods, function ($blocked) use ($dayStart, $dayEnd) {
             return $blocked['start']->isBefore($dayEnd) && $blocked['end']->isAfter($dayStart);
@@ -452,17 +449,20 @@ final class SlotService implements SlotServiceInterface
             return $a['start']->diffInSeconds($b['start']) <=> 0;
         });
 
+        // Générer des slots de la durée demandée dans les plages disponibles
+        $currentStart = $dayStart;
+
         foreach ($dayBlocked as $blocked) {
             // Ajuster les périodes bloquées à la plage du jour
             $blockStart = $blocked['start']->isBefore($dayStart) ? $dayStart : $blocked['start'];
             $blockEnd = $blocked['end']->isAfter($dayEnd) ? $dayEnd : $blocked['end'];
 
-            // Slot avant le blocage
+            // Générer des slots avant le blocage
             if ($currentStart->isBefore($blockStart)) {
-                $slot = $this->tryCreateSlot($currentStart, $blockStart, $durationInMinutes);
-                if ($slot !== null) {
-                    $slots[] = $slot;
-                }
+                $slots = array_merge(
+                    $slots,
+                    $this->generateSlotsInInterval($currentStart, $blockStart, $durationInMinutes)
+                );
             }
 
             // Passer après le blocage
@@ -471,12 +471,36 @@ final class SlotService implements SlotServiceInterface
             }
         }
 
-        // Slot après le dernier blocage
+        // Générer des slots après le dernier blocage
         if ($currentStart->isBefore($dayEnd)) {
-            $slot = $this->tryCreateSlot($currentStart, $dayEnd, $durationInMinutes);
-            if ($slot !== null) {
-                $slots[] = $slot;
-            }
+            $slots = array_merge(
+                $slots,
+                $this->generateSlotsInInterval($currentStart, $dayEnd, $durationInMinutes)
+            );
+        }
+
+        return $slots;
+    }
+
+    /**
+     * Génère tous les slots possibles dans un intervalle de temps.
+     *
+     * @param  DateTimeZuluVO  $start  Le début de l'intervalle
+     * @param  DateTimeZuluVO  $end  La fin de l'intervalle
+     * @param  int  $durationInMinutes  La durée de chaque slot
+     * @return array<SlotVO>
+     */
+    private function generateSlotsInInterval(
+        DateTimeZuluVO $start,
+        DateTimeZuluVO $end,
+        int $durationInMinutes
+    ): array {
+        $slots = [];
+        $current = $start;
+
+        while ($current->addMinutes($durationInMinutes)->isBeforeOrEqual($end)) {
+            $slots[] = SlotVO::fromDuration($current, $durationInMinutes);
+            $current = $current->addMinutes($durationInMinutes);
         }
 
         return $slots;

@@ -6,10 +6,12 @@ namespace AndyDefer\LaravelChronos\Tests\Integration\Repositories;
 
 use AndyDefer\LaravelChronos\Models\Availability;
 use AndyDefer\LaravelChronos\Models\Impediment;
+use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
 use AndyDefer\LaravelChronos\Records\ImpedimentRecord;
 use AndyDefer\LaravelChronos\Repositories\AvailabilityRepository;
 use AndyDefer\LaravelChronos\Repositories\ImpedimentRepository;
+use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
 use AndyDefer\LaravelChronos\Tests\Fixtures\Models\TestCar;
 use AndyDefer\LaravelChronos\Tests\IntegrationTestCase;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
@@ -441,6 +443,218 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
 
         $count = $this->repository->count();
         $this->assertEquals(2, $count);
+    }
+
+    // ============================================================
+    // NEW TESTS FOR BLOCKED SCHEDULES
+    // ============================================================
+
+    public function test_get_blocked_schedules_returns_schedules_that_overlap(): void
+    {
+        $availability = $this->createAvailability();
+
+        $impediment = ChronosMutationContext::withAllowed(function () use ($availability) {
+            return Impediment::create([
+                'availability_id' => $availability->id,
+                'reason' => 'Test Impediment',
+                'start_datetime' => '2024-01-15 10:00:00',
+                'end_datetime' => '2024-01-15 12:00:00',
+            ]);
+        });
+
+        // Create schedule that overlaps with impediment
+        ChronosMutationContext::withAllowed(function () use ($availability) {
+            Schedule::create([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => 1,
+                'title' => 'Overlapping Schedule',
+                'start_datetime' => '2024-01-15 10:30:00',
+                'end_datetime' => '2024-01-15 11:00:00',
+            ]);
+        });
+
+        // Create schedule that does not overlap
+        ChronosMutationContext::withAllowed(function () use ($availability) {
+            Schedule::create([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => 1,
+                'title' => 'Non-overlapping Schedule',
+                'start_datetime' => '2024-01-15 09:00:00',
+                'end_datetime' => '2024-01-15 09:30:00',
+            ]);
+        });
+
+        $blocked = $this->repository->getBlockedSchedules($impediment);
+
+        $this->assertCount(1, $blocked);
+        $this->assertEquals('Overlapping Schedule', $blocked[0]->title);
+    }
+
+    public function test_get_fully_blocked_schedules_returns_completely_contained_schedules(): void
+    {
+        $availability = $this->createAvailability();
+
+        $impediment = ChronosMutationContext::withAllowed(function () use ($availability) {
+            return Impediment::create([
+                'availability_id' => $availability->id,
+                'reason' => 'Test Impediment',
+                'start_datetime' => '2024-01-15 10:00:00',
+                'end_datetime' => '2024-01-15 12:00:00',
+            ]);
+        });
+
+        // Create schedule fully inside impediment
+        ChronosMutationContext::withAllowed(function () use ($availability) {
+            Schedule::create([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => 1,
+                'title' => 'Fully Blocked',
+                'start_datetime' => '2024-01-15 10:30:00',
+                'end_datetime' => '2024-01-15 11:00:00',
+            ]);
+        });
+
+        // Create schedule partially overlapping
+        ChronosMutationContext::withAllowed(function () use ($availability) {
+            Schedule::create([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => 1,
+                'title' => 'Partially Blocked',
+                'start_datetime' => '2024-01-15 09:30:00',
+                'end_datetime' => '2024-01-15 10:30:00',
+            ]);
+        });
+
+        $fullyBlocked = $this->repository->getFullyBlockedSchedules($impediment);
+
+        $this->assertCount(1, $fullyBlocked);
+        $this->assertEquals('Fully Blocked', $fullyBlocked[0]->title);
+    }
+
+    public function test_get_partially_blocked_schedules_returns_partially_overlapping_schedules(): void
+    {
+        $availability = $this->createAvailability();
+
+        $impediment = ChronosMutationContext::withAllowed(function () use ($availability) {
+            return Impediment::create([
+                'availability_id' => $availability->id,
+                'reason' => 'Test Impediment',
+                'start_datetime' => '2024-01-15 10:00:00',
+                'end_datetime' => '2024-01-15 12:00:00',
+            ]);
+        });
+
+        // Create schedule starting before, ending inside
+        ChronosMutationContext::withAllowed(function () use ($availability) {
+            Schedule::create([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => 1,
+                'title' => 'Starts Before',
+                'start_datetime' => '2024-01-15 09:30:00',
+                'end_datetime' => '2024-01-15 10:30:00',
+            ]);
+        });
+
+        // Create schedule starting inside, ending after
+        ChronosMutationContext::withAllowed(function () use ($availability) {
+            Schedule::create([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => 1,
+                'title' => 'Ends After',
+                'start_datetime' => '2024-01-15 11:30:00',
+                'end_datetime' => '2024-01-15 12:30:00',
+            ]);
+        });
+
+        // Create schedule fully inside (should not be included)
+        ChronosMutationContext::withAllowed(function () use ($availability) {
+            Schedule::create([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => 1,
+                'title' => 'Fully Inside',
+                'start_datetime' => '2024-01-15 10:30:00',
+                'end_datetime' => '2024-01-15 11:00:00',
+            ]);
+        });
+
+        $partiallyBlocked = $this->repository->getPartiallyBlockedSchedules($impediment);
+
+        $this->assertCount(2, $partiallyBlocked);
+        $titles = $partiallyBlocked->pluck('title')->toArray();
+        $this->assertContains('Starts Before', $titles);
+        $this->assertContains('Ends After', $titles);
+    }
+
+    public function test_get_blocked_schedules_returns_empty_collection_when_no_overlap(): void
+    {
+        $availability = $this->createAvailability();
+
+        $impediment = ChronosMutationContext::withAllowed(function () use ($availability) {
+            return Impediment::create([
+                'availability_id' => $availability->id,
+                'reason' => 'Test Impediment',
+                'start_datetime' => '2024-01-15 10:00:00',
+                'end_datetime' => '2024-01-15 12:00:00',
+            ]);
+        });
+
+        // Create schedule before impediment
+        ChronosMutationContext::withAllowed(function () use ($availability) {
+            Schedule::create([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => 1,
+                'title' => 'Before Impediment',
+                'start_datetime' => '2024-01-15 09:00:00',
+                'end_datetime' => '2024-01-15 09:30:00',
+            ]);
+        });
+
+        // Create schedule after impediment
+        ChronosMutationContext::withAllowed(function () use ($availability) {
+            Schedule::create([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => 1,
+                'title' => 'After Impediment',
+                'start_datetime' => '2024-01-15 12:30:00',
+                'end_datetime' => '2024-01-15 13:00:00',
+            ]);
+        });
+
+        $blocked = $this->repository->getBlockedSchedules($impediment);
+
+        $this->assertCount(0, $blocked);
+    }
+
+    public function test_get_blocked_schedules_returns_empty_when_no_schedules(): void
+    {
+        $availability = $this->createAvailability();
+
+        $impediment = ChronosMutationContext::withAllowed(function () use ($availability) {
+            return Impediment::create([
+                'availability_id' => $availability->id,
+                'reason' => 'Test Impediment',
+                'start_datetime' => '2024-01-15 10:00:00',
+                'end_datetime' => '2024-01-15 12:00:00',
+            ]);
+        });
+
+        // Aucun schedule créé
+        $blocked = $this->repository->getBlockedSchedules($impediment);
+        $fullyBlocked = $this->repository->getFullyBlockedSchedules($impediment);
+        $partiallyBlocked = $this->repository->getPartiallyBlockedSchedules($impediment);
+
+        $this->assertCount(0, $blocked);
+        $this->assertCount(0, $fullyBlocked);
+        $this->assertCount(0, $partiallyBlocked);
     }
 
     // ============================================================

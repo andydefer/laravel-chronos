@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AndyDefer\LaravelChronos\Validation\Rules\Availability;
 
 use AndyDefer\DomainStructures\Utils\Associative;
-use AndyDefer\LaravelChronos\Collections\WeekDayCollection;
 use AndyDefer\LaravelChronos\Contracts\Validation\ValidationRule;
 use AndyDefer\LaravelChronos\Enums\EntityType;
 use AndyDefer\LaravelChronos\Models\Availability;
@@ -125,25 +124,38 @@ final class AvailabilityNoOverlapRule implements ValidationRule
      */
     private function buildOverlapQuery(AvailabilityRecord $record): Builder
     {
+        $dayStrings = $record->days->toStrings();
+
         return Availability::where('schedulable_type', $record->schedulable_type)
             ->where('schedulable_id', $record->schedulable_id)
-            ->where(function ($query) use ($record) {
-                $this->addDayCondition($query, $record->days);
+            ->where(function ($query) use ($record, $dayStrings) {
+                // Day condition - compatible avec SQLite
+                $this->addDayCondition($query, $dayStrings);
+
+                // Time condition
                 $this->addTimeCondition($query, $record->daily_start, $record->daily_end);
+
+                // Validity period condition
                 $this->addValidityPeriodCondition($query, $record->validity_start, $record->validity_end);
             });
     }
 
     /**
      * Add day overlap condition to the query.
+     * Utilise une approche compatible SQLite avec JSON_EACH.
      *
      * @param  Builder  $query  The query builder
-     * @param  WeekDayCollection  $days  The days to check
+     * @param  array<string>  $dayStrings  The days to check
      */
-    private function addDayCondition(Builder $query, WeekDayCollection $days): void
+    private function addDayCondition(Builder $query, array $dayStrings): void
     {
-        $dayStrings = $days->toStrings();
-        $query->whereJsonContains('days', $dayStrings);
+        // Pour SQLite, on utilise json_each pour vérifier l'intersection
+        // On vérifie qu'au moins un jour commun existe
+        $query->where(function ($subQuery) use ($dayStrings) {
+            foreach ($dayStrings as $day) {
+                $subQuery->orWhereJsonContains('days', $day);
+            }
+        });
     }
 
     /**
