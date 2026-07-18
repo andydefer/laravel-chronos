@@ -20,6 +20,14 @@ use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 final class SchedulableExistsRule implements ValidationRule
 {
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Validates that the referenced schedulable entity exists in the database.';
+    }
+
+    /**
      * Determine if this rule supports the given validation context.
      *
      * @param  ValidationContext  $context  The validation context to check

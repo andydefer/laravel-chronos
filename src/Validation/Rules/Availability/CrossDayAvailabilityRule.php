@@ -32,6 +32,14 @@ final class CrossDayAvailabilityRule implements ValidationRule
     ) {}
 
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Validates that cross-day availabilities have at least 2 consecutive days to cover both start and end days.';
+    }
+
+    /**
      * Determine if this rule supports the given validation context.
      *
      * @param  ValidationContext  $context  The validation context to check

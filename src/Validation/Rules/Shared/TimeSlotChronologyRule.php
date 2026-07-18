@@ -23,6 +23,14 @@ use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 final class TimeSlotChronologyRule implements ValidationRule
 {
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Validates that start datetime is before end datetime and duration is positive.';
+    }
+
+    /**
      * Determine if this rule supports the given validation context.
      *
      * @param  ValidationContext  $context  The validation context to check

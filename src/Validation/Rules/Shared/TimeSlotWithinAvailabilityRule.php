@@ -36,6 +36,14 @@ final class TimeSlotWithinAvailabilityRule implements ValidationRule
     ) {}
 
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Validates that a time slot is within the parent availability constraints (validity period, daily bounds, allowed days).';
+    }
+
+    /**
      * Determine if this rule supports the given validation context.
      *
      * @param  ValidationContext  $context  The validation context to check

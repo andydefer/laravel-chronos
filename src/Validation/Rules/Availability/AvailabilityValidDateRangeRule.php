@@ -24,6 +24,14 @@ use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
 final class AvailabilityValidDateRangeRule implements ValidationRule
 {
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Validates the integrity of daily time ranges and validity date ranges.';
+    }
+
+    /**
      * Determine if this rule supports the given validation context.
      *
      * @param  ValidationContext  $context  The validation context to check

@@ -10,6 +10,13 @@ use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 interface ValidationRule
 {
     /**
+     * Get the description of the validation rule.
+     *
+     * @return string The rule description
+     */
+    public function getDescription(): string;
+
+    /**
      * Check if this rule supports the given validation context.
      */
     public function supports(ValidationContext $context): bool;

@@ -33,6 +33,14 @@ final class AvailabilityMinimumDurationRule implements ValidationRule
     ) {}
 
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Ensures availability duration meets the minimum required duration configured in the system.';
+    }
+
+    /**
      * Determine if this rule supports the given validation context.
      *
      * @param  ValidationContext  $context  The validation context to check

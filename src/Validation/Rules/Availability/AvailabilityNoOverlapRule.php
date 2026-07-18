@@ -37,6 +37,14 @@ final class AvailabilityNoOverlapRule implements ValidationRule
     ) {}
 
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Prevents overlapping availabilities for the same schedulable entity.';
+    }
+
+    /**
      * Determine if this rule supports the given validation context.
      *
      * @param  ValidationContext  $context  The validation context to check

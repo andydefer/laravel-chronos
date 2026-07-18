@@ -24,6 +24,14 @@ use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 final class AvailabilityDaysFormatRule implements ValidationRule
 {
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Validates that days are properly formatted as a WeekDayCollection with no duplicates.';
+    }
+
+    /**
      * Determine if this rule supports the given validation context.
      *
      * @param  ValidationContext  $context  The validation context to check

@@ -22,6 +22,14 @@ use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 final class AvailabilityOwnershipValidationRule implements ValidationRule
 {
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Validates that the referenced availability exists and belongs to the correct schedulable entity.';
+    }
+
+    /**
      * Determine if this rule supports the given validation context.
      *
      * @param  ValidationContext  $context  The validation context to check

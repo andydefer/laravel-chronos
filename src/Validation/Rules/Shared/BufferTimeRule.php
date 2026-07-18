@@ -37,6 +37,14 @@ final class BufferTimeRule implements ValidationRule
     ) {}
 
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Enforces buffer time between consecutive events on the same availability.';
+    }
+
+    /**
      * Determine if this rule supports the given validation context.
      *
      * @param  ValidationContext  $context  The validation context to check

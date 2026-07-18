@@ -24,6 +24,14 @@ use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 final class NoTemporalConflictRule implements ValidationRule
 {
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Prevents temporal conflicts between schedules and impediments on the same availability.';
+    }
+
+    /**
      * Determine if this rule supports the given validation context.
      *
      * @param  ValidationContext  $context  The validation context to check

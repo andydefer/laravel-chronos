@@ -22,6 +22,14 @@ use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 final class EntityOwnershipConsistencyRule implements ValidationRule
 {
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Ensures that schedules and impediments belong to the same entity as their parent availability.';
+    }
+
+    /**
      * Determine if this rule supports the given validation context.
      *
      * @param  ValidationContext  $context  The validation context to check

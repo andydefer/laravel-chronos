@@ -33,6 +33,14 @@ final class AvailabilityRequiredFieldsRule implements ValidationRule
     ];
 
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Validates that all required fields (name, daily_start, daily_end, schedulable_type, schedulable_id) are present for availability creation.';
+    }
+
+    /**
      * Determine if this rule supports the given validation context.
      *
      * @param  ValidationContext  $context  The validation context to check

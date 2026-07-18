@@ -21,6 +21,14 @@ use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 final class NoFutureBookingsOnDeleteRule implements ValidationRule
 {
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Prevents deletion of availabilities that have future bookings.';
+    }
+
+    /**
      * Determine if this rule supports the given validation context.
      *
      * @param  ValidationContext  $context  The validation context to check

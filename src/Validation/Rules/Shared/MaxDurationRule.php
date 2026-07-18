@@ -24,6 +24,14 @@ use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 final class MaxDurationRule implements ValidationRule
 {
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Ensures that event duration does not exceed the configured maximum duration.';
+    }
+
+    /**
      * Constructor with dependency injection.
      *
      * @param  ValidationHelperService  $helper  Helper service for validation utilities

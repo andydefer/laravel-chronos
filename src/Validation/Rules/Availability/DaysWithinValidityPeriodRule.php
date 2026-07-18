@@ -31,6 +31,14 @@ final class DaysWithinValidityPeriodRule implements ValidationRule
     ) {}
 
     /**
+     * {@inheritdoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Ensures that all specified days exist within the validity period of the availability.';
+    }
+
+    /**
      * Determine if this rule supports the given validation context.
      *
      * @param  ValidationContext  $context  The validation context to check
