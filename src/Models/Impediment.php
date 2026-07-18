@@ -44,47 +44,6 @@ final class Impediment extends Model
         return $this->belongsTo(Availability::class);
     }
 
-    /**
-     * Get the schedules that are blocked by this impediment.
-     */
-    public function blockedSchedules()
-    {
-        return Schedule::where('availability_id', $this->availability_id)
-            ->where(function ($query) {
-                $query->where('start_datetime', '<', $this->end_datetime)
-                    ->where('end_datetime', '>', $this->start_datetime);
-            });
-    }
-
-    /**
-     * Get the schedules that are completely within this impediment.
-     */
-    public function fullyBlockedSchedules()
-    {
-        return Schedule::where('availability_id', $this->availability_id)
-            ->where('start_datetime', '>=', $this->start_datetime)
-            ->where('end_datetime', '<=', $this->end_datetime);
-    }
-
-    /**
-     * Get the schedules that partially overlap with this impediment.
-     */
-    public function partiallyBlockedSchedules()
-    {
-        return Schedule::where('availability_id', $this->availability_id)
-            ->where(function ($query) {
-                $query->where(function ($q) {
-                    $q->where('start_datetime', '<', $this->start_datetime)
-                        ->where('end_datetime', '>', $this->start_datetime)
-                        ->where('end_datetime', '<=', $this->end_datetime);
-                })->orWhere(function ($q) {
-                    $q->where('start_datetime', '>=', $this->start_datetime)
-                        ->where('start_datetime', '<', $this->end_datetime)
-                        ->where('end_datetime', '>', $this->end_datetime);
-                });
-            });
-    }
-
     // ============================================================
     // ACCESSORS
     // ============================================================
@@ -201,7 +160,6 @@ final class Impediment extends Model
 
     /**
      * Check if the impediment is cross-day (start_date != end_date).
-     * Uses DateTimeZuluVO comparison.
      */
     public function isCrossDay(): bool
     {

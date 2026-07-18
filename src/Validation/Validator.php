@@ -6,13 +6,14 @@ namespace AndyDefer\LaravelChronos\Validation;
 
 use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 use AndyDefer\LaravelChronos\Contracts\Validation\ValidationRule;
+use AndyDefer\LaravelChronos\Contracts\Validation\ValidatorInterface;
 use AndyDefer\LaravelChronos\Enums\EntityType;
 use AndyDefer\LaravelChronos\Enums\OperationType;
 use AndyDefer\LaravelChronos\Validation\Context\ValidationContext;
 use AndyDefer\LaravelChronos\Validation\Result\ValidationResult;
 use Illuminate\Database\Eloquent\Model;
 
-final class Validator
+final class Validator implements ValidatorInterface
 {
     /**
      * @var array<string, array<ValidationRule>>
@@ -20,7 +21,7 @@ final class Validator
     private array $rules = [];
 
     /**
-     * Add a validation rule for a specific entity type.
+     * {@inheritdoc}
      */
     public function addRule(EntityType $entityType, ValidationRule $rule): self
     {
@@ -36,7 +37,7 @@ final class Validator
     }
 
     /**
-     * Add multiple validation rules for a specific entity type.
+     * {@inheritdoc}
      */
     public function addRules(EntityType $entityType, array $rules): self
     {
@@ -48,7 +49,7 @@ final class Validator
     }
 
     /**
-     * Validate a context against all registered rules.
+     * {@inheritdoc}
      */
     public function validate(ValidationContext $context): ValidationResult
     {
@@ -70,7 +71,7 @@ final class Validator
     }
 
     /**
-     * Validate a record with a specific operation.
+     * {@inheritdoc}
      */
     public function validateRecord(
         AbstractRecord $record,
@@ -83,9 +84,7 @@ final class Validator
     }
 
     /**
-     * Get all registered rules.
-     *
-     * @return array<string, array<ValidationRule>>
+     * {@inheritdoc}
      */
     public function getRules(): array
     {
@@ -93,9 +92,7 @@ final class Validator
     }
 
     /**
-     * Get rules for a specific entity type.
-     *
-     * @return array<ValidationRule>
+     * {@inheritdoc}
      */
     public function getRulesForEntity(EntityType $entityType): array
     {
@@ -103,7 +100,7 @@ final class Validator
     }
 
     /**
-     * Check if a rule exists for a specific entity type.
+     * {@inheritdoc}
      */
     public function hasRulesForEntity(EntityType $entityType): bool
     {

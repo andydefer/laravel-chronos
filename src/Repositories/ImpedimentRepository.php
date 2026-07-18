@@ -7,6 +7,7 @@ namespace AndyDefer\LaravelChronos\Repositories;
 use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 use AndyDefer\LaravelChronos\Contracts\Repositories\ImpedimentRepositoryInterface;
 use AndyDefer\LaravelChronos\Models\Impediment;
+use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\ImpedimentRecord;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use Carbon\Carbon;
@@ -191,6 +192,62 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
             ->where('i1.availability_id', $availabilityId)
             ->whereRaw('(strftime("%s", i2.start_datetime) - strftime("%s", i1.end_datetime)) < ?', [$bufferSeconds])
             ->select('i1.*')
+            ->get();
+    }
+
+    public function getBlockedSchedules(Impediment $impediment): Collection
+    {
+        $start = $impediment->start_datetime;
+        $end = $impediment->end_datetime;
+
+        if ($start === null || $end === null) {
+            return new Collection;
+        }
+
+        return Schedule::where('availability_id', $impediment->availability_id)
+            ->where(function ($query) use ($start, $end) {
+                $query->where('start_datetime', '<', $end)
+                    ->where('end_datetime', '>', $start);
+            })
+            ->get();
+    }
+
+    public function getFullyBlockedSchedules(Impediment $impediment): Collection
+    {
+        $start = $impediment->start_datetime;
+        $end = $impediment->end_datetime;
+
+        if ($start === null || $end === null) {
+            return new Collection;
+        }
+
+        return Schedule::where('availability_id', $impediment->availability_id)
+            ->where('start_datetime', '>=', $start)
+            ->where('end_datetime', '<=', $end)
+            ->get();
+    }
+
+    public function getPartiallyBlockedSchedules(Impediment $impediment): Collection
+    {
+        $start = $impediment->start_datetime;
+        $end = $impediment->end_datetime;
+
+        if ($start === null || $end === null) {
+            return new Collection;
+        }
+
+        return Schedule::where('availability_id', $impediment->availability_id)
+            ->where(function ($query) use ($start, $end) {
+                $query->where(function ($q) use ($start, $end) {
+                    $q->where('start_datetime', '<', $start)
+                        ->where('end_datetime', '>', $start)
+                        ->where('end_datetime', '<=', $end);
+                })->orWhere(function ($q) use ($start, $end) {
+                    $q->where('start_datetime', '>=', $start)
+                        ->where('start_datetime', '<', $end)
+                        ->where('end_datetime', '>', $end);
+                });
+            })
             ->get();
     }
 }

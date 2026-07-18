@@ -96,6 +96,22 @@ interface AvailabilityServiceInterface
     ): Collection;
 
     /**
+     * Find availabilities active within a date range.
+     *
+     * @param  string  $schedulableType  The entity type
+     * @param  int  $schedulableId  The entity ID
+     * @param  DateTimeZuluVO  $start  The start of the range
+     * @param  DateTimeZuluVO  $end  The end of the range
+     * @return Collection<int, Availability> Collection of active availabilities
+     */
+    public function findActiveInDateRange(
+        string $schedulableType,
+        int $schedulableId,
+        DateTimeZuluVO $start,
+        DateTimeZuluVO $end
+    ): Collection;
+
+    /**
      * Check if a schedulable entity exists.
      *
      * @param  string  $schedulableType  The entity type

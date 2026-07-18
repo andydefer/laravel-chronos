@@ -6,6 +6,7 @@ namespace AndyDefer\LaravelChronos\Contracts\Repositories;
 
 use AndyDefer\LaravelChronos\Models\Availability;
 use AndyDefer\LaravelChronos\Models\Impediment;
+use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\ImpedimentRecord;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use AndyDefer\Repository\AbstractRepositoryInterface;
@@ -97,4 +98,28 @@ interface ImpedimentRepositoryInterface extends AbstractRepositoryInterface
      * Utilisé par: BufferTimeRule
      */
     public function findViolatingBufferTime(int $availabilityId, int $bufferMinutes): Collection;
+
+    /**
+     * Get schedules that are blocked by this impediment.
+     *
+     * @param  Impediment  $impediment  The impediment
+     * @return Collection<int, Schedule> Collection of blocked schedules
+     */
+    public function getBlockedSchedules(Impediment $impediment): Collection;
+
+    /**
+     * Get schedules that are completely within this impediment.
+     *
+     * @param  Impediment  $impediment  The impediment
+     * @return Collection<int, Schedule> Collection of fully blocked schedules
+     */
+    public function getFullyBlockedSchedules(Impediment $impediment): Collection;
+
+    /**
+     * Get schedules that partially overlap with this impediment.
+     *
+     * @param  Impediment  $impediment  The impediment
+     * @return Collection<int, Schedule> Collection of partially blocked schedules
+     */
+    public function getPartiallyBlockedSchedules(Impediment $impediment): Collection;
 }
