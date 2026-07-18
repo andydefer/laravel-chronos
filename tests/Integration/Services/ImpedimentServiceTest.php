@@ -24,13 +24,14 @@ final class ImpedimentServiceTest extends IntegrationTestCase
 
     private AvailabilityServiceInterface $availabilityService;
 
+    private TestCar $testCar;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Créer un TestCar pour les tests
-        ChronosMutationContext::withAllowed(function () {
-            TestCar::create([
+        $this->testCar = ChronosMutationContext::withAllowed(function () {
+            return TestCar::create([
                 'model' => 'Test Model',
                 'license_plate' => 'TEST123',
                 'type' => 'sedan',
@@ -66,7 +67,7 @@ final class ImpedimentServiceTest extends IntegrationTestCase
             Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => $this->testCar->id,
                 'title' => 'Existing Schedule',
                 'start_datetime' => '2024-01-15 10:00:00',
                 'end_datetime' => '2024-01-15 11:00:00',
@@ -123,8 +124,6 @@ final class ImpedimentServiceTest extends IntegrationTestCase
         $deleted = $this->impedimentService->delete($id);
 
         $this->assertTrue($deleted);
-
-        // Avec soft delete, le record existe encore avec deleted_at non null
         $this->assertDatabaseHas('impediments', ['id' => $id]);
         $this->assertNotNull(Impediment::withTrashed()->find($id)->deleted_at);
     }
@@ -144,7 +143,6 @@ final class ImpedimentServiceTest extends IntegrationTestCase
     {
         $availability = $this->createAvailability();
 
-        // Créer deux impediments avec des dates différentes pour éviter le conflit
         $impediment1 = ChronosMutationContext::withAllowed(function () use ($availability) {
             return Impediment::create([
                 'availability_id' => $availability->id,
@@ -158,8 +156,8 @@ final class ImpedimentServiceTest extends IntegrationTestCase
             return Impediment::create([
                 'availability_id' => $availability->id,
                 'reason' => 'Impediment 2',
-                'start_datetime' => '2024-01-15 11:30:00', // Différent
-                'end_datetime' => '2024-01-15 12:30:00', // Différent
+                'start_datetime' => '2024-01-15 11:30:00',
+                'end_datetime' => '2024-01-15 12:30:00',
             ]);
         });
 
@@ -175,7 +173,7 @@ final class ImpedimentServiceTest extends IntegrationTestCase
         $availability = $this->createAvailability();
         $impediment = $this->createImpediment($availability);
 
-        $results = $this->impedimentService->findBySchedulable(TestCar::class, 1);
+        $results = $this->impedimentService->findBySchedulable($this->testCar);
 
         $this->assertCount(1, $results);
         $this->assertEquals($impediment->id, $results[0]->id);
@@ -249,7 +247,6 @@ final class ImpedimentServiceTest extends IntegrationTestCase
     {
         $availability = $this->createAvailability();
 
-        // Create impediment
         $impediment = ChronosMutationContext::withAllowed(function () use ($availability) {
             return Impediment::create([
                 'availability_id' => $availability->id,
@@ -259,12 +256,11 @@ final class ImpedimentServiceTest extends IntegrationTestCase
             ]);
         });
 
-        // Create schedule that overlaps
         ChronosMutationContext::withAllowed(function () use ($availability) {
             Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => $this->testCar->id,
                 'title' => 'Blocked Schedule',
                 'start_datetime' => '2024-01-15 10:30:00',
                 'end_datetime' => '2024-01-15 11:00:00',
@@ -288,7 +284,7 @@ final class ImpedimentServiceTest extends IntegrationTestCase
             'validity_start' => '2024-01-01T00:00:00Z',
             'validity_end' => '2024-12-31T23:59:59Z',
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
         ]);
 
         return $this->availabilityService->create($record);

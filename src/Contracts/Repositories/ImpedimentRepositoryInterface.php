@@ -10,6 +10,7 @@ use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\ImpedimentRecord;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use AndyDefer\Repository\AbstractRepositoryInterface;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
@@ -42,8 +43,11 @@ interface ImpedimentRepositoryInterface extends AbstractRepositoryInterface
     /**
      * Find impediments for a specific schedulable entity.
      * Utilisé par: EntityOwnershipConsistencyRule
+     *
+     * @param  Model  $schedulable  The schedulable entity
+     * @return Collection<int, Impediment> Collection of impediments
      */
-    public function findBySchedulable(string $schedulableType, int $schedulableId): Collection;
+    public function findBySchedulable(Model $schedulable): Collection;
 
     /**
      * Find impediments by reason.

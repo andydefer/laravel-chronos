@@ -12,6 +12,7 @@ use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 final class AvailabilityRepository extends AbstractChronosRepository implements AvailabilityRepositoryInterface
@@ -53,16 +54,22 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
         }
     }
 
-    public function findBySchedulable(string $schedulableType, int $schedulableId): Collection
+    public function findBySchedulable(Model $schedulable): Collection
     {
+        $schedulableType = $schedulable->getMorphClass();
+        $schedulableId = (int) $schedulable->getKey();
+
         return $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
             ->where('schedulable_id', $schedulableId)
             ->get();
     }
 
-    public function findByDay(string $schedulableType, int $schedulableId, WeekDay $day): Collection
+    public function findByDay(Model $schedulable, WeekDay $day): Collection
     {
+        $schedulableType = $schedulable->getMorphClass();
+        $schedulableId = (int) $schedulable->getKey();
+
         return $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
             ->where('schedulable_id', $schedulableId)
@@ -71,8 +78,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
     }
 
     public function findOverlapping(
-        string $schedulableType,
-        int $schedulableId,
+        Model $schedulable,
         WeekDay $day,
         TimeZuluVO $startTime,
         TimeZuluVO $endTime,
@@ -80,6 +86,9 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
         DateTimeZuluVO $validityEnd,
         ?int $excludeId = null,
     ): Collection {
+        $schedulableType = $schedulable->getMorphClass();
+        $schedulableId = (int) $schedulable->getKey();
+
         $query = $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
             ->where('schedulable_id', $schedulableId)
@@ -104,8 +113,11 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
         return $query->get();
     }
 
-    public function findActiveAtDate(string $schedulableType, int $schedulableId, DateTimeZuluVO $date): Collection
+    public function findActiveAtDate(Model $schedulable, DateTimeZuluVO $date): Collection
     {
+        $schedulableType = $schedulable->getMorphClass();
+        $schedulableId = (int) $schedulable->getKey();
+
         return $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
             ->where('schedulable_id', $schedulableId)
@@ -121,12 +133,14 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
     }
 
     public function findActiveInDateRange(
-        string $schedulableType,
-        int $schedulableId,
+        Model $schedulable,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
         ?int $excludeId = null,
     ): Collection {
+        $schedulableType = $schedulable->getMorphClass();
+        $schedulableId = (int) $schedulable->getKey();
+
         $query = $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
             ->where('schedulable_id', $schedulableId)
@@ -144,8 +158,11 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
         return $query->get();
     }
 
-    public function findCrossDayAvailabilities(string $schedulableType, int $schedulableId): Collection
+    public function findCrossDayAvailabilities(Model $schedulable): Collection
     {
+        $schedulableType = $schedulable->getMorphClass();
+        $schedulableId = (int) $schedulable->getKey();
+
         return $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
             ->where('schedulable_id', $schedulableId)
@@ -153,8 +170,10 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
             ->get();
     }
 
-    public function findShortDurations(string $schedulableType, int $schedulableId, int $minMinutes): Collection
+    public function findShortDurations(Model $schedulable, int $minMinutes): Collection
     {
+        $schedulableType = $schedulable->getMorphClass();
+        $schedulableId = (int) $schedulable->getKey();
         $minSeconds = $minMinutes * 60;
 
         return $this->model->newQuery()
@@ -164,8 +183,11 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
             ->get();
     }
 
-    public function findInvalidDateRanges(string $schedulableType, int $schedulableId): Collection
+    public function findInvalidDateRanges(Model $schedulable): Collection
     {
+        $schedulableType = $schedulable->getMorphClass();
+        $schedulableId = (int) $schedulable->getKey();
+
         return $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
             ->where('schedulable_id', $schedulableId)
@@ -195,8 +217,11 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
             ->get();
     }
 
-    public function schedulableExists(string $schedulableType, int $schedulableId): bool
+    public function schedulableExists(Model $schedulable): bool
     {
+        $schedulableType = $schedulable->getMorphClass();
+        $schedulableId = (int) $schedulable->getKey();
+
         if (! class_exists($schedulableType)) {
             return false;
         }
@@ -204,9 +229,16 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
         return $schedulableType::where('id', $schedulableId)->exists();
     }
 
-    public function getSchedulableModel(string $schedulableType): ?string
+    public function getSchedulableModel(Model $schedulable): ?string
     {
+        $schedulableType = $schedulable->getMorphClass();
+        $schedulableId = (int) $schedulable->getKey();
+
         if (! class_exists($schedulableType)) {
+            return null;
+        }
+
+        if (! $schedulableType::where('id', $schedulableId)->exists()) {
             return null;
         }
 

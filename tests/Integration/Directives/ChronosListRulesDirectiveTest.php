@@ -143,8 +143,6 @@ final class ChronosListRulesDirectiveTest extends IntegrationTestCase
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 
-        // Vérifier que les méthodes sont affichées (le nom de la classe n'est plus affiché comme "Class:")
-        // On vérifie plutôt que "Methods:" est présent car c'est ce qui est affiché en mode verbose
         $this->assertStringContainsString('Methods:', $response->output);
         $this->assertStringContainsString('getDescription', $response->output);
         $this->assertStringContainsString('supports', $response->output);
@@ -160,13 +158,10 @@ final class ChronosListRulesDirectiveTest extends IntegrationTestCase
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Availability Rules', $response->output);
-
-        // Vérifier que les méthodes sont affichées
         $this->assertStringContainsString('Methods:', $response->output);
         $this->assertStringContainsString('getDescription', $response->output);
         $this->assertStringContainsString('supports', $response->output);
         $this->assertStringContainsString('validate', $response->output);
-
         $this->assertStringNotContainsString('Schedule Rules', $response->output);
         $this->assertStringNotContainsString('Impediment Rules', $response->output);
     }

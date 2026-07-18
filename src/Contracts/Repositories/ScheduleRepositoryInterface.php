@@ -10,6 +10,7 @@ use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\ScheduleRecord;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use AndyDefer\Repository\AbstractRepositoryInterface;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
@@ -64,8 +65,11 @@ interface ScheduleRepositoryInterface extends AbstractRepositoryInterface
     /**
      * Find schedules for a specific schedulable entity.
      * Utilisé par: EntityOwnershipConsistencyRule
+     *
+     * @param  Model  $schedulable  The schedulable entity
+     * @return Collection<int, Schedule> Collection of schedules
      */
-    public function findBySchedulable(string $schedulableType, int $schedulableId): Collection;
+    public function findBySchedulable(Model $schedulable): Collection;
 
     /**
      * Find schedules with invalid chronology.

@@ -10,6 +10,7 @@ use AndyDefer\LaravelChronos\Exceptions\ValidationException;
 use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\ScheduleRecord;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Throwable;
 
@@ -22,8 +23,8 @@ use Throwable;
  * validation and business rules enforcement.
  *
  * @example
- * // Create a new schedule
- * $service->create(new ScheduleRecord([
+ * // Create a new schedule for a specific entity
+ * $service->for($doctor)->create(ScheduleRecord::from([
  *     'availability_id' => 1,
  *     'title' => 'Team Meeting',
  *     'start_time' => new DateTimeZuluVO('2024-01-01 10:00:00'),
@@ -39,16 +40,55 @@ use Throwable;
 interface ScheduleServiceInterface
 {
     /**
+     * Sets the schedulable entity context for subsequent operations.
+     *
+     * This method allows you to define the entity (e.g., Doctor, User) that
+     * the schedule operations will be scoped to. When used, the entity type
+     * and ID will be automatically injected into records.
+     *
+     * @param  Model  $schedulable  The schedulable entity (e.g., Doctor::find(42))
+     * @return self Returns the service instance for method chaining
+     *
+     * @example
+     * $service->for($doctor)->create($record);
+     * $service->for($doctor)->findByStatus(ScheduleStatus::BOOKED);
+     */
+    public function for(Model $schedulable): self;
+
+    /**
      * Creates a new schedule record.
      *
      * Validates the record against business rules before creation. If validation
      * passes, the record is persisted and the created model is returned.
+     * If the service is scoped via for(), the schedulable_type and schedulable_id
+     * are automatically injected.
      *
      * @param  ScheduleRecord  $record  The schedule data to create
      * @return Schedule The newly created schedule model
      *
      * @throws ValidationException When the record fails business rule validation
      * @throws Throwable When an unexpected error occurs during creation
+     *
+     * @example
+     * // With for() - auto-injects schedulable_type and schedulable_id
+     * $schedule = $service->for($doctor)->create(ScheduleRecord::from([
+     *     'availability_id' => 1,
+     *     'title' => 'Consultation',
+     *     'start_datetime' => '2024-01-15T10:00:00Z',
+     *     'end_datetime' => '2024-01-15T10:30:00Z',
+     *     'status' => ScheduleStatus::BOOKED,
+     * ]));
+     *
+     * // Without for() - must specify schedulable_type and schedulable_id
+     * $schedule = $service->create(ScheduleRecord::from([
+     *     'availability_id' => 1,
+     *     'schedulable_type' => Doctor::class,
+     *     'schedulable_id' => 42,
+     *     'title' => 'Consultation',
+     *     'start_datetime' => '2024-01-15T10:00:00Z',
+     *     'end_datetime' => '2024-01-15T10:30:00Z',
+     *     'status' => ScheduleStatus::BOOKED,
+     * ]));
      */
     public function create(ScheduleRecord $record): Schedule;
 
@@ -101,14 +141,21 @@ interface ScheduleServiceInterface
     /**
      * Finds all schedules for a given schedulable entity.
      *
-     * Traverses through the availability relationship to find schedules
-     * associated with the specified entity.
+     * If the service is scoped via for(), you can omit the parameter.
      *
-     * @param  string  $schedulableType  The entity type (e.g., 'user', 'location')
-     * @param  int  $schedulableId  The entity ID
+     * @param  Model|null  $schedulable  The schedulable entity, or null to use the scoped entity
      * @return Collection<int, Schedule> Collection of schedule models
+     *
+     * @throws \RuntimeException When no schedulable entity is provided and none is scoped
+     *
+     * @example
+     * // Using scoped entity
+     * $schedules = $service->for($doctor)->findBySchedulable();
+     *
+     * // Using explicit entity
+     * $schedules = $service->findBySchedulable($doctor);
      */
-    public function findBySchedulable(string $schedulableType, int $schedulableId): Collection;
+    public function findBySchedulable(?Model $schedulable = null): Collection;
 
     /**
      * Finds schedules by their current status.

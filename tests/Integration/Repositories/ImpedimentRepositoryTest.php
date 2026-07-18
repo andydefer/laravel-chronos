@@ -24,12 +24,14 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
 
     private AvailabilityRepository $availabilityRepository;
 
+    private TestCar $testCar;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        ChronosMutationContext::withAllowed(function () {
-            TestCar::create([
+        $this->testCar = ChronosMutationContext::withAllowed(function () {
+            return TestCar::create([
                 'model' => 'Test Model',
                 'license_plate' => 'TEST123',
                 'type' => 'sedan',
@@ -297,7 +299,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         $impediment = $this->createImpediment($availability);
 
         // Find impediments by schedulable (TestCar)
-        $results = $this->repository->findBySchedulable(TestCar::class, 1);
+        $results = $this->repository->findBySchedulable($this->testCar);
 
         $this->assertCount(1, $results);
         $this->assertEquals($impediment->id, $results[0]->id);
@@ -481,7 +483,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => $this->testCar->id,
                 'title' => 'Overlapping Schedule',
                 'start_datetime' => '2024-01-15 10:30:00',
                 'end_datetime' => '2024-01-15 11:00:00',
@@ -493,7 +495,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => $this->testCar->id,
                 'title' => 'Non-overlapping Schedule',
                 'start_datetime' => '2024-01-15 09:00:00',
                 'end_datetime' => '2024-01-15 09:30:00',
@@ -524,7 +526,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => $this->testCar->id,
                 'title' => 'Fully Blocked',
                 'start_datetime' => '2024-01-15 10:30:00',
                 'end_datetime' => '2024-01-15 11:00:00',
@@ -536,7 +538,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => $this->testCar->id,
                 'title' => 'Partially Blocked',
                 'start_datetime' => '2024-01-15 09:30:00',
                 'end_datetime' => '2024-01-15 10:30:00',
@@ -567,7 +569,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => $this->testCar->id,
                 'title' => 'Starts Before',
                 'start_datetime' => '2024-01-15 09:30:00',
                 'end_datetime' => '2024-01-15 10:30:00',
@@ -579,7 +581,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => $this->testCar->id,
                 'title' => 'Ends After',
                 'start_datetime' => '2024-01-15 11:30:00',
                 'end_datetime' => '2024-01-15 12:30:00',
@@ -591,7 +593,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => $this->testCar->id,
                 'title' => 'Fully Inside',
                 'start_datetime' => '2024-01-15 10:30:00',
                 'end_datetime' => '2024-01-15 11:00:00',
@@ -624,7 +626,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => $this->testCar->id,
                 'title' => 'Before Impediment',
                 'start_datetime' => '2024-01-15 09:00:00',
                 'end_datetime' => '2024-01-15 09:30:00',
@@ -636,7 +638,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => $this->testCar->id,
                 'title' => 'After Impediment',
                 'start_datetime' => '2024-01-15 12:30:00',
                 'end_datetime' => '2024-01-15 13:00:00',
@@ -686,7 +688,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             'validity_start' => '2024-01-01T00:00:00Z',
             'validity_end' => '2024-12-31T23:59:59Z',
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
         ]);
 
         return $this->availabilityRepository->create($record);

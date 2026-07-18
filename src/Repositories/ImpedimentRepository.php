@@ -12,6 +12,7 @@ use AndyDefer\LaravelChronos\Records\ImpedimentRecord;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 final class ImpedimentRepository extends AbstractChronosRepository implements ImpedimentRepositoryInterface
@@ -85,11 +86,13 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
     }
 
     /**
-     * Find impediments by schedulable entity.
-     * Traverse through the availability relationship.
+     * {@inheritDoc}
      */
-    public function findBySchedulable(string $schedulableType, int $schedulableId): Collection
+    public function findBySchedulable(Model $schedulable): Collection
     {
+        $schedulableType = $schedulable->getMorphClass();
+        $schedulableId = (int) $schedulable->getKey();
+
         return $this->model->newQuery()
             ->whereHas('availability', function ($query) use ($schedulableType, $schedulableId) {
                 $query->where('schedulable_type', $schedulableType)

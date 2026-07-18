@@ -16,6 +16,7 @@ use AndyDefer\LaravelChronos\Records\ScheduleRecord;
 use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
 use AndyDefer\LaravelChronos\Support\ServiceContext;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Throwable;
 
@@ -29,13 +30,15 @@ use Throwable;
  *
  * @example
  * $service = new ScheduleService($repository, $validator);
- * $schedule = $service->create(new ScheduleRecord(...));
+ * $schedule = $service->for($doctor)->create(new ScheduleRecord(...));
  * $cancelled = $service->cancel($schedule->id);
  *
  * @see ScheduleServiceInterface
  */
 final class ScheduleService implements ScheduleServiceInterface
 {
+    private ?Model $schedulable = null;
+
     /**
      * @param  ScheduleRepositoryInterface  $repository  The repository for persistence operations
      * @param  ValidatorInterface  $validator  The validator for business rule validation
@@ -47,12 +50,31 @@ final class ScheduleService implements ScheduleServiceInterface
 
     /**
      * {@inheritDoc}
+     */
+    public function for(Model $schedulable): self
+    {
+        $this->schedulable = $schedulable;
+
+        return $this;
+    }
+
+    /**
+     * {@inheritDoc}
      *
      * @throws ValidationException When the record fails validation
      * @throws Throwable When the repository operation fails
      */
     public function create(ScheduleRecord $record): Schedule
     {
+        // If scoped via for(), inject schedulable_type and schedulable_id
+        if ($this->schedulable !== null) {
+            $data = $record->toArray();
+            $data['schedulable_type'] = $this->schedulable->getMorphClass();
+            $data['schedulable_id'] = $this->schedulable->getKey();
+            $record = ScheduleRecord::from($data);
+            $this->schedulable = null; // Reset after use
+        }
+
         return ServiceContext::within(
             ScheduleService::class,
             function () use ($record): Schedule {
@@ -75,6 +97,15 @@ final class ScheduleService implements ScheduleServiceInterface
      */
     public function update(int $id, ScheduleRecord $record): Schedule
     {
+        // If scoped via for(), inject schedulable_type and schedulable_id
+        if ($this->schedulable !== null) {
+            $data = $record->toArray();
+            $data['schedulable_type'] = $this->schedulable->getMorphClass();
+            $data['schedulable_id'] = $this->schedulable->getKey();
+            $record = ScheduleRecord::from($data);
+            $this->schedulable = null; // Reset after use
+        }
+
         return ServiceContext::within(
             ScheduleService::class,
             function () use ($id, $record): Schedule {
@@ -98,10 +129,13 @@ final class ScheduleService implements ScheduleServiceInterface
      */
     public function delete(int $id): bool
     {
+        $schedulable = $this->schedulable;
+        $this->schedulable = null; // Reset after use
+
         return ServiceContext::within(
             ScheduleService::class,
-            function () use ($id): bool {
-                $existing = $this->findOrFail($id);
+            function () use ($id, $schedulable): bool {
+                $existing = $this->findOrFail($id, $schedulable);
                 $this->validateOperation(
                     new ScheduleRecord,
                     OperationType::DELETE,
@@ -121,9 +155,24 @@ final class ScheduleService implements ScheduleServiceInterface
      */
     public function find(int $id): ?Schedule
     {
+        $schedulable = $this->schedulable;
+        $this->schedulable = null; // Reset after use
+
         return ServiceContext::within(
             ScheduleService::class,
-            fn (): ?Schedule => $this->repository->find($id),
+            function () use ($id, $schedulable): ?Schedule {
+                $schedule = $this->repository->find($id);
+
+                // If scoped, verify ownership
+                if ($schedule !== null && $schedulable !== null) {
+                    if ($schedule->schedulable_type !== $schedulable->getMorphClass() ||
+                        $schedule->schedulable_id !== $schedulable->getKey()) {
+                        return null;
+                    }
+                }
+
+                return $schedule;
+            },
             ['operation' => 'find', 'id' => $id]
         );
     }
@@ -143,15 +192,25 @@ final class ScheduleService implements ScheduleServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findBySchedulable(string $schedulableType, int $schedulableId): Collection
+    public function findBySchedulable(?Model $schedulable = null): Collection
     {
+        $schedulable = $schedulable ?? $this->schedulable;
+
+        if ($schedulable === null) {
+            throw new \RuntimeException(
+                'No schedulable entity defined. Use for() or pass a model to findBySchedulable().'
+            );
+        }
+
+        $this->schedulable = null; // Reset after use
+
         return ServiceContext::within(
             ScheduleService::class,
-            fn (): Collection => $this->repository->findBySchedulable($schedulableType, $schedulableId),
+            fn (): Collection => $this->repository->findBySchedulable($schedulable),
             [
                 'operation' => 'findBySchedulable',
-                'schedulable_type' => $schedulableType,
-                'schedulable_id' => $schedulableId,
+                'schedulable_type' => $schedulable->getMorphClass(),
+                'schedulable_id' => $schedulable->getKey(),
             ]
         );
     }
@@ -233,10 +292,13 @@ final class ScheduleService implements ScheduleServiceInterface
      */
     public function cancel(int $id): Schedule
     {
+        $schedulable = $this->schedulable;
+        $this->schedulable = null; // Reset after use
+
         return ServiceContext::within(
             ScheduleService::class,
-            function () use ($id): Schedule {
-                $schedule = $this->findOrFail($id);
+            function () use ($id, $schedulable): Schedule {
+                $schedule = $this->findOrFail($id, $schedulable);
 
                 if (! $this->canBeCancelled($schedule)) {
                     throw new ValidationException(
@@ -264,10 +326,13 @@ final class ScheduleService implements ScheduleServiceInterface
      */
     public function complete(int $id): Schedule
     {
+        $schedulable = $this->schedulable;
+        $this->schedulable = null; // Reset after use
+
         return ServiceContext::within(
             ScheduleService::class,
-            function () use ($id): Schedule {
-                $schedule = $this->findOrFail($id);
+            function () use ($id, $schedulable): Schedule {
+                $schedule = $this->findOrFail($id, $schedulable);
 
                 if (! $this->canBeCompleted($schedule)) {
                     throw new ValidationException(
@@ -288,8 +353,6 @@ final class ScheduleService implements ScheduleServiceInterface
 
     /**
      * {@inheritDoc}
-     *
-     * Delegates to the schedule model for business logic.
      */
     public function canBeCancelled(Schedule $schedule): bool
     {
@@ -298,8 +361,6 @@ final class ScheduleService implements ScheduleServiceInterface
 
     /**
      * {@inheritDoc}
-     *
-     * Delegates to the schedule model for business logic.
      */
     public function canBeCompleted(Schedule $schedule): bool
     {
@@ -310,16 +371,25 @@ final class ScheduleService implements ScheduleServiceInterface
      * Finds a schedule or throws an exception if not found.
      *
      * @param  int  $id  The schedule ID
+     * @param  Model|null  $schedulable  Optional schedulable entity for ownership verification
      * @return Schedule The found schedule
      *
-     * @throws ModelNotFoundException When the schedule does not exist
+     * @throws ModelNotFoundException When the schedule does not exist or does not belong to the entity
      */
-    private function findOrFail(int $id): Schedule
+    private function findOrFail(int $id, ?Model $schedulable = null): Schedule
     {
         $schedule = $this->repository->find($id);
 
         if ($schedule === null) {
             throw ModelNotFoundException::create(Schedule::class, $id);
+        }
+
+        // If scoped, verify ownership
+        if ($schedulable !== null) {
+            if ($schedule->schedulable_type !== $schedulable->getMorphClass() ||
+                $schedule->schedulable_id !== $schedulable->getKey()) {
+                throw ModelNotFoundException::create(Schedule::class, $id);
+            }
         }
 
         return $schedule;

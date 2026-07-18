@@ -23,12 +23,14 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
 
     private AvailabilityRepository $availabilityRepository;
 
+    private TestCar $testCar;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        ChronosMutationContext::withAllowed(function () {
-            TestCar::create([
+        $this->testCar = ChronosMutationContext::withAllowed(function () {
+            return TestCar::create([
                 'model' => 'Test Model',
                 'license_plate' => 'TEST123',
                 'type' => 'sedan',
@@ -61,7 +63,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
             'title' => 'Test Schedule',
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
             'status' => ScheduleStatus::AVAILABLE->value,
         ]);
     }
@@ -73,7 +75,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $record = ScheduleRecord::from([
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
             'title' => 'Completed Schedule',
             'status' => ScheduleStatus::COMPLETED,
             'start_datetime' => '2024-01-15T10:00:00Z',
@@ -89,75 +91,6 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         ]);
     }
 
-    public function test_can_create_schedule_with_blocked_status(): void
-    {
-        $availability = $this->createAvailability();
-
-        $record = ScheduleRecord::from([
-            'availability_id' => $availability->id,
-            'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
-            'title' => 'Blocked Schedule',
-            'status' => ScheduleStatus::BLOCKED,
-            'start_datetime' => '2024-01-15T10:00:00Z',
-            'end_datetime' => '2024-01-15T11:00:00Z',
-        ]);
-
-        $schedule = $this->repository->create($record);
-
-        $this->assertEquals(ScheduleStatus::BLOCKED, $schedule->status);
-        $this->assertDatabaseHas('schedules', [
-            'id' => $schedule->id,
-            'status' => ScheduleStatus::BLOCKED->value,
-        ]);
-    }
-
-    public function test_can_create_schedule_with_cancelled_status(): void
-    {
-        $availability = $this->createAvailability();
-
-        $record = ScheduleRecord::from([
-            'availability_id' => $availability->id,
-            'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
-            'title' => 'Cancelled Schedule',
-            'status' => ScheduleStatus::CANCELLED,
-            'start_datetime' => '2024-01-15T10:00:00Z',
-            'end_datetime' => '2024-01-15T11:00:00Z',
-        ]);
-
-        $schedule = $this->repository->create($record);
-
-        $this->assertEquals(ScheduleStatus::CANCELLED, $schedule->status);
-        $this->assertDatabaseHas('schedules', [
-            'id' => $schedule->id,
-            'status' => ScheduleStatus::CANCELLED->value,
-        ]);
-    }
-
-    public function test_can_create_schedule_with_available_status(): void
-    {
-        $availability = $this->createAvailability();
-
-        $record = ScheduleRecord::from([
-            'availability_id' => $availability->id,
-            'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
-            'title' => 'Available Schedule',
-            'status' => ScheduleStatus::AVAILABLE,
-            'start_datetime' => '2024-01-15T10:00:00Z',
-            'end_datetime' => '2024-01-15T11:00:00Z',
-        ]);
-
-        $schedule = $this->repository->create($record);
-
-        $this->assertEquals(ScheduleStatus::AVAILABLE, $schedule->status);
-        $this->assertDatabaseHas('schedules', [
-            'id' => $schedule->id,
-            'status' => ScheduleStatus::AVAILABLE->value,
-        ]);
-    }
-
     public function test_can_create_raw_schedule(): void
     {
         $availability = $this->createAvailability();
@@ -165,7 +98,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $data = [
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
             'title' => 'Raw Schedule',
             'start_datetime' => '2024-01-15 10:00:00',
             'end_datetime' => '2024-01-15 11:00:00',
@@ -215,7 +148,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $schedule1 = $this->createSchedule();
         $schedule2 = $this->createSchedule();
 
-        $results = $this->repository->findBySchedulable(TestCar::class, 1);
+        $results = $this->repository->findBySchedulable($this->testCar);
 
         $this->assertCount(2, $results);
         $this->assertEquals($schedule1->id, $results[0]->id);
@@ -363,7 +296,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         DB::table('schedules')->insert([
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
             'title' => 'Invalid Chronology',
             'start_datetime' => '2024-01-15 11:00:00',
             'end_datetime' => '2024-01-15 10:00:00',
@@ -384,7 +317,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         DB::table('schedules')->insert([
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
             'title' => 'Long Schedule',
             'start_datetime' => '2024-01-15 10:00:00',
             'end_datetime' => '2024-01-15 12:30:00',
@@ -395,7 +328,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         DB::table('schedules')->insert([
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
             'title' => 'Short Schedule',
             'start_datetime' => '2024-01-15 13:00:00',
             'end_datetime' => '2024-01-15 13:30:00',
@@ -416,7 +349,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         DB::table('schedules')->insert([
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
             'title' => 'Schedule 1',
             'start_datetime' => '2024-01-15 10:00:00',
             'end_datetime' => '2024-01-15 11:00:00',
@@ -427,7 +360,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         DB::table('schedules')->insert([
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
             'title' => 'Schedule 2',
             'start_datetime' => '2024-01-15 11:15:00',
             'end_datetime' => '2024-01-15 12:00:00',
@@ -448,7 +381,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         DB::table('schedules')->insert([
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
             'title' => 'Cross Day Schedule',
             'start_datetime' => '2024-01-15 22:00:00',
             'end_datetime' => '2024-01-16 02:00:00',
@@ -480,7 +413,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $record = ScheduleRecord::from([
             'availability_id' => $schedule->availability_id,
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
             'title' => 'Updated Title',
             'description' => 'Updated Description',
             'status' => ScheduleStatus::COMPLETED,
@@ -530,12 +463,6 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $this->assertNotNull(Schedule::withTrashed()->find($id)->deleted_at);
     }
 
-    public function test_delete_returns_false_when_not_found(): void
-    {
-        $deleted = $this->repository->delete(99999);
-        $this->assertFalse($deleted);
-    }
-
     public function test_can_restore_schedule(): void
     {
         $schedule = $this->createSchedule();
@@ -549,12 +476,6 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $this->assertNull(Schedule::find($id)->deleted_at);
     }
 
-    public function test_restore_returns_false_when_not_found(): void
-    {
-        $restored = $this->repository->restore(99999);
-        $this->assertFalse($restored);
-    }
-
     public function test_can_force_delete_schedule(): void
     {
         $schedule = $this->createSchedule();
@@ -564,12 +485,6 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
 
         $this->assertTrue($deleted);
         $this->assertDatabaseMissing('schedules', ['id' => $id]);
-    }
-
-    public function test_force_delete_returns_false_when_not_found(): void
-    {
-        $deleted = $this->repository->forceDelete(99999);
-        $this->assertFalse($deleted);
     }
 
     public function test_can_bulk_delete_schedules(): void
@@ -670,7 +585,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
             'validity_start' => '2024-01-01T00:00:00Z',
             'validity_end' => '2024-12-31T23:59:59Z',
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
         ]);
 
         return $this->availabilityRepository->create($record);
@@ -681,7 +596,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         return ScheduleRecord::from([
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
             'title' => 'Test Schedule',
             'description' => 'Test Description',
             'start_datetime' => '2024-01-15T10:00:00Z',

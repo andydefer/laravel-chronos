@@ -15,6 +15,7 @@ use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
 use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
 use AndyDefer\LaravelChronos\Support\ServiceContext;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Throwable;
 
@@ -133,15 +134,15 @@ final class AvailabilityService implements AvailabilityServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findBySchedulable(string $schedulableType, int $schedulableId): Collection
+    public function findBySchedulable(Model $schedulable): Collection
     {
         return ServiceContext::within(
             AvailabilityService::class,
-            fn (): Collection => $this->repository->findBySchedulable($schedulableType, $schedulableId),
+            fn (): Collection => $this->repository->findBySchedulable($schedulable),
             [
                 'operation' => 'findBySchedulable',
-                'schedulable_type' => $schedulableType,
-                'schedulable_id' => $schedulableId,
+                'schedulable_type' => $schedulable->getMorphClass(),
+                'schedulable_id' => $schedulable->getKey(),
             ]
         );
     }
@@ -162,21 +163,19 @@ final class AvailabilityService implements AvailabilityServiceInterface
      * {@inheritDoc}
      */
     public function findActiveAtDate(
-        string $schedulableType,
-        int $schedulableId,
+        Model $schedulable,
         DateTimeZuluVO $date
     ): Collection {
         return ServiceContext::within(
             AvailabilityService::class,
             fn (): Collection => $this->repository->findActiveAtDate(
-                $schedulableType,
-                $schedulableId,
+                $schedulable,
                 $date
             ),
             [
                 'operation' => 'findActiveAtDate',
-                'schedulable_type' => $schedulableType,
-                'schedulable_id' => $schedulableId,
+                'schedulable_type' => $schedulable->getMorphClass(),
+                'schedulable_id' => $schedulable->getKey(),
                 'date' => $date->toDateTimeString(),
             ]
         );
@@ -186,23 +185,21 @@ final class AvailabilityService implements AvailabilityServiceInterface
      * {@inheritDoc}
      */
     public function findActiveInDateRange(
-        string $schedulableType,
-        int $schedulableId,
+        Model $schedulable,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end
     ): Collection {
         return ServiceContext::within(
             AvailabilityService::class,
             fn (): Collection => $this->repository->findActiveInDateRange(
-                $schedulableType,
-                $schedulableId,
+                $schedulable,
                 $start,
                 $end
             ),
             [
                 'operation' => 'findActiveInDateRange',
-                'schedulable_type' => $schedulableType,
-                'schedulable_id' => $schedulableId,
+                'schedulable_type' => $schedulable->getMorphClass(),
+                'schedulable_id' => $schedulable->getKey(),
                 'start' => $start->toDateTimeString(),
                 'end' => $end->toDateTimeString(),
             ]
@@ -212,15 +209,15 @@ final class AvailabilityService implements AvailabilityServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function schedulableExists(string $schedulableType, int $schedulableId): bool
+    public function schedulableExists(Model $schedulable): bool
     {
         return ServiceContext::within(
             AvailabilityService::class,
-            fn (): bool => $this->repository->schedulableExists($schedulableType, $schedulableId),
+            fn (): bool => $this->repository->schedulableExists($schedulable),
             [
                 'operation' => 'schedulableExists',
-                'schedulable_type' => $schedulableType,
-                'schedulable_id' => $schedulableId,
+                'schedulable_type' => $schedulable->getMorphClass(),
+                'schedulable_id' => $schedulable->getKey(),
             ]
         );
     }
@@ -228,14 +225,14 @@ final class AvailabilityService implements AvailabilityServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function getSchedulableModel(string $schedulableType): ?string
+    public function getSchedulableModel(Model $schedulable): ?string
     {
         return ServiceContext::within(
             AvailabilityService::class,
-            fn (): ?string => $this->repository->getSchedulableModel($schedulableType),
+            fn (): ?string => $this->repository->getSchedulableModel($schedulable),
             [
                 'operation' => 'getSchedulableModel',
-                'schedulable_type' => $schedulableType,
+                'schedulable_type' => $schedulable->getMorphClass(),
             ]
         );
     }

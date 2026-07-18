@@ -9,6 +9,7 @@ use AndyDefer\LaravelChronos\Exceptions\ValidationException;
 use AndyDefer\LaravelChronos\Models\Availability;
 use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Throwable;
 
@@ -30,7 +31,7 @@ use Throwable;
  * ]));
  *
  * // Find all availabilities for a schedulable entity
- * $availabilities = $service->findBySchedulable('user', 1);
+ * $availabilities = $service->findBySchedulable($user);
  */
 interface AvailabilityServiceInterface
 {
@@ -92,14 +93,13 @@ interface AvailabilityServiceInterface
     /**
      * Finds all availabilities for a given schedulable entity.
      *
-     * Returns all availabilities associated with the specified entity type and ID,
+     * Returns all availabilities associated with the specified entity,
      * regardless of their active status.
      *
-     * @param  string  $schedulableType  The entity type (e.g., 'user', 'location')
-     * @param  int  $schedulableId  The entity ID
+     * @param  Model  $schedulable  The schedulable entity
      * @return Collection<int, Availability> Collection of availability models
      */
-    public function findBySchedulable(string $schedulableType, int $schedulableId): Collection;
+    public function findBySchedulable(Model $schedulable): Collection;
 
     /**
      * Finds all availabilities of a specific type.
@@ -114,14 +114,12 @@ interface AvailabilityServiceInterface
      *
      * Returns availabilities that cover the given date, regardless of time.
      *
-     * @param  string  $schedulableType  The entity type
-     * @param  int  $schedulableId  The entity ID
+     * @param  Model  $schedulable  The schedulable entity
      * @param  DateTimeZuluVO  $date  The date to check for active status
      * @return Collection<int, Availability> Collection of active availability models
      */
     public function findActiveAtDate(
-        string $schedulableType,
-        int $schedulableId,
+        Model $schedulable,
         DateTimeZuluVO $date
     ): Collection;
 
@@ -130,15 +128,13 @@ interface AvailabilityServiceInterface
      *
      * Returns availabilities that overlap with the specified date range.
      *
-     * @param  string  $schedulableType  The entity type
-     * @param  int  $schedulableId  The entity ID
+     * @param  Model  $schedulable  The schedulable entity
      * @param  DateTimeZuluVO  $start  The start of the date range
      * @param  DateTimeZuluVO  $end  The end of the date range
      * @return Collection<int, Availability> Collection of active availability models
      */
     public function findActiveInDateRange(
-        string $schedulableType,
-        int $schedulableId,
+        Model $schedulable,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end
     ): Collection;
@@ -146,23 +142,21 @@ interface AvailabilityServiceInterface
     /**
      * Checks if a schedulable entity exists.
      *
-     * Validates that the referenced entity type and ID combination exists
-     * in the system.
+     * Validates that the referenced entity exists in the system.
      *
-     * @param  string  $schedulableType  The entity type
-     * @param  int  $schedulableId  The entity ID
+     * @param  Model  $schedulable  The schedulable entity
      * @return bool True if the entity exists, false otherwise
      */
-    public function schedulableExists(string $schedulableType, int $schedulableId): bool;
+    public function schedulableExists(Model $schedulable): bool;
 
     /**
      * Retrieves the model class name for a schedulable type.
      *
      * Returns the fully qualified class name that represents the schedulable
-     * entity type, or null if the type is not registered.
+     * entity, or null if the type is not registered.
      *
-     * @param  string  $schedulableType  The entity type to resolve
+     * @param  Model  $schedulable  The schedulable entity
      * @return string|null The fully qualified class name or null if not found
      */
-    public function getSchedulableModel(string $schedulableType): ?string;
+    public function getSchedulableModel(Model $schedulable): ?string;
 }

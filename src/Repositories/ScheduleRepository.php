@@ -11,6 +11,7 @@ use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\ScheduleRecord;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -156,8 +157,14 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
         return $query->get();
     }
 
-    public function findBySchedulable(string $schedulableType, int $schedulableId): Collection
+    /**
+     * {@inheritDoc}
+     */
+    public function findBySchedulable(Model $schedulable): Collection
     {
+        $schedulableType = $schedulable->getMorphClass();
+        $schedulableId = (int) $schedulable->getKey();
+
         return $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
             ->where('schedulable_id', $schedulableId)

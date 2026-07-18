@@ -10,6 +10,7 @@ use AndyDefer\LaravelChronos\Models\Impediment;
 use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\ImpedimentRecord;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Throwable;
 
@@ -101,11 +102,10 @@ interface ImpedimentServiceInterface
      * Traverses through the availability relationship to find impediments
      * associated with the specified entity.
      *
-     * @param  string  $schedulableType  The entity type (e.g., 'user', 'location')
-     * @param  int  $schedulableId  The entity ID
+     * @param  Model  $schedulable  The schedulable entity
      * @return Collection<int, Impediment> Collection of impediment models
      */
-    public function findBySchedulable(string $schedulableType, int $schedulableId): Collection;
+    public function findBySchedulable(Model $schedulable): Collection;
 
     /**
      * Finds impediments that occur on a specific date.

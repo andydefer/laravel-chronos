@@ -15,6 +15,7 @@ use AndyDefer\LaravelChronos\Records\ImpedimentRecord;
 use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
 use AndyDefer\LaravelChronos\Support\ServiceContext;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Throwable;
 
@@ -140,15 +141,15 @@ final class ImpedimentService implements ImpedimentServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findBySchedulable(string $schedulableType, int $schedulableId): Collection
+    public function findBySchedulable(Model $schedulable): Collection
     {
         return ServiceContext::within(
             ImpedimentService::class,
-            fn (): Collection => $this->repository->findBySchedulable($schedulableType, $schedulableId),
+            fn (): Collection => $this->repository->findBySchedulable($schedulable),
             [
                 'operation' => 'findBySchedulable',
-                'schedulable_type' => $schedulableType,
-                'schedulable_id' => $schedulableId,
+                'schedulable_type' => $schedulable->getMorphClass(),
+                'schedulable_id' => $schedulable->getKey(),
             ]
         );
     }

@@ -19,13 +19,14 @@ final class AvailabilityServiceTest extends IntegrationTestCase
 {
     private AvailabilityServiceInterface $service;
 
+    private TestCar $testCar;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Créer un TestCar pour les tests
-        ChronosMutationContext::withAllowed(function () {
-            TestCar::create([
+        $this->testCar = ChronosMutationContext::withAllowed(function () {
+            return TestCar::create([
                 'model' => 'Test Model',
                 'license_plate' => 'TEST123',
                 'type' => 'sedan',
@@ -47,7 +48,7 @@ final class AvailabilityServiceTest extends IntegrationTestCase
             'id' => $availability->id,
             'name' => 'Test Availability',
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
         ]);
     }
 
@@ -75,7 +76,7 @@ final class AvailabilityServiceTest extends IntegrationTestCase
             'validity_start' => '2024-01-01T00:00:00Z',
             'validity_end' => '2024-12-31T23:59:59Z',
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
         ]);
 
         $updated = $this->service->update($availability->id, $record);
@@ -103,8 +104,6 @@ final class AvailabilityServiceTest extends IntegrationTestCase
         $deleted = $this->service->delete($id);
 
         $this->assertTrue($deleted);
-
-        // Avec soft delete, le record existe encore avec deleted_at non null
         $this->assertDatabaseHas('availabilities', ['id' => $id]);
         $this->assertNotNull(Availability::withTrashed()->find($id)->deleted_at);
     }
@@ -117,7 +116,7 @@ final class AvailabilityServiceTest extends IntegrationTestCase
             DB::table('schedules')->insert([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => $this->testCar->id,
                 'title' => 'Future Schedule',
                 'start_datetime' => '2025-01-15 10:00:00',
                 'end_datetime' => '2025-01-15 11:00:00',
@@ -139,7 +138,7 @@ final class AvailabilityServiceTest extends IntegrationTestCase
             DB::table('schedules')->insert([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => $this->testCar->id,
                 'title' => 'Future Schedule',
                 'start_datetime' => '2025-01-15 10:00:00',
                 'end_datetime' => '2025-01-15 11:00:00',
@@ -166,25 +165,23 @@ final class AvailabilityServiceTest extends IntegrationTestCase
 
     public function test_find_by_schedulable_returns_availabilities(): void
     {
-        // Créer deux availabilities avec des jours différents pour éviter l'overlap
         $availability1 = $this->createAvailability();
 
-        // Créer une deuxième availability avec des jours différents
         $record2 = AvailabilityRecord::from([
             'name' => 'Second Availability',
             'type' => 'test',
-            'days' => ['tuesday', 'thursday'], // Jours différents
+            'days' => ['tuesday', 'thursday'],
             'daily_start' => '09:00:00',
             'daily_end' => '17:00:00',
             'validity_start' => '2024-01-01T00:00:00Z',
             'validity_end' => '2024-12-31T23:59:59Z',
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
         ]);
 
         $availability2 = $this->service->create($record2);
 
-        $results = $this->service->findBySchedulable(TestCar::class, 1);
+        $results = $this->service->findBySchedulable($this->testCar);
 
         $this->assertCount(2, $results);
         $this->assertEquals($availability1->id, $results[0]->id);
@@ -206,7 +203,7 @@ final class AvailabilityServiceTest extends IntegrationTestCase
         $availability = $this->createAvailability();
         $date = DateTimeZuluVO::from('2024-06-15T12:00:00Z');
 
-        $results = $this->service->findActiveAtDate(TestCar::class, 1, $date);
+        $results = $this->service->findActiveAtDate($this->testCar, $date);
 
         $this->assertCount(1, $results);
         $this->assertEquals($availability->id, $results[0]->id);
@@ -218,7 +215,7 @@ final class AvailabilityServiceTest extends IntegrationTestCase
         $start = DateTimeZuluVO::from('2024-01-01T00:00:00Z');
         $end = DateTimeZuluVO::from('2024-12-31T23:59:59Z');
 
-        $results = $this->service->findActiveInDateRange(TestCar::class, 1, $start, $end);
+        $results = $this->service->findActiveInDateRange($this->testCar, $start, $end);
 
         $this->assertCount(1, $results);
         $this->assertEquals($availability->id, $results[0]->id);
@@ -226,13 +223,16 @@ final class AvailabilityServiceTest extends IntegrationTestCase
 
     public function test_schedulable_exists_returns_true_when_exists(): void
     {
-        $exists = $this->service->schedulableExists(TestCar::class, 1);
+        $exists = $this->service->schedulableExists($this->testCar);
         $this->assertTrue($exists);
     }
 
     public function test_schedulable_exists_returns_false_when_not_exists(): void
     {
-        $exists = $this->service->schedulableExists(TestCar::class, 99999);
+        $unknownCar = new TestCar;
+        $unknownCar->id = 99999;
+
+        $exists = $this->service->schedulableExists($unknownCar);
         $this->assertFalse($exists);
     }
 
@@ -247,7 +247,7 @@ final class AvailabilityServiceTest extends IntegrationTestCase
             'validity_start' => '2024-01-01T00:00:00Z',
             'validity_end' => '2024-12-31T23:59:59Z',
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => 1,
+            'schedulable_id' => $this->testCar->id,
         ]);
     }
 
