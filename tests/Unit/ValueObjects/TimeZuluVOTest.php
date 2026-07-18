@@ -958,4 +958,96 @@ final class TimeZuluVOTest extends TestCase
         // Assert
         $this->assertSame('13:00:00', $result->getValue());
     }
+
+    // ==================== NEW COMPARISON METHODS TESTS ====================
+
+    public function test_is_after_or_equal_returns_true_when_after(): void
+    {
+        // Arrange
+        $later = TimeZuluVO::from('14:30:00');
+        $earlier = TimeZuluVO::from('13:30:00');
+
+        // Act & Assert
+        $this->assertTrue($later->isAfterOrEqual($earlier));
+    }
+
+    public function test_is_after_or_equal_returns_true_when_equal(): void
+    {
+        // Arrange
+        $time1 = TimeZuluVO::from('14:30:00');
+        $time2 = TimeZuluVO::from('14:30:00');
+
+        // Act & Assert
+        $this->assertTrue($time1->isAfterOrEqual($time2));
+    }
+
+    public function test_is_after_or_equal_returns_false_when_before(): void
+    {
+        // Arrange
+        $earlier = TimeZuluVO::from('13:30:00');
+        $later = TimeZuluVO::from('14:30:00');
+
+        // Act & Assert
+        $this->assertFalse($earlier->isAfterOrEqual($later));
+    }
+
+    public function test_is_before_or_equal_returns_true_when_before(): void
+    {
+        // Arrange
+        $earlier = TimeZuluVO::from('13:30:00');
+        $later = TimeZuluVO::from('14:30:00');
+
+        // Act & Assert
+        $this->assertTrue($earlier->isBeforeOrEqual($later));
+    }
+
+    public function test_is_before_or_equal_returns_true_when_equal(): void
+    {
+        // Arrange
+        $time1 = TimeZuluVO::from('14:30:00');
+        $time2 = TimeZuluVO::from('14:30:00');
+
+        // Act & Assert
+        $this->assertTrue($time1->isBeforeOrEqual($time2));
+    }
+
+    public function test_is_before_or_equal_returns_false_when_after(): void
+    {
+        // Arrange
+        $later = TimeZuluVO::from('14:30:00');
+        $earlier = TimeZuluVO::from('13:30:00');
+
+        // Act & Assert
+        $this->assertFalse($later->isBeforeOrEqual($earlier));
+    }
+
+    public function test_is_same_hour_returns_true_when_same_hour(): void
+    {
+        // Arrange
+        $time1 = TimeZuluVO::from('14:30:00');
+        $time2 = TimeZuluVO::from('14:45:00');
+
+        // Act & Assert
+        $this->assertTrue($time1->isSameHour($time2));
+    }
+
+    public function test_is_same_hour_returns_false_when_different_hour(): void
+    {
+        // Arrange
+        $time1 = TimeZuluVO::from('14:30:00');
+        $time2 = TimeZuluVO::from('15:30:00');
+
+        // Act & Assert
+        $this->assertFalse($time1->isSameHour($time2));
+    }
+
+    public function test_is_same_hour_returns_true_for_midnight_and_end_of_day(): void
+    {
+        // Arrange
+        $time1 = TimeZuluVO::from('00:30:00');
+        $time2 = TimeZuluVO::from('00:45:00');
+
+        // Act & Assert
+        $this->assertTrue($time1->isSameHour($time2));
+    }
 }

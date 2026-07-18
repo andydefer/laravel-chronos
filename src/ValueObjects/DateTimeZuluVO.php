@@ -263,8 +263,12 @@ final class DateTimeZuluVO extends AbstractValueObject
         return $this->carbon->format($format);
     }
 
+    // ============================================================
+    // COMPARISON METHODS
+    // ============================================================
+
     /**
-     * Checks if this datetime is after another datetime.
+     * Check if this datetime is after another datetime.
      *
      * @param  self  $other  The datetime to compare against
      * @return bool True if this datetime is after the other
@@ -275,7 +279,18 @@ final class DateTimeZuluVO extends AbstractValueObject
     }
 
     /**
-     * Checks if this datetime is before another datetime.
+     * Check if this datetime is after or equal to another datetime.
+     *
+     * @param  self  $other  The datetime to compare against
+     * @return bool True if this datetime is after or equal to the other
+     */
+    public function isAfterOrEqual(self $other): bool
+    {
+        return $this->carbon->gte($other->carbon);
+    }
+
+    /**
+     * Check if this datetime is before another datetime.
      *
      * @param  self  $other  The datetime to compare against
      * @return bool True if this datetime is before the other
@@ -286,7 +301,18 @@ final class DateTimeZuluVO extends AbstractValueObject
     }
 
     /**
-     * Checks if this datetime is equal to another datetime.
+     * Check if this datetime is before or equal to another datetime.
+     *
+     * @param  self  $other  The datetime to compare against
+     * @return bool True if this datetime is before or equal to the other
+     */
+    public function isBeforeOrEqual(self $other): bool
+    {
+        return $this->carbon->lte($other->carbon);
+    }
+
+    /**
+     * Check if this datetime is equal to another datetime.
      *
      * @param  self  $other  The datetime to compare against
      * @return bool True if the datetimes are equal
@@ -297,7 +323,77 @@ final class DateTimeZuluVO extends AbstractValueObject
     }
 
     /**
-     * Checks if this datetime is in the past.
+     * Check if this datetime is between two datetimes.
+     *
+     * @param  self  $start  The start datetime
+     * @param  self  $end  The end datetime
+     * @param  bool  $includeStart  Whether to include the start datetime (default: true)
+     * @param  bool  $includeEnd  Whether to include the end datetime (default: true)
+     * @return bool True if this datetime is between the start and end
+     */
+    public function isBetween(self $start, self $end, bool $includeStart = true, bool $includeEnd = true): bool
+    {
+        // Si start > end, la plage est invalide
+        if ($start->isAfter($end)) {
+            return false;
+        }
+
+        if ($includeStart && $includeEnd) {
+            return $this->carbon->between($start->carbon, $end->carbon, true);
+        }
+
+        if ($includeStart && ! $includeEnd) {
+            return $this->carbon->between($start->carbon, $end->carbon, true) && ! $this->isEqual($end);
+        }
+
+        if (! $includeStart && $includeEnd) {
+            return $this->carbon->between($start->carbon, $end->carbon, true) && ! $this->isEqual($start);
+        }
+
+        // Neither includeStart nor includeEnd
+        return $this->carbon->between($start->carbon, $end->carbon, false);
+    }
+
+    /**
+     * Check if this datetime is on the same day as another datetime.
+     *
+     * @param  self  $other  The datetime to compare against
+     * @return bool True if both datetimes are on the same day
+     */
+    public function isSameDay(self $other): bool
+    {
+        return $this->toDateString() === $other->toDateString();
+    }
+
+    /**
+     * Check if this datetime is after another datetime (crosses midnight).
+     * Only relevant when comparing two DateTimeZuluVO instances on different days.
+     *
+     * @param  self  $other  The datetime to compare against
+     * @return bool True if this datetime is after the other (different day)
+     */
+    public function isCrossDay(self $other): bool
+    {
+        return ! $this->isSameDay($other) && $this->isAfter($other);
+    }
+
+    /**
+     * Check if this datetime is on the same hour as another datetime.
+     *
+     * @param  self  $other  The datetime to compare against
+     * @return bool True if both datetimes have the same hour
+     */
+    public function isSameHour(self $other): bool
+    {
+        return $this->getHour() === $other->getHour();
+    }
+
+    // ============================================================
+    // STATE METHODS
+    // ============================================================
+
+    /**
+     * Check if this datetime is in the past.
      *
      * @return bool True if the datetime is in the past
      */
@@ -307,7 +403,7 @@ final class DateTimeZuluVO extends AbstractValueObject
     }
 
     /**
-     * Checks if this datetime is in the future.
+     * Check if this datetime is in the future.
      *
      * @return bool True if the datetime is in the future
      */
@@ -317,7 +413,7 @@ final class DateTimeZuluVO extends AbstractValueObject
     }
 
     /**
-     * Checks if this datetime is today.
+     * Check if this datetime is today.
      *
      * @return bool True if the datetime is today
      */
@@ -327,7 +423,7 @@ final class DateTimeZuluVO extends AbstractValueObject
     }
 
     /**
-     * Checks if this datetime is tomorrow.
+     * Check if this datetime is tomorrow.
      *
      * @return bool True if the datetime is tomorrow
      */
@@ -337,7 +433,7 @@ final class DateTimeZuluVO extends AbstractValueObject
     }
 
     /**
-     * Checks if this datetime is yesterday.
+     * Check if this datetime is yesterday.
      *
      * @return bool True if the datetime is yesterday
      */
@@ -345,6 +441,10 @@ final class DateTimeZuluVO extends AbstractValueObject
     {
         return $this->carbon->isYesterday();
     }
+
+    // ============================================================
+    // ARITHMETIC METHODS
+    // ============================================================
 
     /**
      * Adds a specified number of days.
@@ -476,6 +576,10 @@ final class DateTimeZuluVO extends AbstractValueObject
         return self::fromCarbon($newCarbon);
     }
 
+    // ============================================================
+    // DIFFERENCE METHODS
+    // ============================================================
+
     /**
      * Gets the absolute difference in seconds between two datetimes.
      *
@@ -541,6 +645,10 @@ final class DateTimeZuluVO extends AbstractValueObject
     {
         return $this->carbon->diffInYears($other->carbon, true);
     }
+
+    // ============================================================
+    // GETTERS
+    // ============================================================
 
     /**
      * Gets the year component.
@@ -621,6 +729,10 @@ final class DateTimeZuluVO extends AbstractValueObject
     {
         return $this->carbon->weekOfYear;
     }
+
+    // ============================================================
+    // MODIFIERS (return new instances)
+    // ============================================================
 
     /**
      * Returns a new instance with the time set to the start of the day (00:00:00 UTC).

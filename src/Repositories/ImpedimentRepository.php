@@ -83,11 +83,17 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
         return $query->get();
     }
 
+    /**
+     * Find impediments by schedulable entity.
+     * Traverse through the availability relationship.
+     */
     public function findBySchedulable(string $schedulableType, int $schedulableId): Collection
     {
         return $this->model->newQuery()
-            ->where('schedulable_type', $schedulableType)
-            ->where('schedulable_id', $schedulableId)
+            ->whereHas('availability', function ($query) use ($schedulableType, $schedulableId) {
+                $query->where('schedulable_type', $schedulableType)
+                    ->where('schedulable_id', $schedulableId);
+            })
             ->get();
     }
 
@@ -133,7 +139,7 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
 
     public function findActive(?int $availabilityId = null): Collection
     {
-        $now = DateTimeZuluVO::now()->toDateTimeString();
+        $now = Carbon::now('UTC')->format('Y-m-d H:i:s');
 
         $query = $this->model->newQuery()
             ->where('start_datetime', '<=', $now)
@@ -158,23 +164,23 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
     public function findWithInvalidChronology(): Collection
     {
         return $this->model->newQuery()
-            ->where('start_datetime', '>=', 'end_datetime')
+            ->whereRaw('start_datetime >= end_datetime')
             ->get();
     }
 
     public function findWithExceedingDuration(int $availabilityId, int $maxDurationMinutes): Collection
     {
-        $maxTime = Carbon::createFromTime(0, $maxDurationMinutes, 0)->format('H:i:s');
+        $maxSeconds = $maxDurationMinutes * 60;
 
         return $this->model->newQuery()
             ->where('availability_id', $availabilityId)
-            ->whereRaw('TIMEDIFF(end_datetime, start_datetime) > ?', [$maxTime])
+            ->whereRaw('(strftime("%s", end_datetime) - strftime("%s", start_datetime)) > ?', [$maxSeconds])
             ->get();
     }
 
     public function findViolatingBufferTime(int $availabilityId, int $bufferMinutes): Collection
     {
-        $bufferTime = Carbon::createFromTime(0, $bufferMinutes, 0)->format('H:i:s');
+        $bufferSeconds = $bufferMinutes * 60;
 
         return $this->model->newQuery()
             ->from('impediments as i1')
@@ -182,12 +188,8 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
                 $join->on('i1.availability_id', '=', 'i2.availability_id')
                     ->where('i1.id', '<', 'i2.id');
             })
-            ->join('schedules as s', function ($join) {
-                $join->on('s.availability_id', '=', 'i1.availability_id');
-            })
             ->where('i1.availability_id', $availabilityId)
-            ->whereRaw('TIMEDIFF(i2.start_datetime, i1.end_datetime) < ?', [$bufferTime])
-            ->orWhereRaw('TIMEDIFF(s.start_datetime, i1.end_datetime) < ?', [$bufferTime])
+            ->whereRaw('(strftime("%s", i2.start_datetime) - strftime("%s", i1.end_datetime)) < ?', [$bufferSeconds])
             ->select('i1.*')
             ->get();
     }

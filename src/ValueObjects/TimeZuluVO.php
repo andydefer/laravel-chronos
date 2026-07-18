@@ -311,7 +311,7 @@ final class TimeZuluVO extends AbstractValueObject
     }
 
     /**
-     * Checks if this time is after another time.
+     * Check if this time is after another time.
      *
      * @param  self  $other  The time to compare against
      * @return bool True if this time is after the other
@@ -322,7 +322,7 @@ final class TimeZuluVO extends AbstractValueObject
     }
 
     /**
-     * Checks if this time is before another time.
+     * Check if this time is before another time.
      *
      * @param  self  $other  The time to compare against
      * @return bool True if this time is before the other
@@ -333,7 +333,7 @@ final class TimeZuluVO extends AbstractValueObject
     }
 
     /**
-     * Checks if this time is equal to another time.
+     * Check if this time is equal to another time.
      *
      * @param  self  $other  The time to compare against
      * @return bool True if the times are equal
@@ -344,7 +344,7 @@ final class TimeZuluVO extends AbstractValueObject
     }
 
     /**
-     * Checks if this time is between two times.
+     * Check if this time is between two times.
      *
      * @param  self  $start  The start time
      * @param  self  $end  The end time
@@ -387,6 +387,17 @@ final class TimeZuluVO extends AbstractValueObject
         }
 
         return $seconds > $startSeconds || $seconds < $endSeconds;
+    }
+
+    /**
+     * Check if this time is on the same hour as another time.
+     *
+     * @param  self  $other  The time to compare against
+     * @return bool True if both times have the same hour
+     */
+    public function isSameHour(self $other): bool
+    {
+        return $this->getHours() === $other->getHours();
     }
 
     /**
@@ -550,6 +561,28 @@ final class TimeZuluVO extends AbstractValueObject
     public function isEvening(): bool
     {
         return $this->getHours() >= 18;
+    }
+
+    /**
+     * Check if this time is after or equal to another time.
+     *
+     * @param  self  $other  The time to compare against
+     * @return bool True if this time is after or equal to the other
+     */
+    public function isAfterOrEqual(self $other): bool
+    {
+        return $this->getTotalSeconds() >= $other->getTotalSeconds();
+    }
+
+    /**
+     * Check if this time is before or equal to another time.
+     *
+     * @param  self  $other  The time to compare against
+     * @return bool True if this time is before or equal to the other
+     */
+    public function isBeforeOrEqual(self $other): bool
+    {
+        return $this->getTotalSeconds() <= $other->getTotalSeconds();
     }
 
     /**

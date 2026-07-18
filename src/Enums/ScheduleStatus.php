@@ -10,6 +10,7 @@ enum ScheduleStatus: string
     case BOOKED = 'booked';
     case CANCELLED = 'cancelled';
     case BLOCKED = 'blocked';
+    case COMPLETED = 'completed';
 
     public function getLabel(): string
     {
@@ -18,6 +19,8 @@ enum ScheduleStatus: string
             self::BOOKED => 'Booked',
             self::CANCELLED => 'Cancelled',
             self::BLOCKED => 'Blocked',
+            self::COMPLETED => 'Completed'
+
         };
     }
 
@@ -39,5 +42,10 @@ enum ScheduleStatus: string
     public function isBlocked(): bool
     {
         return $this === self::BLOCKED;
+    }
+
+    public function isCompleted(): bool
+    {
+        return $this === self::COMPLETED;
     }
 }

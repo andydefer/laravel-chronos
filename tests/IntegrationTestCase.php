@@ -6,12 +6,27 @@ namespace AndyDefer\LaravelChronos\Tests;
 
 use AndyDefer\LaravelChronos\Providers\LaravelChronosServiceProvider;
 use AndyDefer\Repository\RepositoryServiceProvider;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Event;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 abstract class IntegrationTestCase extends Orchestra
 {
     protected string $databasePath;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Carbon::setTestNow(Carbon::create(2024, 1, 1, 12, 0, 0));
+        $this->runMigrations();
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        \Mockery::close();
+        parent::tearDown();
+    }
 
     protected function stripAnsi(string $text): string
     {
@@ -200,18 +215,6 @@ abstract class IntegrationTestCase extends Orchestra
 
         // Enable Laravel Context for tests
         $app['config']->set('context.default', 'array');
-    }
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->runMigrations();
-    }
-
-    protected function tearDown(): void
-    {
-        parent::tearDown();
-        \Mockery::close();
     }
 
     protected function runMigrations(): void

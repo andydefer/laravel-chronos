@@ -836,4 +836,203 @@ final class DateTimeZuluVOTest extends TestCase
         // Assert
         $this->assertSame('2024-02-29T00:00:00Z', $result->getValue());
     }
+
+    // ==================== NEW COMPARISON METHODS TESTS ====================
+
+    public function test_is_after_or_equal_returns_true_when_after(): void
+    {
+        // Arrange
+        $later = DateTimeZuluVO::from('2024-01-15T14:30:00Z');
+        $earlier = DateTimeZuluVO::from('2024-01-14T14:30:00Z');
+
+        // Act & Assert
+        $this->assertTrue($later->isAfterOrEqual($earlier));
+    }
+
+    public function test_is_after_or_equal_returns_true_when_equal(): void
+    {
+        // Arrange
+        $date1 = DateTimeZuluVO::from('2024-01-15T14:30:00Z');
+        $date2 = DateTimeZuluVO::from('2024-01-15T14:30:00Z');
+
+        // Act & Assert
+        $this->assertTrue($date1->isAfterOrEqual($date2));
+    }
+
+    public function test_is_after_or_equal_returns_false_when_before(): void
+    {
+        // Arrange
+        $earlier = DateTimeZuluVO::from('2024-01-14T14:30:00Z');
+        $later = DateTimeZuluVO::from('2024-01-15T14:30:00Z');
+
+        // Act & Assert
+        $this->assertFalse($earlier->isAfterOrEqual($later));
+    }
+
+    public function test_is_before_or_equal_returns_true_when_before(): void
+    {
+        // Arrange
+        $earlier = DateTimeZuluVO::from('2024-01-14T14:30:00Z');
+        $later = DateTimeZuluVO::from('2024-01-15T14:30:00Z');
+
+        // Act & Assert
+        $this->assertTrue($earlier->isBeforeOrEqual($later));
+    }
+
+    public function test_is_before_or_equal_returns_true_when_equal(): void
+    {
+        // Arrange
+        $date1 = DateTimeZuluVO::from('2024-01-15T14:30:00Z');
+        $date2 = DateTimeZuluVO::from('2024-01-15T14:30:00Z');
+
+        // Act & Assert
+        $this->assertTrue($date1->isBeforeOrEqual($date2));
+    }
+
+    public function test_is_before_or_equal_returns_false_when_after(): void
+    {
+        // Arrange
+        $later = DateTimeZuluVO::from('2024-01-15T14:30:00Z');
+        $earlier = DateTimeZuluVO::from('2024-01-14T14:30:00Z');
+
+        // Act & Assert
+        $this->assertFalse($later->isBeforeOrEqual($earlier));
+    }
+
+    public function test_is_between_returns_true_when_between(): void
+    {
+        // Arrange
+        $start = DateTimeZuluVO::from('2024-01-15T10:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T14:00:00Z');
+        $middle = DateTimeZuluVO::from('2024-01-15T12:00:00Z');
+
+        // Act & Assert
+        $this->assertTrue($middle->isBetween($start, $end));
+    }
+
+    public function test_is_between_returns_false_when_outside(): void
+    {
+        // Arrange
+        $start = DateTimeZuluVO::from('2024-01-15T10:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T14:00:00Z');
+        $outside = DateTimeZuluVO::from('2024-01-15T16:00:00Z');
+
+        // Act & Assert
+        $this->assertFalse($outside->isBetween($start, $end));
+    }
+
+    public function test_is_between_respects_include_start_true(): void
+    {
+        // Arrange
+        $start = DateTimeZuluVO::from('2024-01-15T10:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T14:00:00Z');
+
+        // Act & Assert
+        $this->assertTrue($start->isBetween($start, $end, true, true));
+    }
+
+    public function test_is_between_respects_include_start_false(): void
+    {
+        // Arrange
+        $start = DateTimeZuluVO::from('2024-01-15T10:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T14:00:00Z');
+
+        // Act & Assert
+        $this->assertFalse($start->isBetween($start, $end, false, true));
+    }
+
+    public function test_is_between_respects_include_end_true(): void
+    {
+        // Arrange
+        $start = DateTimeZuluVO::from('2024-01-15T10:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T14:00:00Z');
+
+        // Act & Assert
+        $this->assertTrue($end->isBetween($start, $end, true, true));
+    }
+
+    public function test_is_between_respects_include_end_false(): void
+    {
+        // Arrange
+        $start = DateTimeZuluVO::from('2024-01-15T10:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T14:00:00Z');
+
+        // Act & Assert
+        $this->assertFalse($end->isBetween($start, $end, true, false));
+    }
+
+    public function test_is_between_with_both_excluded(): void
+    {
+        // Arrange
+        $start = DateTimeZuluVO::from('2024-01-15T10:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T14:00:00Z');
+        $middle = DateTimeZuluVO::from('2024-01-15T12:00:00Z');
+
+        // Act & Assert
+        $this->assertTrue($middle->isBetween($start, $end, false, false));
+    }
+
+    public function test_is_between_with_both_excluded_and_equal_to_start(): void
+    {
+        // Arrange
+        $start = DateTimeZuluVO::from('2024-01-15T10:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T14:00:00Z');
+
+        // Act & Assert
+        $this->assertFalse($start->isBetween($start, $end, false, false));
+    }
+
+    public function test_is_between_with_both_excluded_and_equal_to_end(): void
+    {
+        // Arrange
+        $start = DateTimeZuluVO::from('2024-01-15T10:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T14:00:00Z');
+
+        // Act & Assert
+        $this->assertFalse($end->isBetween($start, $end, false, false));
+    }
+
+    public function test_is_between_handles_inclusive_start_only(): void
+    {
+        // Arrange
+        $start = DateTimeZuluVO::from('2024-01-15T10:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T14:00:00Z');
+
+        // Act & Assert
+        $this->assertTrue($start->isBetween($start, $end, true, false));
+        $this->assertFalse($end->isBetween($start, $end, true, false));
+    }
+
+    public function test_is_between_handles_inclusive_end_only(): void
+    {
+        // Arrange
+        $start = DateTimeZuluVO::from('2024-01-15T10:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T14:00:00Z');
+
+        // Act & Assert
+        $this->assertFalse($start->isBetween($start, $end, false, true));
+        $this->assertTrue($end->isBetween($start, $end, false, true));
+    }
+
+    public function test_is_between_with_different_days(): void
+    {
+        // Arrange
+        $start = DateTimeZuluVO::from('2024-01-15T10:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-17T14:00:00Z');
+        $middle = DateTimeZuluVO::from('2024-01-16T12:00:00Z');
+
+        // Act & Assert
+        $this->assertTrue($middle->isBetween($start, $end));
+    }
+
+    public function test_is_between_with_start_after_end_returns_false(): void
+    {
+        // Arrange
+        $start = DateTimeZuluVO::from('2024-01-17T14:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T10:00:00Z');
+        $middle = DateTimeZuluVO::from('2024-01-16T12:00:00Z');
+
+        // Act & Assert
+        $this->assertFalse($middle->isBetween($start, $end));
+    }
 }

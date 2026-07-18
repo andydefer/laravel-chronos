@@ -11,7 +11,6 @@ use AndyDefer\LaravelChronos\Models\Availability;
 use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -156,12 +155,12 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
 
     public function findShortDurations(string $schedulableType, int $schedulableId, int $minMinutes): Collection
     {
-        $minTime = Carbon::createFromTime(0, $minMinutes, 0)->format('H:i:s');
+        $minSeconds = $minMinutes * 60;
 
         return $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
             ->where('schedulable_id', $schedulableId)
-            ->whereRaw('TIMEDIFF(daily_end, daily_start) < ?', [$minTime])
+            ->whereRaw('(strftime("%s", daily_end) - strftime("%s", daily_start)) < ?', [$minSeconds])
             ->get();
     }
 
@@ -171,8 +170,8 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
             ->where('schedulable_type', $schedulableType)
             ->where('schedulable_id', $schedulableId)
             ->where(function ($q) {
-                $q->where('daily_start', '>=', 'daily_end')
-                    ->orWhere('validity_start', '>=', 'validity_end')
+                $q->whereRaw('daily_start >= daily_end')
+                    ->orWhereRaw('validity_start >= validity_end')
                     ->orWhereNull('validity_start')
                     ->orWhereNull('validity_end');
             })

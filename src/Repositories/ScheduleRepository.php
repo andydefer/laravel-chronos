@@ -10,17 +10,28 @@ use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
 use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\ScheduleRecord;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
+/**
+ * Repository for Schedule model operations.
+ *
+ * @extends AbstractChronosRepository<Schedule, ScheduleRecord>
+ */
 final class ScheduleRepository extends AbstractChronosRepository implements ScheduleRepositoryInterface
 {
+    /**
+     * Initialize repository with Schedule model.
+     */
     public function __construct()
     {
         parent::__construct(Schedule::class, ScheduleRecord::class);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     protected function applyFilters(Builder $query, AbstractRecord $filters): void
     {
         if (! $filters instanceof ScheduleRecord) {
@@ -41,7 +52,7 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
         }
 
         if ($filters->status !== null) {
-            $query->where('status', $filters->status);
+            $query->where('status', $filters->status->value);
         }
 
         if ($filters->start_datetime !== null) {
@@ -83,7 +94,7 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
     public function findByStatus(ScheduleStatus $status, ?int $availabilityId = null): Collection
     {
         $query = $this->model->newQuery()
-            ->where('status', $status);
+            ->where('status', $status->value);
 
         if ($availabilityId !== null) {
             $query->where('availability_id', $availabilityId);
@@ -136,7 +147,7 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
     public function findByDayOfWeek(int $dayOfWeek, ?int $availabilityId = null): Collection
     {
         $query = $this->model->newQuery()
-            ->whereRaw('DAYOFWEEK(start_datetime) = ?', [$dayOfWeek + 1]);
+            ->whereRaw('strftime("%w", start_datetime) = ?', [(string) ($dayOfWeek % 7)]);
 
         if ($availabilityId !== null) {
             $query->where('availability_id', $availabilityId);
@@ -156,33 +167,67 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
     public function findWithInvalidChronology(): Collection
     {
         return $this->model->newQuery()
-            ->where('start_datetime', '>=', 'end_datetime')
+            ->whereRaw('start_datetime >= end_datetime')
             ->get();
     }
 
     public function findWithExceedingDuration(int $availabilityId, int $maxDurationMinutes): Collection
     {
-        $maxTime = Carbon::createFromTime(0, $maxDurationMinutes, 0)->format('H:i:s');
+        $maxSeconds = $maxDurationMinutes * 60;
 
         return $this->model->newQuery()
             ->where('availability_id', $availabilityId)
-            ->whereRaw('TIMEDIFF(end_datetime, start_datetime) > ?', [$maxTime])
+            ->whereRaw('(strftime("%s", end_datetime) - strftime("%s", start_datetime)) > ?', [$maxSeconds])
             ->get();
     }
 
+    /**
+     * Find schedules that violate buffer time between consecutive schedules.
+     *
+     * A violation occurs when the time between the end of one schedule and the
+     * start of the next schedule is less than the configured buffer time.
+     *
+     * @param  int  $availabilityId  The availability ID to check
+     * @param  int  $bufferMinutes  Minimum allowed buffer time in minutes
+     * @return Collection<int, Schedule> Schedules that violate the buffer time
+     */
     public function findViolatingBufferTime(int $availabilityId, int $bufferMinutes): Collection
     {
-        $bufferTime = Carbon::createFromTime(0, $bufferMinutes, 0)->format('H:i:s');
+        $bufferSeconds = $bufferMinutes * 60;
 
-        return $this->model->newQuery()
-            ->from('schedules as s1')
+        $results = DB::table('schedules as s1')
             ->join('schedules as s2', function ($join) {
                 $join->on('s1.availability_id', '=', 's2.availability_id')
-                    ->where('s1.id', '<', 's2.id');
+                    ->whereColumn('s1.id', '!=', 's2.id')
+                    ->whereColumn('s1.start_datetime', '<', 's2.start_datetime')
+                    ->whereNotExists(function ($query) {
+                        $query->select(DB::raw(1))
+                            ->from('schedules as s3')
+                            ->whereColumn('s3.availability_id', 's1.availability_id')
+                            ->whereColumn('s3.id', '!=', 's1.id')
+                            ->whereColumn('s3.id', '!=', 's2.id')
+                            ->whereColumn('s3.start_datetime', '>', 's1.start_datetime')
+                            ->whereColumn('s3.start_datetime', '<', 's2.start_datetime')
+                            ->whereNull('s3.deleted_at');
+                    });
             })
             ->where('s1.availability_id', $availabilityId)
-            ->whereRaw('TIMEDIFF(s2.start_datetime, s1.end_datetime) < ?', [$bufferTime])
+            ->whereNull('s1.deleted_at')
+            ->whereNull('s2.deleted_at')
+            ->whereRaw(
+                '(strftime("%s", s2.start_datetime) - strftime("%s", s1.end_datetime)) < ?',
+                [$bufferSeconds]
+            )
             ->select('s1.*')
+            ->distinct()
+            ->get();
+
+        if ($results->isEmpty()) {
+            return new Collection;
+        }
+
+        return $this->model->newQuery()
+            ->whereIn('id', $results->pluck('id')->all())
             ->get();
     }
 
