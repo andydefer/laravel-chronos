@@ -17,9 +17,9 @@ use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
  * Validates the integrity of date and time ranges for an availability.
  *
  * Ensures that:
- * - Daily start time is before daily end time
+ * - Daily start time is before daily end time (except for cross-day)
  * - Validity start date is before validity end date
- * - Both validity start and end dates are provided
+ * - Both validity start and end dates are provided (required for CREATE only)
  */
 final class AvailabilityValidDateRangeRule implements ValidationRule
 {
@@ -57,16 +57,17 @@ final class AvailabilityValidDateRangeRule implements ValidationRule
             return null;
         }
 
-        // Validate daily time ranges
+        // Validate daily time ranges (allow cross-day)
         $dailyError = $this->validateDailyTimes($record->daily_start, $record->daily_end);
         if ($dailyError !== null) {
             return $dailyError;
         }
 
-        // Validate validity date ranges
+        // Validate validity date ranges (required only for CREATE)
         $validityError = $this->validateValidityDates(
             $record->validity_start,
-            $record->validity_end
+            $record->validity_end,
+            $context->isCreate()
         );
         if ($validityError !== null) {
             return $validityError;
@@ -77,6 +78,7 @@ final class AvailabilityValidDateRangeRule implements ValidationRule
 
     /**
      * Validate daily start and end times.
+     * Allows cross-day (daily_start > daily_end) as valid.
      *
      * @param  TimeZuluVO|null  $dailyStart  The daily start time
      * @param  TimeZuluVO|null  $dailyEnd  The daily end time
@@ -90,23 +92,66 @@ final class AvailabilityValidDateRangeRule implements ValidationRule
             return null;
         }
 
-        if ($this->isStartAfterEnd($dailyStart, $dailyEnd)) {
-            return $this->createDailyTimeError($dailyStart, $dailyEnd);
+        // Cross-day est autorisé (daily_start > daily_end)
+        // Seulement vérifier si ce n'est PAS une cross-day
+        if (! $dailyStart->isAfter($dailyEnd)) {
+            // Vérification normale (non cross-day): start < end
+            if (! $dailyStart->isBefore($dailyEnd)) {
+                return $this->createDailyTimeError($dailyStart, $dailyEnd);
+            }
+        }
+        // Si cross-day (dailyStart > dailyEnd), on ignore la vérification
+
+        return null;
+    }
+
+    /**
+     * Validate validity start and end dates.
+     *
+     * @param  DateTimeZuluVO|null  $validityStart  The validity start date
+     * @param  DateTimeZuluVO|null  $validityEnd  The validity end date
+     * @param  bool  $isCreate  True if this is a CREATE operation
+     * @return ValidationErrorRecord|null Error if validation fails, null otherwise
+     */
+    private function validateValidityDates(
+        ?DateTimeZuluVO $validityStart,
+        ?DateTimeZuluVO $validityEnd,
+        bool $isCreate
+    ): ?ValidationErrorRecord {
+        // Pour CREATE : les dates sont obligatoires
+        if ($isCreate) {
+            if ($validityStart === null) {
+                return $this->createMissingValidityDateError('start');
+            }
+
+            if ($validityEnd === null) {
+                return $this->createMissingValidityDateError('end');
+            }
+        }
+
+        // Pour UPDATE : les dates sont optionnelles
+        // Si elles sont fournies, on les valide
+        if ($validityStart !== null && $validityEnd !== null) {
+            if ($this->isValidityStartAfterEnd($validityStart, $validityEnd)) {
+                return $this->createValidityDateRangeError($validityStart, $validityEnd);
+            }
         }
 
         return null;
     }
 
     /**
-     * Check if start time is after or equal to end time.
+     * Check if validity start is after or equal to validity end.
      *
-     * @param  TimeZuluVO  $start  The start time
-     * @param  TimeZuluVO  $end  The end time
+     * @param  DateTimeZuluVO  $start  The start date
+     * @param  DateTimeZuluVO  $end  The end date
      * @return bool True if start is after or equal to end
      */
-    private function isStartAfterEnd(TimeZuluVO $start, TimeZuluVO $end): bool
-    {
-        return ! $start->isBefore($end) && ! $start->isEqual($end);
+    private function isValidityStartAfterEnd(
+        DateTimeZuluVO $start,
+        DateTimeZuluVO $end
+    ): bool {
+        return ! $start->isBefore($end);
     }
 
     /**
@@ -128,48 +173,6 @@ final class AvailabilityValidDateRangeRule implements ValidationRule
                 'daily_end' => $dailyEnd->toTimeString(),
             ])
         );
-    }
-
-    /**
-     * Validate validity start and end dates.
-     *
-     * @param  DateTimeZuluVO|null  $validityStart  The validity start date
-     * @param  DateTimeZuluVO|null  $validityEnd  The validity end date
-     * @return ValidationErrorRecord|null Error if validation fails, null otherwise
-     */
-    private function validateValidityDates(
-        ?DateTimeZuluVO $validityStart,
-        ?DateTimeZuluVO $validityEnd
-    ): ?ValidationErrorRecord {
-        // Check if both dates are provided
-        if ($validityStart === null) {
-            return $this->createMissingValidityDateError('start');
-        }
-
-        if ($validityEnd === null) {
-            return $this->createMissingValidityDateError('end');
-        }
-
-        // Check if start is before end
-        if ($this->isValidityStartAfterEnd($validityStart, $validityEnd)) {
-            return $this->createValidityDateRangeError($validityStart, $validityEnd);
-        }
-
-        return null;
-    }
-
-    /**
-     * Check if validity start is after or equal to validity end.
-     *
-     * @param  DateTimeZuluVO  $start  The start date
-     * @param  DateTimeZuluVO  $end  The end date
-     * @return bool True if start is after or equal to end
-     */
-    private function isValidityStartAfterEnd(
-        DateTimeZuluVO $start,
-        DateTimeZuluVO $end
-    ): bool {
-        return ! $start->isBefore($end);
     }
 
     /**
