@@ -30,8 +30,13 @@ final class AvailabilityMinimumDurationRuleTest extends IntegrationTestCase
     {
         parent::setUp();
 
-        // Set configuration via Laravel config repository
-        config()->set('chronos.min_duration', 15);
+        // Set configuration with entity-specific durations
+        config()->set('chronos.min_durations', [
+            'availability' => 15,
+            'schedule' => 15,
+            'impediment' => 15,
+            'slot_search' => 5,
+        ]);
         config()->set('chronos.max_duration', 240);
         config()->set('chronos.buffer_time', 0);
 
@@ -147,8 +152,8 @@ final class AvailabilityMinimumDurationRuleTest extends IntegrationTestCase
 
     public function test_respects_configuration_changes(): void
     {
-        // Change min duration to 60 minutes
-        config()->set('chronos.min_duration', 60);
+        // Change min duration for availability to 60 minutes
+        config()->set('chronos.min_durations.availability', 60);
 
         $helper = new ValidationHelperService;
         $config = new ChronosConfig(app(ConfigRepository::class));
@@ -169,6 +174,44 @@ final class AvailabilityMinimumDurationRuleTest extends IntegrationTestCase
         $this->assertStringContainsString('Availability duration must be at least 60 minutes', $result->message);
 
         // Restore configuration for other tests
-        config()->set('chronos.min_duration', 15);
+        config()->set('chronos.min_durations.availability', 15);
+    }
+
+    public function test_uses_availability_specific_duration(): void
+    {
+        // Set different durations for different entities
+        config()->set('chronos.min_durations', [
+            'availability' => 30,
+            'schedule' => 15,
+            'impediment' => 10,
+            'slot_search' => 5,
+        ]);
+
+        $helper = new ValidationHelperService;
+        $config = new ChronosConfig(app(ConfigRepository::class));
+        $rule = new AvailabilityMinimumDurationRule($helper, $config);
+
+        // Availability duration = 20 minutes should fail (min 30 for availability)
+        $record = new AvailabilityRecord(
+            days: WeekDayCollection::fromStrings(['monday']),
+            daily_start: TimeZuluVO::from('09:00:00'),
+            daily_end: TimeZuluVO::from('09:20:00'),
+            schedulable_type: TestCar::class,
+            schedulable_id: 1,
+        );
+        $context = new ValidationContext($record, OperationType::CREATE);
+
+        $result = $rule->validate($context);
+
+        $this->assertInstanceOf(ValidationErrorRecord::class, $result);
+        $this->assertStringContainsString('Availability duration must be at least 30 minutes', $result->message);
+
+        // Restore configuration
+        config()->set('chronos.min_durations', [
+            'availability' => 15,
+            'schedule' => 15,
+            'impediment' => 15,
+            'slot_search' => 5,
+        ]);
     }
 }

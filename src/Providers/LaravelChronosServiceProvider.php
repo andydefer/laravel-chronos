@@ -40,6 +40,7 @@ use AndyDefer\LaravelChronos\Validation\Rules\Shared\AvailabilityOwnershipValida
 use AndyDefer\LaravelChronos\Validation\Rules\Shared\BufferTimeRule;
 use AndyDefer\LaravelChronos\Validation\Rules\Shared\EntityOwnershipConsistencyRule;
 use AndyDefer\LaravelChronos\Validation\Rules\Shared\MaxDurationRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Shared\MinSlotSearchDurationRule;
 use AndyDefer\LaravelChronos\Validation\Rules\Shared\NoTemporalConflictRule;
 use AndyDefer\LaravelChronos\Validation\Rules\Shared\TimeSlotChronologyRule;
 use AndyDefer\LaravelChronos\Validation\Rules\Shared\TimeSlotWithinAvailabilityRule;
@@ -139,7 +140,8 @@ final class LaravelChronosServiceProvider extends ServiceProvider
                 return new SlotService(
                     $app->make(AvailabilityServiceInterface::class),
                     $app->make(ScheduleServiceInterface::class),
-                    $app->make(ImpedimentServiceInterface::class)
+                    $app->make(ImpedimentServiceInterface::class),
+                    $app->make(ChronosConfigInterface::class)
                 );
             }
         );
@@ -194,8 +196,8 @@ final class LaravelChronosServiceProvider extends ServiceProvider
                     new SchedulableExistsRule,
                 ]);
 
-                // Register Schedule & Impediment rules (shared)
-                $sharedRules = [
+                // Register Schedule rules
+                $validator->addRules(EntityType::SCHEDULE, [
                     new EntityOwnershipConsistencyRule,
                     new AvailabilityOwnershipValidationRule,
                     new TimeSlotWithinAvailabilityRule($helper),
@@ -203,10 +205,20 @@ final class LaravelChronosServiceProvider extends ServiceProvider
                     new TimeSlotChronologyRule,
                     new BufferTimeRule($helper, $config),
                     new MaxDurationRule($helper, $config),
-                ];
+                    new MinSlotSearchDurationRule($config),
+                ]);
 
-                $validator->addRules(EntityType::SCHEDULE, $sharedRules);
-                $validator->addRules(EntityType::IMPEDIMENT, $sharedRules);
+                // Register Impediment rules
+                $validator->addRules(EntityType::IMPEDIMENT, [
+                    new EntityOwnershipConsistencyRule,
+                    new AvailabilityOwnershipValidationRule,
+                    new TimeSlotWithinAvailabilityRule($helper),
+                    new NoTemporalConflictRule,
+                    new TimeSlotChronologyRule,
+                    new BufferTimeRule($helper, $config),
+                    new MaxDurationRule($helper, $config),
+                    new MinSlotSearchDurationRule($config),
+                ]);
 
                 return $validator;
             }

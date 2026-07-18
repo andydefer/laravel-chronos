@@ -6,6 +6,7 @@ namespace AndyDefer\LaravelChronos\Services;
 
 use AndyDefer\LaravelChronos\Collections\SlotVOCollection;
 use AndyDefer\LaravelChronos\Collections\WeekDayCollection;
+use AndyDefer\LaravelChronos\Contracts\Configs\ChronosConfigInterface;
 use AndyDefer\LaravelChronos\Contracts\Services\AvailabilityServiceInterface;
 use AndyDefer\LaravelChronos\Contracts\Services\ImpedimentServiceInterface;
 use AndyDefer\LaravelChronos\Contracts\Services\ScheduleServiceInterface;
@@ -16,6 +17,7 @@ use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use AndyDefer\LaravelChronos\ValueObjects\SlotVO;
 use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
 use Illuminate\Support\Collection;
+use InvalidArgumentException;
 
 /**
  * Service for finding and generating available time slots.
@@ -26,7 +28,7 @@ use Illuminate\Support\Collection;
  * and handles time zone conversions.
  *
  * @example
- * $service = new SlotService($availabilityService, $scheduleService, $impedimentService);
+ * $service = new SlotService($availabilityService, $scheduleService, $impedimentService, $config);
  * $slots = $service->findSlotsForDay('user', 1, today(), 30);
  *
  * @see SlotServiceInterface
@@ -39,11 +41,13 @@ final class SlotService implements SlotServiceInterface
      * @param  AvailabilityServiceInterface  $availabilityService  Service for availability data
      * @param  ScheduleServiceInterface  $scheduleService  Service for schedule data
      * @param  ImpedimentServiceInterface  $impedimentService  Service for impediment data
+     * @param  ChronosConfigInterface  $config  Configuration for validation
      */
     public function __construct(
         private readonly AvailabilityServiceInterface $availabilityService,
         private readonly ScheduleServiceInterface $scheduleService,
         private readonly ImpedimentServiceInterface $impedimentService,
+        private readonly ChronosConfigInterface $config,
     ) {}
 
     /**
@@ -56,6 +60,8 @@ final class SlotService implements SlotServiceInterface
         int $durationInMinutes,
         ?int $availabilityId = null
     ): ?SlotVO {
+        $this->validateDuration($durationInMinutes);
+
         return ServiceContext::within(
             SlotService::class,
             function () use ($schedulableType, $schedulableId, $after, $durationInMinutes, $availabilityId): ?SlotVO {
@@ -93,6 +99,8 @@ final class SlotService implements SlotServiceInterface
         int $durationInMinutes,
         ?int $availabilityId = null
     ): ?SlotVO {
+        $this->validateDuration($durationInMinutes);
+
         return ServiceContext::within(
             SlotService::class,
             function () use ($schedulableType, $schedulableId, $before, $durationInMinutes, $availabilityId): ?SlotVO {
@@ -131,6 +139,8 @@ final class SlotService implements SlotServiceInterface
         int $durationInMinutes,
         ?int $availabilityId = null
     ): SlotVOCollection {
+        $this->validateDuration($durationInMinutes);
+
         return ServiceContext::within(
             SlotService::class,
             function () use ($schedulableType, $schedulableId, $start, $end, $durationInMinutes, $availabilityId): SlotVOCollection {
@@ -190,6 +200,8 @@ final class SlotService implements SlotServiceInterface
         int $durationInMinutes,
         ?int $availabilityId = null
     ): SlotVOCollection {
+        $this->validateDuration($durationInMinutes);
+
         return ServiceContext::within(
             SlotService::class,
             function () use ($schedulableType, $schedulableId, $date, $durationInMinutes, $availabilityId): SlotVOCollection {
@@ -226,11 +238,12 @@ final class SlotService implements SlotServiceInterface
         DateTimeZuluVO $end,
         ?int $availabilityId = null
     ): bool {
+        $durationInMinutes = (int) $start->diffInMinutes($end);
+        $this->validateDuration($durationInMinutes);
+
         return ServiceContext::within(
             SlotService::class,
-            function () use ($schedulableType, $schedulableId, $start, $end, $availabilityId): bool {
-                $durationInMinutes = (int) $start->diffInMinutes($end);
-
+            function () use ($schedulableType, $schedulableId, $start, $end, $durationInMinutes, $availabilityId): bool {
                 $slots = $this->findSlotsInRange(
                     $schedulableType,
                     $schedulableId,
@@ -240,7 +253,6 @@ final class SlotService implements SlotServiceInterface
                     $availabilityId
                 );
 
-                // Use filter to find matching slots
                 $matchingSlots = $slots->filter(
                     fn (SlotVO $slot): bool => $slot->getStart()->isEqual($start) &&
                         $slot->getEnd()->isEqual($end)
@@ -269,6 +281,8 @@ final class SlotService implements SlotServiceInterface
         int $durationInMinutes,
         ?int $availabilityId = null
     ): ?DateTimeZuluVO {
+        $this->validateDuration($durationInMinutes);
+
         return ServiceContext::within(
             SlotService::class,
             function () use ($schedulableType, $schedulableId, $after, $durationInMinutes, $availabilityId): ?DateTimeZuluVO {
@@ -376,6 +390,8 @@ final class SlotService implements SlotServiceInterface
      */
     public function generateSlotsFromSlot(SlotVO $slot, int $chunkDuration): SlotVOCollection
     {
+        $this->validateDuration($chunkDuration);
+
         return ServiceContext::within(
             SlotService::class,
             function () use ($slot, $chunkDuration): SlotVOCollection {
@@ -395,6 +411,28 @@ final class SlotService implements SlotServiceInterface
                 'chunk_duration' => $chunkDuration,
             ]
         );
+    }
+
+    /**
+     * Validates that the duration meets the minimum required duration.
+     *
+     * @param  int  $durationInMinutes  The duration to validate
+     *
+     * @throws InvalidArgumentException When the duration is too short
+     */
+    private function validateDuration(int $durationInMinutes): void
+    {
+        $minDuration = $this->config->getMinSlotSearchDuration();
+
+        if ($durationInMinutes < $minDuration) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    'Duration (%d minutes) is too short. Minimum allowed duration for slot search is %d minutes.',
+                    $durationInMinutes,
+                    $minDuration
+                )
+            );
+        }
     }
 
     /**

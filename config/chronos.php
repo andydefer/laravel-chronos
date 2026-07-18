@@ -5,16 +5,28 @@ declare(strict_types=1);
 return [
     /*
     |--------------------------------------------------------------------------
-    | Minimum Duration
+    | Minimum Durations
     |--------------------------------------------------------------------------
     |
-    | The minimum duration (in minutes) for an availability or schedule slot.
-    | Any slot shorter than this will be rejected.
+    | The minimum duration (in minutes) for each entity type.
+    | This prevents generating slots that are too short and could slow down
+    | the system or cause performance issues.
     |
-    | Default: 15 minutes
+    | Values:
+    | - availability: Minimum duration for availability creation
+    | - schedule: Minimum duration for schedule slots
+    | - impediment: Minimum duration for impediment slots
+    | - slot_search: Minimum duration allowed when searching for slots
+    |
+    | Default: 15 minutes for all types
     |
     */
-    'min_duration' => env('CHRONOS_MIN_DURATION', 15),
+    'min_durations' => [
+        'availability' => env('CHRONOS_MIN_DURATION_AVAILABILITY', 15),
+        'schedule' => env('CHRONOS_MIN_DURATION_SCHEDULE', 15),
+        'impediment' => env('CHRONOS_MIN_DURATION_IMPEDIMENT', 15),
+        'slot_search' => env('CHRONOS_MIN_DURATION_SLOT_SEARCH', 5),
+    ],
 
     /*
     |--------------------------------------------------------------------------

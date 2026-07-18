@@ -18,8 +18,7 @@ use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
  * Validates that the availability duration meets the minimum required duration.
  *
  * Ensures that the time between daily_start and daily_end is at least
- * the configured minimum duration. This prevents creating availabilities
- * that are too short to be useful for scheduling.
+ * the configured minimum duration for availability.
  *
  * @example
  * $rule = new AvailabilityMinimumDurationRule($helper, $config);
@@ -82,7 +81,7 @@ final class AvailabilityMinimumDurationRule implements ValidationRule
             return null;
         }
 
-        $minDuration = $this->config->getMinDuration();
+        $minDuration = $this->config->getMinDuration(EntityType::AVAILABILITY);
         $actualDuration = $this->helper->getTimeDurationInMinutes($dailyStart, $dailyEnd);
 
         if ($actualDuration < $minDuration) {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\LaravelChronos\Configs;
 
 use AndyDefer\LaravelChronos\Contracts\Configs\ChronosConfigInterface;
+use AndyDefer\LaravelChronos\Enums\EntityType;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 
 /**
@@ -19,6 +20,8 @@ final class ChronosConfig implements ChronosConfigInterface
 
     private const DEFAULT_MIN_DURATION = 15;
 
+    private const DEFAULT_MIN_SLOT_SEARCH = 5;
+
     private const DEFAULT_MAX_DURATION = 240;
 
     private const DEFAULT_BUFFER_TIME = 0;
@@ -30,11 +33,28 @@ final class ChronosConfig implements ChronosConfigInterface
     /**
      * {@inheritDoc}
      */
-    public function getMinDuration(): int
+    public function getMinDuration(EntityType $entityType): int
+    {
+        $key = match ($entityType) {
+            EntityType::AVAILABILITY => 'availability',
+            EntityType::SCHEDULE => 'schedule',
+            EntityType::IMPEDIMENT => 'impediment',
+        };
+
+        return (int) $this->config->get(
+            self::CONFIG_KEY.'.min_durations.'.$key,
+            self::DEFAULT_MIN_DURATION
+        );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getMinSlotSearchDuration(): int
     {
         return (int) $this->config->get(
-            self::CONFIG_KEY.'.min_duration',
-            self::DEFAULT_MIN_DURATION
+            self::CONFIG_KEY.'.min_durations.slot_search',
+            self::DEFAULT_MIN_SLOT_SEARCH
         );
     }
 

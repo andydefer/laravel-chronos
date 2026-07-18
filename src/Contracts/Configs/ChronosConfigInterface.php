@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AndyDefer\LaravelChronos\Contracts\Configs;
 
+use AndyDefer\LaravelChronos\Enums\EntityType;
+
 /**
  * Interface for Laravel Chronos configuration.
  *
@@ -13,11 +15,22 @@ namespace AndyDefer\LaravelChronos\Contracts\Configs;
 interface ChronosConfigInterface
 {
     /**
-     * Gets the minimum duration for a slot in minutes.
+     * Gets the minimum duration for a specific entity type in minutes.
      *
+     * @param  EntityType  $entityType  The entity type (AVAILABILITY, SCHEDULE, IMPEDIMENT)
      * @return int The minimum duration in minutes
      */
-    public function getMinDuration(): int;
+    public function getMinDuration(EntityType $entityType): int;
+
+    /**
+     * Gets the minimum duration for slot search in minutes.
+     *
+     * This prevents users from searching for slots that are too short,
+     * which could generate excessive results and slow down the system.
+     *
+     * @return int The minimum slot search duration in minutes
+     */
+    public function getMinSlotSearchDuration(): int;
 
     /**
      * Gets the maximum duration for a slot in minutes.
