@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace AndyDefer\LaravelChronos\Repositories;
 
 use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
+use AndyDefer\LaravelChronos\Contracts\Repositories\AvailabilityRepositoryInterface;
+use AndyDefer\LaravelChronos\Enums\WeekDay;
 use AndyDefer\LaravelChronos\Models\Availability;
 use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
-use AndyDefer\LaravelChronos\Records\Filters\AvailabilityFiltersRecord;
-use AndyDefer\Repository\AbstractRepository;
+use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
-final class AvailabilityRepository extends AbstractRepository
+final class AvailabilityRepository extends AbstractChronosRepository implements AvailabilityRepositoryInterface
 {
     public function __construct()
     {
@@ -20,7 +24,7 @@ final class AvailabilityRepository extends AbstractRepository
 
     protected function applyFilters(Builder $query, AbstractRecord $filters): void
     {
-        if (! $filters instanceof AvailabilityFiltersRecord) {
+        if (! $filters instanceof AvailabilityRecord) {
             return;
         }
 
@@ -37,20 +41,176 @@ final class AvailabilityRepository extends AbstractRepository
                 ->where('schedulable_id', $filters->schedulable_id);
         }
 
-        if ($filters->days !== null) {
-            $query->whereJsonContains('days', $filters->days->toStrings());
-        }
-
         if ($filters->validity_start !== null) {
-            $query->where('validity_start', '>=', $filters->validity_start->toDateTimeString());
+            $query->where('validity_start', '>=', $filters->validity_start);
         }
 
         if ($filters->validity_end !== null) {
-            $query->where('validity_end', '<=', $filters->validity_end->toDateTimeString());
+            $query->where('validity_end', '<=', $filters->validity_end);
         }
 
-        if ($filters->withTrashed === true) {
-            $query->withTrashed();
+        if ($filters->days !== null && ! $filters->days->isEmpty()) {
+            $query->whereJsonContains('days', $filters->days->toStrings());
         }
+    }
+
+    public function findBySchedulable(string $schedulableType, int $schedulableId): Collection
+    {
+        return $this->model->newQuery()
+            ->where('schedulable_type', $schedulableType)
+            ->where('schedulable_id', $schedulableId)
+            ->get();
+    }
+
+    public function findByDay(string $schedulableType, int $schedulableId, WeekDay $day): Collection
+    {
+        return $this->model->newQuery()
+            ->where('schedulable_type', $schedulableType)
+            ->where('schedulable_id', $schedulableId)
+            ->whereJsonContains('days', $day->value)
+            ->get();
+    }
+
+    public function findOverlapping(
+        string $schedulableType,
+        int $schedulableId,
+        WeekDay $day,
+        TimeZuluVO $startTime,
+        TimeZuluVO $endTime,
+        DateTimeZuluVO $validityStart,
+        DateTimeZuluVO $validityEnd,
+        ?int $excludeId = null,
+    ): Collection {
+        $query = $this->model->newQuery()
+            ->where('schedulable_type', $schedulableType)
+            ->where('schedulable_id', $schedulableId)
+            ->whereJsonContains('days', $day->value)
+            ->where(function ($q) use ($startTime, $endTime) {
+                $q->where(function ($sub) use ($startTime, $endTime) {
+                    $sub->where('daily_start', '<', $endTime->toTimeString())
+                        ->where('daily_end', '>', $startTime->toTimeString());
+                });
+            })
+            ->where(function ($q) use ($validityStart, $validityEnd) {
+                $q->where(function ($sub) use ($validityStart, $validityEnd) {
+                    $sub->where('validity_start', '<=', $validityEnd->toDateTimeString())
+                        ->where('validity_end', '>=', $validityStart->toDateTimeString());
+                });
+            });
+
+        if ($excludeId !== null) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        return $query->get();
+    }
+
+    public function findActiveAtDate(string $schedulableType, int $schedulableId, DateTimeZuluVO $date): Collection
+    {
+        return $this->model->newQuery()
+            ->where('schedulable_type', $schedulableType)
+            ->where('schedulable_id', $schedulableId)
+            ->where(function ($q) use ($date) {
+                $q->where('validity_start', '<=', $date->toDateTimeString())
+                    ->orWhereNull('validity_start');
+            })
+            ->where(function ($q) use ($date) {
+                $q->where('validity_end', '>=', $date->toDateTimeString())
+                    ->orWhereNull('validity_end');
+            })
+            ->get();
+    }
+
+    public function findActiveInDateRange(
+        string $schedulableType,
+        int $schedulableId,
+        DateTimeZuluVO $start,
+        DateTimeZuluVO $end,
+        ?int $excludeId = null,
+    ): Collection {
+        $query = $this->model->newQuery()
+            ->where('schedulable_type', $schedulableType)
+            ->where('schedulable_id', $schedulableId)
+            ->where(function ($q) use ($start, $end) {
+                $q->where(function ($sub) use ($start, $end) {
+                    $sub->where('validity_start', '<=', $end->toDateTimeString())
+                        ->where('validity_end', '>=', $start->toDateTimeString());
+                });
+            });
+
+        if ($excludeId !== null) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        return $query->get();
+    }
+
+    public function findCrossDayAvailabilities(string $schedulableType, int $schedulableId): Collection
+    {
+        return $this->model->newQuery()
+            ->where('schedulable_type', $schedulableType)
+            ->where('schedulable_id', $schedulableId)
+            ->whereRaw('daily_start > daily_end')
+            ->get();
+    }
+
+    public function findShortDurations(string $schedulableType, int $schedulableId, int $minMinutes): Collection
+    {
+        $minTime = Carbon::createFromTime(0, $minMinutes, 0)->format('H:i:s');
+
+        return $this->model->newQuery()
+            ->where('schedulable_type', $schedulableType)
+            ->where('schedulable_id', $schedulableId)
+            ->whereRaw('TIMEDIFF(daily_end, daily_start) < ?', [$minTime])
+            ->get();
+    }
+
+    public function findInvalidDateRanges(string $schedulableType, int $schedulableId): Collection
+    {
+        return $this->model->newQuery()
+            ->where('schedulable_type', $schedulableType)
+            ->where('schedulable_id', $schedulableId)
+            ->where(function ($q) {
+                $q->where('daily_start', '>=', 'daily_end')
+                    ->orWhere('validity_start', '>=', 'validity_end')
+                    ->orWhereNull('validity_start')
+                    ->orWhereNull('validity_end');
+            })
+            ->get();
+    }
+
+    public function findWithFutureSchedules(int $availabilityId, DateTimeZuluVO $now): bool
+    {
+        return $this->model->newQuery()
+            ->where('id', $availabilityId)
+            ->whereHas('schedules', function ($q) use ($now) {
+                $q->where('start_datetime', '>', $now->toDateTimeString());
+            })
+            ->exists();
+    }
+
+    public function findByType(string $type): Collection
+    {
+        return $this->model->newQuery()
+            ->where('type', $type)
+            ->get();
+    }
+
+    public function schedulableExists(string $schedulableType, int $schedulableId): bool
+    {
+        if (! class_exists($schedulableType)) {
+            return false;
+        }
+
+        return $schedulableType::where('id', $schedulableId)->exists();
+    }
+
+    public function getSchedulableModel(string $schedulableType): ?string
+    {
+        if (! class_exists($schedulableType)) {
+            return null;
+        }
+
+        return $schedulableType;
     }
 }

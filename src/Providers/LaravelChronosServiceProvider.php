@@ -6,9 +6,14 @@ namespace AndyDefer\LaravelChronos\Providers;
 
 use AndyDefer\LaravelChronos\Configs\ChronosConfig;
 use AndyDefer\LaravelChronos\Contracts\Configs\ChronosConfigInterface;
+use AndyDefer\LaravelChronos\Models\Availability;
+use AndyDefer\LaravelChronos\Models\Impediment;
+use AndyDefer\LaravelChronos\Models\Schedule;
+use AndyDefer\LaravelChronos\Observers\EnforceDomainMutationObserver;
 use AndyDefer\LaravelChronos\Repositories\AvailabilityRepository;
 use AndyDefer\LaravelChronos\Repositories\ImpedimentRepository;
 use AndyDefer\LaravelChronos\Repositories\ScheduleRepository;
+use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
 use AndyDefer\LaravelChronos\Validation\Validator;
 use Illuminate\Support\ServiceProvider;
 
@@ -47,11 +52,20 @@ final class LaravelChronosServiceProvider extends ServiceProvider
         $this->app->singleton(Validator::class, function ($app) {
             return new Validator;
         });
+
+        // Mutation Context
+        $this->app->singleton(
+            ChronosMutationContext::class,
+            fn ($app) => new ChronosMutationContext
+        );
     }
 
     public function boot(): void
     {
         $this->loadMigrationsFrom(__DIR__.'/../../database/Migrations');
+
+        // Register model observers to enforce domain mutation rules
+        $this->registerModelObservers();
 
         if ($this->app->runningInConsole()) {
             $this->publishes([
@@ -67,5 +81,16 @@ final class LaravelChronosServiceProvider extends ServiceProvider
                 __DIR__.'/../../database/Migrations' => database_path('migrations'),
             ], 'chronos-all');
         }
+    }
+
+    /**
+     * Register observers for domain models to enforce business rules.
+     * Ensures data integrity and domain constraints during model operations.
+     */
+    protected function registerModelObservers(): void
+    {
+        Availability::observe(EnforceDomainMutationObserver::class);
+        Schedule::observe(EnforceDomainMutationObserver::class);
+        Impediment::observe(EnforceDomainMutationObserver::class);
     }
 }
