@@ -5,7 +5,7 @@ node_modules/
 npm-debug.log
 yarn-error.log
 /bin/
-
+/prompts/
 # Laravel 4 specific
 bootstrap/compiled.php
 app/storage/
