@@ -11,93 +11,118 @@ use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\ImpedimentRecord;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use Illuminate\Support\Collection;
+use Throwable;
 
 /**
  * Interface for Impediment service operations.
  *
- * Provides high-level business operations for managing impediments,
- * including creation, updates, deletion with validation and business rules.
+ * Defines the contract for high-level business operations to manage impediment
+ * records, which represent blocks or restrictions on availability. Impediments
+ * can affect schedules by partially or fully blocking them, and are associated
+ * with availability records.
+ *
+ * @example
+ * // Create an impediment
+ * $service->create(new ImpedimentRecord([
+ *     'availability_id' => 1,
+ *     'reason' => 'Team meeting',
+ *     'start_time' => new DateTimeZuluVO('2024-01-01 10:00:00'),
+ *     'end_time' => new DateTimeZuluVO('2024-01-01 11:00:00'),
+ * ]));
+ *
+ * // Find all active impediments
+ * $activeImpediments = $service->findActive();
  */
 interface ImpedimentServiceInterface
 {
     /**
-     * Create a new impediment.
+     * Creates a new impediment record.
      *
-     * @param  ImpedimentRecord  $record  The impediment data
-     * @return Impediment The created impediment
+     * Validates the record against business rules before creation. If validation
+     * passes, the record is persisted and the created model is returned.
      *
-     * @throws ValidationException If validation fails
-     * @throws \Throwable If creation fails
+     * @param  ImpedimentRecord  $record  The impediment data to create
+     * @return Impediment The newly created impediment model
+     *
+     * @throws ValidationException When the record fails business rule validation
+     * @throws Throwable When an unexpected error occurs during creation
      */
     public function create(ImpedimentRecord $record): Impediment;
 
     /**
-     * Update an existing impediment.
+     * Updates an existing impediment record.
      *
-     * @param  int  $id  The impediment ID
-     * @param  ImpedimentRecord  $record  The updated data
-     * @return Impediment The updated impediment
+     * Finds the existing record, validates the updated data, and applies the
+     * changes. The operation is atomic and includes mutation tracking.
      *
-     * @throws ModelNotFoundException If impediment not found
-     * @throws ValidationException If validation fails
-     * @throws \Throwable If update fails
+     * @param  int  $id  The ID of the impediment to update
+     * @param  ImpedimentRecord  $record  The updated impediment data
+     * @return Impediment The updated impediment model
+     *
+     * @throws ModelNotFoundException When no impediment exists with the given ID
+     * @throws ValidationException When the updated data fails validation
+     * @throws Throwable When an unexpected error occurs during update
      */
     public function update(int $id, ImpedimentRecord $record): Impediment;
 
     /**
-     * Delete an impediment.
+     * Deletes an impediment record.
      *
-     * @param  int  $id  The impediment ID
-     * @return bool True if deleted
+     * Performs validation before deletion to ensure business rules are respected.
      *
-     * @throws ModelNotFoundException If impediment not found
-     * @throws ValidationException If validation fails
-     * @throws \Throwable If deletion fails
+     * @param  int  $id  The ID of the impediment to delete
+     * @return bool True if the deletion was successful
+     *
+     * @throws ModelNotFoundException When no impediment exists with the given ID
+     * @throws ValidationException When validation fails
+     * @throws Throwable When an unexpected error occurs during deletion
      */
     public function delete(int $id): bool;
 
     /**
-     * Find an impediment by its ID.
+     * Finds an impediment by its ID.
      *
-     * @param  int  $id  The impediment ID
-     * @return Impediment|null The impediment or null if not found
+     * @param  int  $id  The impediment ID to find
+     * @return Impediment|null The impediment model or null if not found
      */
     public function find(int $id): ?Impediment;
 
     /**
-     * Find impediments by availability.
+     * Finds all impediments associated with a specific availability.
      *
-     * @param  int  $availabilityId  The availability ID
-     * @return Collection<int, Impediment> Collection of impediments
+     * @param  int  $availabilityId  The availability ID to filter by
+     * @return Collection<int, Impediment> Collection of impediment models
      */
     public function findByAvailability(int $availabilityId): Collection;
 
     /**
-     * Find impediments by schedulable entity.
-     * Traverses through the availability relationship.
+     * Finds all impediments for a given schedulable entity.
      *
-     * @param  string  $schedulableType  The entity type
+     * Traverses through the availability relationship to find impediments
+     * associated with the specified entity.
+     *
+     * @param  string  $schedulableType  The entity type (e.g., 'user', 'location')
      * @param  int  $schedulableId  The entity ID
-     * @return Collection<int, Impediment> Collection of impediments
+     * @return Collection<int, Impediment> Collection of impediment models
      */
     public function findBySchedulable(string $schedulableType, int $schedulableId): Collection;
 
     /**
-     * Find impediments by date.
+     * Finds impediments that occur on a specific date.
      *
-     * @param  DateTimeZuluVO  $date  The date to search
+     * @param  DateTimeZuluVO  $date  The date to search for impediments
      * @param  int|null  $availabilityId  Optional availability filter
-     * @return Collection<int, Impediment> Collection of impediments
+     * @return Collection<int, Impediment> Collection of impediment models
      */
     public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null): Collection;
 
     /**
-     * Find impediments in a date range.
+     * Finds impediments that fall within a date range.
      *
-     * @param  DateTimeZuluVO  $start  The start date
-     * @param  DateTimeZuluVO  $end  The end date
+     * @param  DateTimeZuluVO  $start  The start of the date range
+     * @param  DateTimeZuluVO  $end  The end of the date range
      * @param  int|null  $availabilityId  Optional availability filter
-     * @return Collection<int, Impediment> Collection of impediments
+     * @return Collection<int, Impediment> Collection of impediment models
      */
     public function findInDateRange(
         DateTimeZuluVO $start,
@@ -106,37 +131,47 @@ interface ImpedimentServiceInterface
     ): Collection;
 
     /**
-     * Find active impediments (currently running).
+     * Finds currently active impediments.
+     *
+     * Active impediments are those that are currently running based on
+     * the current system time.
      *
      * @param  int|null  $availabilityId  Optional availability filter
-     * @return Collection<int, Impediment> Collection of active impediments
+     * @return Collection<int, Impediment> Collection of active impediment models
      */
     public function findActive(?int $availabilityId = null): Collection;
 
     /**
-     * Search impediments by reason.
+     * Searches for impediments by reason text.
      *
-     * @param  string  $search  The search term
+     * Performs a case-insensitive search on the reason field.
+     *
+     * @param  string  $search  The search term to look for in the reason
      * @param  int|null  $availabilityId  Optional availability filter
-     * @return Collection<int, Impediment> Collection of matching impediments
+     * @return Collection<int, Impediment> Collection of matching impediment models
      */
     public function searchByReason(string $search, ?int $availabilityId = null): Collection;
 
     /**
-     * Check if an impediment is currently active.
+     * Checks if an impediment is currently active.
+     *
+     * An impediment is active if the current time falls within its date range.
      *
      * @param  Impediment  $impediment  The impediment to check
-     * @return bool True if the impediment is active
+     * @return bool True if the impediment is currently active
      */
     public function isActive(Impediment $impediment): bool;
 
     /**
-     * Check if an impediment overlaps with a given time range.
+     * Checks if an impediment overlaps with a given time range.
+     *
+     * Determines if the impediment's time range intersects with the provided
+     * time range.
      *
      * @param  Impediment  $impediment  The impediment to check
-     * @param  DateTimeZuluVO  $start  The start of the time range
-     * @param  DateTimeZuluVO  $end  The end of the time range
-     * @return bool True if the impediment overlaps
+     * @param  DateTimeZuluVO  $start  The start of the time range to check
+     * @param  DateTimeZuluVO  $end  The end of the time range to check
+     * @return bool True if the impediment overlaps with the time range
      */
     public function overlapsWith(
         Impediment $impediment,
@@ -145,26 +180,35 @@ interface ImpedimentServiceInterface
     ): bool;
 
     /**
-     * Get schedules blocked by an impediment.
+     * Retrieves all schedules blocked by an impediment.
      *
-     * @param  Impediment  $impediment  The impediment
-     * @return Collection<int, Schedule> Collection of blocked schedules
+     * Returns all schedules whose time ranges intersect with the impediment
+     * in any way (fully or partially).
+     *
+     * @param  Impediment  $impediment  The impediment to analyze
+     * @return Collection<int, Schedule> Collection of blocked schedule models
      */
     public function getBlockedSchedules(Impediment $impediment): Collection;
 
     /**
-     * Get schedules fully blocked by an impediment.
+     * Retrieves schedules fully blocked by an impediment.
      *
-     * @param  Impediment  $impediment  The impediment
-     * @return Collection<int, Schedule> Collection of fully blocked schedules
+     * Returns schedules whose entire time range falls within the impediment's
+     * time range, meaning they are completely unavailable.
+     *
+     * @param  Impediment  $impediment  The impediment to analyze
+     * @return Collection<int, Schedule> Collection of fully blocked schedule models
      */
     public function getFullyBlockedSchedules(Impediment $impediment): Collection;
 
     /**
-     * Get schedules partially blocked by an impediment.
+     * Retrieves schedules partially blocked by an impediment.
      *
-     * @param  Impediment  $impediment  The impediment
-     * @return Collection<int, Schedule> Collection of partially blocked schedules
+     * Returns schedules that partially overlap with the impediment, meaning
+     * only a portion of their time range is blocked.
+     *
+     * @param  Impediment  $impediment  The impediment to analyze
+     * @return Collection<int, Schedule> Collection of partially blocked schedule models
      */
     public function getPartiallyBlockedSchedules(Impediment $impediment): Collection;
 }

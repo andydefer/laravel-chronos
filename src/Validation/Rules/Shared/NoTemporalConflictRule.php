@@ -19,12 +19,22 @@ use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
  * Prevents temporal conflicts between schedules and impediments.
  *
  * Ensures that no two schedules or impediments overlap in time on the same
- * availability, maintaining the integrity of the schedule.
+ * availability, maintaining the integrity of the schedule. This prevents
+ * double-booking and resource conflicts.
+ *
+ * @example
+ * $rule = new NoTemporalConflictRule();
+ * $context = new ValidationContext($record, OperationType::CREATE);
+ * $error = $rule->validate($context);
+ *
+ * if ($error !== null) {
+ *     // Handle temporal conflict
+ * }
  */
 final class NoTemporalConflictRule implements ValidationRule
 {
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function getDescription(): string
     {
@@ -32,10 +42,9 @@ final class NoTemporalConflictRule implements ValidationRule
     }
 
     /**
-     * Determine if this rule supports the given validation context.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context to check
-     * @return bool True if this rule applies to the context
+     * This rule applies to Schedule and Impediment entity types during create or update operations.
      */
     public function supports(ValidationContext $context): bool
     {
@@ -45,16 +54,16 @@ final class NoTemporalConflictRule implements ValidationRule
     }
 
     /**
-     * Validate that there are no temporal conflicts.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context containing the record
-     * @return ValidationErrorRecord|null An error record if validation fails, null otherwise
+     * Validates that there are no temporal conflicts.
+     *
+     * @throws \RuntimeException If the record is not a ScheduleRecord or ImpedimentRecord
      */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
         $record = $context->getRecord();
 
-        // Extract conflict data from the record
         $conflictData = $this->extractConflictData($record, $context);
 
         if ($conflictData === null) {
@@ -63,7 +72,6 @@ final class NoTemporalConflictRule implements ValidationRule
 
         [$availabilityId, $startDatetime, $endDatetime, $excludeId] = $conflictData;
 
-        // Check for conflicting schedules
         $scheduleConflict = $this->findConflictingSchedule(
             $availabilityId,
             $startDatetime,
@@ -72,14 +80,9 @@ final class NoTemporalConflictRule implements ValidationRule
         );
 
         if ($scheduleConflict !== null) {
-            return $this->createScheduleConflictError(
-                $startDatetime,
-                $endDatetime,
-                $scheduleConflict
-            );
+            return $this->createConflictError('schedule', $scheduleConflict, $startDatetime, $endDatetime);
         }
 
-        // Check for conflicting impediments
         $impedimentConflict = $this->findConflictingImpediment(
             $availabilityId,
             $startDatetime,
@@ -88,18 +91,14 @@ final class NoTemporalConflictRule implements ValidationRule
         );
 
         if ($impedimentConflict !== null) {
-            return $this->createImpedimentConflictError(
-                $startDatetime,
-                $endDatetime,
-                $impedimentConflict
-            );
+            return $this->createConflictError('impediment', $impedimentConflict, $startDatetime, $endDatetime);
         }
 
         return null;
     }
 
     /**
-     * Extract conflict data from the record.
+     * Extracts conflict data from the record.
      *
      * @param  mixed  $record  The record to extract from
      * @param  ValidationContext  $context  The validation context
@@ -110,18 +109,16 @@ final class NoTemporalConflictRule implements ValidationRule
         $availabilityId = null;
         $startDatetime = null;
         $endDatetime = null;
-        $excludeId = null;
+        $excludeId = $context->hasExistingEntity() ? $context->getExistingEntity()?->id : null;
 
         if ($record instanceof ScheduleRecord) {
             $availabilityId = $record->availability_id;
             $startDatetime = $record->start_datetime;
             $endDatetime = $record->end_datetime;
-            $excludeId = $context->hasExistingEntity() ? $context->getExistingEntity()?->id : null;
         } elseif ($record instanceof ImpedimentRecord) {
             $availabilityId = $record->availability_id;
             $startDatetime = $record->start_datetime;
             $endDatetime = $record->end_datetime;
-            $excludeId = $context->hasExistingEntity() ? $context->getExistingEntity()?->id : null;
         }
 
         if ($availabilityId === null || $startDatetime === null || $endDatetime === null) {
@@ -132,7 +129,7 @@ final class NoTemporalConflictRule implements ValidationRule
     }
 
     /**
-     * Find a conflicting schedule.
+     * Finds a conflicting schedule.
      *
      * @param  int  $availabilityId  The availability ID
      * @param  DateTimeZuluVO  $startDatetime  The start datetime
@@ -147,10 +144,8 @@ final class NoTemporalConflictRule implements ValidationRule
         ?int $excludeId
     ): ?Schedule {
         $query = Schedule::where('availability_id', $availabilityId)
-            ->where(function ($q) use ($startDatetime, $endDatetime) {
-                $q->where('start_datetime', '<', $endDatetime->toDateTimeString())
-                    ->where('end_datetime', '>', $startDatetime->toDateTimeString());
-            });
+            ->where('start_datetime', '<', $endDatetime->toDateTimeString())
+            ->where('end_datetime', '>', $startDatetime->toDateTimeString());
 
         if ($excludeId !== null) {
             $query->where('id', '!=', $excludeId);
@@ -160,7 +155,7 @@ final class NoTemporalConflictRule implements ValidationRule
     }
 
     /**
-     * Find a conflicting impediment.
+     * Finds a conflicting impediment.
      *
      * @param  int  $availabilityId  The availability ID
      * @param  DateTimeZuluVO  $startDatetime  The start datetime
@@ -175,10 +170,8 @@ final class NoTemporalConflictRule implements ValidationRule
         ?int $excludeId
     ): ?Impediment {
         $query = Impediment::where('availability_id', $availabilityId)
-            ->where(function ($q) use ($startDatetime, $endDatetime) {
-                $q->where('start_datetime', '<', $endDatetime->toDateTimeString())
-                    ->where('end_datetime', '>', $startDatetime->toDateTimeString());
-            });
+            ->where('start_datetime', '<', $endDatetime->toDateTimeString())
+            ->where('end_datetime', '>', $startDatetime->toDateTimeString());
 
         if ($excludeId !== null) {
             $query->where('id', '!=', $excludeId);
@@ -188,61 +181,35 @@ final class NoTemporalConflictRule implements ValidationRule
     }
 
     /**
-     * Create an error for schedule conflict.
+     * Creates an error for conflict.
      *
+     * @param  string  $type  The event type ('schedule' or 'impediment')
+     * @param  Schedule|Impediment  $conflict  The conflicting event
      * @param  DateTimeZuluVO  $startDatetime  The start datetime
      * @param  DateTimeZuluVO  $endDatetime  The end datetime
-     * @param  Schedule  $conflict  The conflicting schedule
      * @return ValidationErrorRecord The error record
      */
-    private function createScheduleConflictError(
+    private function createConflictError(
+        string $type,
+        Schedule|Impediment $conflict,
         DateTimeZuluVO $startDatetime,
-        DateTimeZuluVO $endDatetime,
-        Schedule $conflict
+        DateTimeZuluVO $endDatetime
     ): ValidationErrorRecord {
-        return new ValidationErrorRecord(
-            rule: self::class,
-            message: sprintf(
-                'Time slot %s to %s conflicts with existing schedule #%d (%s to %s).',
-                $startDatetime->toDateTimeString(),
-                $endDatetime->toDateTimeString(),
-                $conflict->id,
-                $conflict->start_datetime->format('Y-m-d H:i:s'),
-                $conflict->end_datetime->format('Y-m-d H:i:s')
-            ),
-            context: Associative::from([
-                'conflicting_schedule_id' => $conflict->id,
-                'conflicting_start' => $conflict->start_datetime->format('Y-m-d H:i:s'),
-                'conflicting_end' => $conflict->end_datetime->format('Y-m-d H:i:s'),
-            ])
-        );
-    }
+        $contextKey = $type === 'schedule' ? 'conflicting_schedule_id' : 'conflicting_impediment_id';
 
-    /**
-     * Create an error for impediment conflict.
-     *
-     * @param  DateTimeZuluVO  $startDatetime  The start datetime
-     * @param  DateTimeZuluVO  $endDatetime  The end datetime
-     * @param  Impediment  $conflict  The conflicting impediment
-     * @return ValidationErrorRecord The error record
-     */
-    private function createImpedimentConflictError(
-        DateTimeZuluVO $startDatetime,
-        DateTimeZuluVO $endDatetime,
-        Impediment $conflict
-    ): ValidationErrorRecord {
         return new ValidationErrorRecord(
             rule: self::class,
             message: sprintf(
-                'Time slot %s to %s conflicts with existing impediment #%d (%s to %s).',
+                'Time slot %s to %s conflicts with existing %s #%d (%s to %s).',
                 $startDatetime->toDateTimeString(),
                 $endDatetime->toDateTimeString(),
+                $type,
                 $conflict->id,
                 $conflict->start_datetime->format('Y-m-d H:i:s'),
                 $conflict->end_datetime->format('Y-m-d H:i:s')
             ),
             context: Associative::from([
-                'conflicting_impediment_id' => $conflict->id,
+                $contextKey => $conflict->id,
                 'conflicting_start' => $conflict->start_datetime->format('Y-m-d H:i:s'),
                 'conflicting_end' => $conflict->end_datetime->format('Y-m-d H:i:s'),
             ])

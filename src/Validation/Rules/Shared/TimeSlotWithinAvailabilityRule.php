@@ -23,12 +23,19 @@ use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
  * - Validity period of the availability
  * - Daily start and end times
  * - Allowed days of the week
+ *
+ * @example
+ * $rule = new TimeSlotWithinAvailabilityRule($helper);
+ * $context = new ValidationContext($record, OperationType::CREATE);
+ * $error = $rule->validate($context);
+ *
+ * if ($error !== null) {
+ *     // Handle availability constraint violation
+ * }
  */
 final class TimeSlotWithinAvailabilityRule implements ValidationRule
 {
     /**
-     * Constructor with dependency injection.
-     *
      * @param  ValidationHelperService  $helper  Helper service for validation utilities
      */
     public function __construct(
@@ -36,7 +43,7 @@ final class TimeSlotWithinAvailabilityRule implements ValidationRule
     ) {}
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function getDescription(): string
     {
@@ -44,10 +51,9 @@ final class TimeSlotWithinAvailabilityRule implements ValidationRule
     }
 
     /**
-     * Determine if this rule supports the given validation context.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context to check
-     * @return bool True if this rule applies to the context
+     * This rule applies to Schedule and Impediment entity types during create or update operations.
      */
     public function supports(ValidationContext $context): bool
     {
@@ -57,16 +63,16 @@ final class TimeSlotWithinAvailabilityRule implements ValidationRule
     }
 
     /**
-     * Validate that the time slot is within the availability constraints.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context containing the record
-     * @return ValidationErrorRecord|null An error record if validation fails, null otherwise
+     * Validates that the time slot is within the availability constraints.
+     *
+     * @throws \RuntimeException If the record is not a ScheduleRecord or ImpedimentRecord
      */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
         $record = $context->getRecord();
 
-        // Extract time slot data from the record
         $slotData = $this->extractSlotData($record);
 
         if ($slotData === null) {
@@ -75,34 +81,29 @@ final class TimeSlotWithinAvailabilityRule implements ValidationRule
 
         [$availabilityId, $startDatetime, $endDatetime] = $slotData;
 
-        // Find the parent availability
         $availability = Availability::find($availabilityId);
 
         if ($availability === null) {
             return null;
         }
 
-        // Validate each constraint
         $validityError = $this->validateValidityPeriod($availability, $startDatetime, $endDatetime);
+
         if ($validityError !== null) {
             return $validityError;
         }
 
         $dailyBoundsError = $this->validateDailyBounds($availability, $startDatetime, $endDatetime);
+
         if ($dailyBoundsError !== null) {
             return $dailyBoundsError;
         }
 
-        $daysError = $this->validateDays($availability, $startDatetime);
-        if ($daysError !== null) {
-            return $daysError;
-        }
-
-        return null;
+        return $this->validateDay($availability, $startDatetime);
     }
 
     /**
-     * Extract time slot data from the record.
+     * Extracts time slot data from the record.
      *
      * @param  mixed  $record  The record to extract from
      * @return array{int, DateTimeZuluVO, DateTimeZuluVO}|null Array of [availabilityId, start, end] or null
@@ -131,7 +132,7 @@ final class TimeSlotWithinAvailabilityRule implements ValidationRule
     }
 
     /**
-     * Validate that the time slot is within the validity period.
+     * Validates that the time slot is within the validity period.
      *
      * @param  Availability  $availability  The parent availability
      * @param  DateTimeZuluVO  $startDatetime  The start datetime
@@ -159,7 +160,7 @@ final class TimeSlotWithinAvailabilityRule implements ValidationRule
     }
 
     /**
-     * Validate that the time slot is within daily bounds.
+     * Validates that the time slot is within daily bounds.
      *
      * @param  Availability  $availability  The parent availability
      * @param  DateTimeZuluVO  $startDatetime  The start datetime
@@ -195,13 +196,13 @@ final class TimeSlotWithinAvailabilityRule implements ValidationRule
     }
 
     /**
-     * Validate that the day of the week is allowed.
+     * Validates that the day of the week is allowed.
      *
      * @param  Availability  $availability  The parent availability
      * @param  DateTimeZuluVO  $startDatetime  The start datetime
      * @return ValidationErrorRecord|null Error if validation fails
      */
-    private function validateDays(
+    private function validateDay(
         Availability $availability,
         DateTimeZuluVO $startDatetime
     ): ?ValidationErrorRecord {
@@ -214,14 +215,14 @@ final class TimeSlotWithinAvailabilityRule implements ValidationRule
         $dayName = strtolower($startDatetime->format('l'));
 
         if (! in_array($dayName, $days, true)) {
-            return $this->createDaysError($dayName, $days);
+            return $this->createDayNotAllowedError($dayName, $days);
         }
 
         return null;
     }
 
     /**
-     * Create an error for validity period violation.
+     * Creates an error for validity period violation.
      *
      * @param  DateTimeZuluVO  $startDatetime  The start datetime
      * @param  DateTimeZuluVO  $endDatetime  The end datetime
@@ -252,7 +253,7 @@ final class TimeSlotWithinAvailabilityRule implements ValidationRule
     }
 
     /**
-     * Create an error for daily bounds violation.
+     * Creates an error for daily bounds violation.
      *
      * @param  DateTimeZuluVO  $startDatetime  The start datetime
      * @param  DateTimeZuluVO  $endDatetime  The end datetime
@@ -283,14 +284,16 @@ final class TimeSlotWithinAvailabilityRule implements ValidationRule
     }
 
     /**
-     * Create an error for day not allowed.
+     * Creates an error for day not allowed.
      *
      * @param  string  $dayName  The day name
      * @param  array<string>  $allowedDays  The allowed days
      * @return ValidationErrorRecord The error record
      */
-    private function createDaysError(string $dayName, array $allowedDays): ValidationErrorRecord
-    {
+    private function createDayNotAllowedError(
+        string $dayName,
+        array $allowedDays
+    ): ValidationErrorRecord {
         return new ValidationErrorRecord(
             rule: self::class,
             message: sprintf(

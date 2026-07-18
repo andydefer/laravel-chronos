@@ -18,11 +18,21 @@ use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
  *
  * Validates that the schedulable_type and schedulable_id of a child record
  * match those of its parent availability to maintain data consistency.
+ * This prevents cross-entity data corruption.
+ *
+ * @example
+ * $rule = new EntityOwnershipConsistencyRule();
+ * $context = new ValidationContext($record, OperationType::CREATE);
+ * $error = $rule->validate($context);
+ *
+ * if ($error !== null) {
+ *     // Handle ownership inconsistency
+ * }
  */
 final class EntityOwnershipConsistencyRule implements ValidationRule
 {
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function getDescription(): string
     {
@@ -30,10 +40,9 @@ final class EntityOwnershipConsistencyRule implements ValidationRule
     }
 
     /**
-     * Determine if this rule supports the given validation context.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context to check
-     * @return bool True if this rule applies to the context
+     * This rule applies to Schedule and Impediment entity types.
      */
     public function supports(ValidationContext $context): bool
     {
@@ -42,44 +51,43 @@ final class EntityOwnershipConsistencyRule implements ValidationRule
     }
 
     /**
-     * Validate that the child entity matches the parent availability's owner.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context containing the record
-     * @return ValidationErrorRecord|null An error record if validation fails, null otherwise
+     * Validates that the child entity matches the parent availability's owner.
+     *
+     * @throws \RuntimeException If the record is not a ScheduleRecord or ImpedimentRecord
      */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
         $record = $context->getRecord();
 
-        // Extract availability ID from the record
         $availabilityId = $this->extractAvailabilityId($record);
 
         if ($availabilityId === null) {
             return null;
         }
 
-        // Find the parent availability
         $availability = Availability::find($availabilityId);
 
         if ($availability === null) {
             return null;
         }
 
-        // Skip validation for Impediment (they inherit from availability)
         if ($record instanceof ImpedimentRecord) {
             return null;
         }
 
-        // Extract schedulable info from the record
-        $schedulableInfo = $this->extractSchedulableInfo($record);
-
-        if ($schedulableInfo === null) {
+        if (! $record instanceof ScheduleRecord) {
             return null;
         }
 
-        [$recordType, $recordId] = $schedulableInfo;
+        $recordType = $record->schedulable_type;
+        $recordId = $record->schedulable_id;
 
-        // Check if the record's schedulable matches the availability's schedulable
+        if ($recordType === null || $recordId === null) {
+            return null;
+        }
+
         if ($this->isOwnershipMismatch($availability, $recordType, $recordId)) {
             return $this->createOwnershipMismatchError(
                 $recordType,
@@ -93,45 +101,22 @@ final class EntityOwnershipConsistencyRule implements ValidationRule
     }
 
     /**
-     * Extract availability ID from the record.
+     * Extracts availability ID from the record.
      *
      * @param  mixed  $record  The record to extract from
      * @return int|null The availability ID or null
      */
     private function extractAvailabilityId(mixed $record): ?int
     {
-        if ($record instanceof ScheduleRecord) {
-            return $record->availability_id;
-        }
-
-        if ($record instanceof ImpedimentRecord) {
-            return $record->availability_id;
-        }
-
-        return null;
+        return match (true) {
+            $record instanceof ScheduleRecord => $record->availability_id,
+            $record instanceof ImpedimentRecord => $record->availability_id,
+            default => null,
+        };
     }
 
     /**
-     * Extract schedulable type and ID from the record.
-     *
-     * @param  mixed  $record  The record to extract from
-     * @return array{string, int}|null Array of [type, id] or null
-     */
-    private function extractSchedulableInfo(mixed $record): ?array
-    {
-        if (! $record instanceof ScheduleRecord) {
-            return null;
-        }
-
-        if ($record->schedulable_type === null || $record->schedulable_id === null) {
-            return null;
-        }
-
-        return [$record->schedulable_type, $record->schedulable_id];
-    }
-
-    /**
-     * Check if there is an ownership mismatch.
+     * Checks if there is an ownership mismatch.
      *
      * @param  Availability  $availability  The parent availability
      * @param  string  $recordType  The record's schedulable type
@@ -148,7 +133,7 @@ final class EntityOwnershipConsistencyRule implements ValidationRule
     }
 
     /**
-     * Create an error for ownership mismatch.
+     * Creates an error for ownership mismatch.
      *
      * @param  string  $recordType  The record's schedulable type
      * @param  int  $recordId  The record's schedulable ID

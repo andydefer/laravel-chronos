@@ -17,14 +17,23 @@ use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
  * Validates the integrity of date and time ranges for an availability.
  *
  * Ensures that:
- * - Daily start time is before daily end time (except for cross-day)
+ * - Daily start time is before daily end time (cross-day is allowed)
  * - Validity start date is before validity end date
  * - Both validity start and end dates are provided (required for CREATE only)
+ *
+ * @example
+ * $rule = new AvailabilityValidDateRangeRule();
+ * $context = new ValidationContext($record, OperationType::CREATE);
+ * $error = $rule->validate($context);
+ *
+ * if ($error !== null) {
+ *     // Handle validation failure
+ * }
  */
 final class AvailabilityValidDateRangeRule implements ValidationRule
 {
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function getDescription(): string
     {
@@ -32,10 +41,9 @@ final class AvailabilityValidDateRangeRule implements ValidationRule
     }
 
     /**
-     * Determine if this rule supports the given validation context.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context to check
-     * @return bool True if this rule applies to the context
+     * This rule applies to Availability entity types during create or update operations.
      */
     public function supports(ValidationContext $context): bool
     {
@@ -44,10 +52,11 @@ final class AvailabilityValidDateRangeRule implements ValidationRule
     }
 
     /**
-     * Validate the integrity of date and time ranges.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context containing the record
-     * @return ValidationErrorRecord|null An error record if validation fails, null otherwise
+     * Validates the integrity of date and time ranges.
+     *
+     * @throws \RuntimeException If the record is not an AvailabilityRecord
      */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
@@ -57,28 +66,24 @@ final class AvailabilityValidDateRangeRule implements ValidationRule
             return null;
         }
 
-        // Validate daily time ranges (allow cross-day)
         $dailyError = $this->validateDailyTimes($record->daily_start, $record->daily_end);
+
         if ($dailyError !== null) {
             return $dailyError;
         }
 
-        // Validate validity date ranges (required only for CREATE)
-        $validityError = $this->validateValidityDates(
+        return $this->validateValidityDates(
             $record->validity_start,
             $record->validity_end,
             $context->isCreate()
         );
-        if ($validityError !== null) {
-            return $validityError;
-        }
-
-        return null;
     }
 
     /**
-     * Validate daily start and end times.
-     * Allows cross-day (daily_start > daily_end) as valid.
+     * Validates daily start and end times.
+     *
+     * Cross-day (daily_start > daily_end) is allowed, but start and end times
+     * cannot be equal (zero duration).
      *
      * @param  TimeZuluVO|null  $dailyStart  The daily start time
      * @param  TimeZuluVO|null  $dailyEnd  The daily end time
@@ -92,21 +97,27 @@ final class AvailabilityValidDateRangeRule implements ValidationRule
             return null;
         }
 
-        // Cross-day est autorisé (daily_start > daily_end)
-        // Seulement vérifier si ce n'est PAS une cross-day
-        if (! $dailyStart->isAfter($dailyEnd)) {
-            // Vérification normale (non cross-day): start < end
-            if (! $dailyStart->isBefore($dailyEnd)) {
-                return $this->createDailyTimeError($dailyStart, $dailyEnd);
-            }
+        // Cross-day is allowed (daily_start > daily_end)
+        // Only validate when not cross-day: start must be before end
+        if ($dailyStart->isBefore($dailyEnd)) {
+            return null;
         }
-        // Si cross-day (dailyStart > dailyEnd), on ignore la vérification
 
+        // If not cross-day, they must be equal (invalid) or start > end (cross-day, valid)
+        // So the only invalid case is when they are equal (zero duration)
+        if ($dailyStart->isEqual($dailyEnd)) {
+            return $this->createDailyTimeError($dailyStart, $dailyEnd);
+        }
+
+        // Cross-day (start > end) is valid
         return null;
     }
 
     /**
-     * Validate validity start and end dates.
+     * Validates validity start and end dates.
+     *
+     * For CREATE operations, both dates are required.
+     * For UPDATE operations, dates are optional but if provided must be valid.
      *
      * @param  DateTimeZuluVO|null  $validityStart  The validity start date
      * @param  DateTimeZuluVO|null  $validityEnd  The validity end date
@@ -118,7 +129,6 @@ final class AvailabilityValidDateRangeRule implements ValidationRule
         ?DateTimeZuluVO $validityEnd,
         bool $isCreate
     ): ?ValidationErrorRecord {
-        // Pour CREATE : les dates sont obligatoires
         if ($isCreate) {
             if ($validityStart === null) {
                 return $this->createMissingValidityDateError('start');
@@ -129,10 +139,8 @@ final class AvailabilityValidDateRangeRule implements ValidationRule
             }
         }
 
-        // Pour UPDATE : les dates sont optionnelles
-        // Si elles sont fournies, on les valide
         if ($validityStart !== null && $validityEnd !== null) {
-            if ($this->isValidityStartAfterEnd($validityStart, $validityEnd)) {
+            if (! $validityStart->isBefore($validityEnd)) {
                 return $this->createValidityDateRangeError($validityStart, $validityEnd);
             }
         }
@@ -141,21 +149,7 @@ final class AvailabilityValidDateRangeRule implements ValidationRule
     }
 
     /**
-     * Check if validity start is after or equal to validity end.
-     *
-     * @param  DateTimeZuluVO  $start  The start date
-     * @param  DateTimeZuluVO  $end  The end date
-     * @return bool True if start is after or equal to end
-     */
-    private function isValidityStartAfterEnd(
-        DateTimeZuluVO $start,
-        DateTimeZuluVO $end
-    ): bool {
-        return ! $start->isBefore($end);
-    }
-
-    /**
-     * Create an error for invalid daily time range.
+     * Creates an error for invalid daily time range.
      *
      * @param  TimeZuluVO  $dailyStart  The daily start time
      * @param  TimeZuluVO  $dailyEnd  The daily end time
@@ -176,21 +170,16 @@ final class AvailabilityValidDateRangeRule implements ValidationRule
     }
 
     /**
-     * Create an error for missing validity date.
+     * Creates an error for missing validity date.
      *
      * @param  string  $type  The type of missing date ('start' or 'end')
      * @return ValidationErrorRecord The error record
      */
     private function createMissingValidityDateError(string $type): ValidationErrorRecord
     {
-        $message = sprintf(
-            'Validity %s date is required for availability.',
-            $type
-        );
-
         return new ValidationErrorRecord(
             rule: self::class,
-            message: $message,
+            message: sprintf('Validity %s date is required for availability creation.', $type),
             context: Associative::from([
                 'missing_field' => "validity_{$type}",
             ])
@@ -198,7 +187,7 @@ final class AvailabilityValidDateRangeRule implements ValidationRule
     }
 
     /**
-     * Create an error for invalid validity date range.
+     * Creates an error for invalid validity date range.
      *
      * @param  DateTimeZuluVO  $validityStart  The validity start date
      * @param  DateTimeZuluVO  $validityEnd  The validity end date

@@ -17,12 +17,22 @@ use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
  * Validates that the referenced availability exists and belongs to the correct entity.
  *
  * Ensures that when creating a schedule or impediment, the availability exists
- * and is owned by the same schedulable entity.
+ * and is owned by the same schedulable entity. This maintains referential
+ * integrity between child records and their parent availability.
+ *
+ * @example
+ * $rule = new AvailabilityOwnershipValidationRule();
+ * $context = new ValidationContext($record, OperationType::CREATE);
+ * $error = $rule->validate($context);
+ *
+ * if ($error !== null) {
+ *     // Handle ownership validation failure
+ * }
  */
 final class AvailabilityOwnershipValidationRule implements ValidationRule
 {
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function getDescription(): string
     {
@@ -30,10 +40,9 @@ final class AvailabilityOwnershipValidationRule implements ValidationRule
     }
 
     /**
-     * Determine if this rule supports the given validation context.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context to check
-     * @return bool True if this rule applies to the context
+     * This rule applies to Schedule and Impediment entity types during create operations.
      */
     public function supports(ValidationContext $context): bool
     {
@@ -43,46 +52,45 @@ final class AvailabilityOwnershipValidationRule implements ValidationRule
     }
 
     /**
-     * Validate that the availability exists and belongs to the correct entity.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context containing the record
-     * @return ValidationErrorRecord|null An error record if validation fails, null otherwise
+     * Validates that the availability exists and belongs to the correct entity.
+     *
+     * @throws \RuntimeException If the record is not a ScheduleRecord or ImpedimentRecord
      */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
         $record = $context->getRecord();
 
-        // Extract availability ID from the record
         $availabilityId = $this->extractAvailabilityId($record);
 
         if ($availabilityId === null) {
             return null;
         }
 
-        // Find the availability
         $availability = Availability::find($availabilityId);
 
         if ($availability === null) {
             return $this->createAvailabilityNotFoundError($availabilityId);
         }
 
-        // For impediments, skip the ownership check (they inherit from availability)
         if ($record instanceof ImpedimentRecord) {
             return null;
         }
 
-        // Extract schedulable info from the record
-        $schedulableInfo = $this->extractSchedulableInfo($record);
-
-        if ($schedulableInfo === null) {
+        if (! $record instanceof ScheduleRecord) {
             return null;
         }
 
-        [$schedulableType, $schedulableId] = $schedulableInfo;
+        $schedulableType = $record->schedulable_type;
+        $schedulableId = $record->schedulable_id;
 
-        // Check if the availability belongs to the schedulable entity
-        if ($this->isAvailabilityMismatch($availability, $schedulableType, $schedulableId)) {
-            return $this->createAvailabilityMismatchError(
+        if ($schedulableType === null || $schedulableId === null) {
+            return null;
+        }
+
+        if ($this->isOwnershipMismatch($availability, $schedulableType, $schedulableId)) {
+            return $this->createOwnershipMismatchError(
                 $availabilityId,
                 $schedulableType,
                 $schedulableId,
@@ -94,52 +102,29 @@ final class AvailabilityOwnershipValidationRule implements ValidationRule
     }
 
     /**
-     * Extract availability ID from the record.
+     * Extracts availability ID from the record.
      *
      * @param  mixed  $record  The record to extract from
      * @return int|null The availability ID or null
      */
     private function extractAvailabilityId(mixed $record): ?int
     {
-        if ($record instanceof ScheduleRecord) {
-            return $record->availability_id;
-        }
-
-        if ($record instanceof ImpedimentRecord) {
-            return $record->availability_id;
-        }
-
-        return null;
+        return match (true) {
+            $record instanceof ScheduleRecord => $record->availability_id,
+            $record instanceof ImpedimentRecord => $record->availability_id,
+            default => null,
+        };
     }
 
     /**
-     * Extract schedulable type and ID from the record.
-     *
-     * @param  mixed  $record  The record to extract from
-     * @return array{string, int}|null Array of [type, id] or null
-     */
-    private function extractSchedulableInfo(mixed $record): ?array
-    {
-        if (! $record instanceof ScheduleRecord) {
-            return null;
-        }
-
-        if ($record->schedulable_type === null || $record->schedulable_id === null) {
-            return null;
-        }
-
-        return [$record->schedulable_type, $record->schedulable_id];
-    }
-
-    /**
-     * Check if the availability does not belong to the schedulable entity.
+     * Checks if the availability does not belong to the schedulable entity.
      *
      * @param  Availability  $availability  The availability
      * @param  string  $schedulableType  The schedulable type
      * @param  int  $schedulableId  The schedulable ID
      * @return bool True if there is a mismatch
      */
-    private function isAvailabilityMismatch(
+    private function isOwnershipMismatch(
         Availability $availability,
         string $schedulableType,
         int $schedulableId
@@ -149,7 +134,7 @@ final class AvailabilityOwnershipValidationRule implements ValidationRule
     }
 
     /**
-     * Create an error for missing availability.
+     * Creates an error for missing availability.
      *
      * @param  int  $availabilityId  The availability ID
      * @return ValidationErrorRecord The error record
@@ -158,10 +143,7 @@ final class AvailabilityOwnershipValidationRule implements ValidationRule
     {
         return new ValidationErrorRecord(
             rule: self::class,
-            message: sprintf(
-                'Availability #%d does not exist.',
-                $availabilityId
-            ),
+            message: sprintf('Availability #%d does not exist.', $availabilityId),
             context: Associative::from([
                 'availability_id' => $availabilityId,
             ])
@@ -169,7 +151,7 @@ final class AvailabilityOwnershipValidationRule implements ValidationRule
     }
 
     /**
-     * Create an error for availability ownership mismatch.
+     * Creates an error for availability ownership mismatch.
      *
      * @param  int  $availabilityId  The availability ID
      * @param  string  $schedulableType  The schedulable type
@@ -177,7 +159,7 @@ final class AvailabilityOwnershipValidationRule implements ValidationRule
      * @param  Availability  $availability  The availability
      * @return ValidationErrorRecord The error record
      */
-    private function createAvailabilityMismatchError(
+    private function createOwnershipMismatchError(
         int $availabilityId,
         string $schedulableType,
         int $schedulableId,

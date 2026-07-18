@@ -16,11 +16,20 @@ use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
  *
  * Ensures that the schedulable_type and schedulable_id reference a valid,
  * existing entity in the system to maintain referential integrity.
+ *
+ * @example
+ * $rule = new SchedulableExistsRule();
+ * $context = new ValidationContext($record, OperationType::CREATE);
+ * $error = $rule->validate($context);
+ *
+ * if ($error !== null) {
+ *     // Handle non-existent schedulable entity
+ * }
  */
 final class SchedulableExistsRule implements ValidationRule
 {
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function getDescription(): string
     {
@@ -28,10 +37,9 @@ final class SchedulableExistsRule implements ValidationRule
     }
 
     /**
-     * Determine if this rule supports the given validation context.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context to check
-     * @return bool True if this rule applies to the context
+     * This rule applies to create and update operations.
      */
     public function supports(ValidationContext $context): bool
     {
@@ -39,10 +47,9 @@ final class SchedulableExistsRule implements ValidationRule
     }
 
     /**
-     * Validate that the schedulable entity exists.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context containing the record
-     * @return ValidationErrorRecord|null An error record if validation fails, null otherwise
+     * Validates that the schedulable entity exists.
      */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
@@ -50,19 +57,16 @@ final class SchedulableExistsRule implements ValidationRule
 
         $schedulableInfo = $this->extractSchedulableInfo($record);
 
-        // Skip if no schedulable info (Impediment or missing data)
         if ($schedulableInfo === null) {
             return null;
         }
 
         [$schedulableType, $schedulableId] = $schedulableInfo;
 
-        // Validate the class exists
         if (! $this->isClassExists($schedulableType)) {
             return $this->createClassNotExistsError($schedulableType);
         }
 
-        // Validate the entity exists
         if (! $this->isEntityExists($schedulableType, $schedulableId)) {
             return $this->createEntityNotExistsError($schedulableType, $schedulableId);
         }
@@ -71,7 +75,7 @@ final class SchedulableExistsRule implements ValidationRule
     }
 
     /**
-     * Extract schedulable type and ID from the record.
+     * Extracts schedulable type and ID from the record.
      *
      * @param  mixed  $record  The record to extract from
      * @return array{string, int}|null Array of [type, id] or null if not applicable
@@ -86,12 +90,11 @@ final class SchedulableExistsRule implements ValidationRule
             return $this->extractFromSchedule($record);
         }
 
-        // Impediments don't have schedulable fields directly
         return null;
     }
 
     /**
-     * Extract from AvailabilityRecord.
+     * Extracts from AvailabilityRecord.
      *
      * @param  AvailabilityRecord  $record  The record
      * @return array{string, int}|null
@@ -106,7 +109,7 @@ final class SchedulableExistsRule implements ValidationRule
     }
 
     /**
-     * Extract from ScheduleRecord.
+     * Extracts from ScheduleRecord.
      *
      * @param  ScheduleRecord  $record  The record
      * @return array{string, int}|null
@@ -121,7 +124,7 @@ final class SchedulableExistsRule implements ValidationRule
     }
 
     /**
-     * Check if a class exists.
+     * Checks if a class exists.
      *
      * @param  string  $class  The class name to check
      * @return bool True if the class exists
@@ -132,7 +135,7 @@ final class SchedulableExistsRule implements ValidationRule
     }
 
     /**
-     * Check if an entity exists in the database.
+     * Checks if an entity exists in the database.
      *
      * @param  string  $type  The entity type class
      * @param  int  $id  The entity ID
@@ -144,7 +147,7 @@ final class SchedulableExistsRule implements ValidationRule
     }
 
     /**
-     * Create an error for non-existent class.
+     * Creates an error for non-existent class.
      *
      * @param  string  $schedulableType  The class name
      * @return ValidationErrorRecord The error record
@@ -164,7 +167,7 @@ final class SchedulableExistsRule implements ValidationRule
     }
 
     /**
-     * Create an error for non-existent entity.
+     * Creates an error for non-existent entity.
      *
      * @param  string  $schedulableType  The entity type
      * @param  int  $schedulableId  The entity ID

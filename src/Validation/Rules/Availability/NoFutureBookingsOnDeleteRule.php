@@ -16,12 +16,22 @@ use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
  * Prevents deletion of availabilities that have future bookings.
  *
  * Ensures data integrity by preventing the deletion of an availability
- * that still has scheduled events in the future.
+ * that still has scheduled events in the future. This rule only applies
+ * to DELETE operations and helps prevent orphaned schedules.
+ *
+ * @example
+ * $rule = new NoFutureBookingsOnDeleteRule();
+ * $context = new ValidationContext($record, OperationType::DELETE, $existingEntity);
+ * $error = $rule->validate($context);
+ *
+ * if ($error !== null) {
+ *     // Cannot delete availability with future bookings
+ * }
  */
 final class NoFutureBookingsOnDeleteRule implements ValidationRule
 {
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function getDescription(): string
     {
@@ -29,10 +39,9 @@ final class NoFutureBookingsOnDeleteRule implements ValidationRule
     }
 
     /**
-     * Determine if this rule supports the given validation context.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context to check
-     * @return bool True if this rule applies to the context
+     * This rule only applies to DELETE operations.
      */
     public function supports(ValidationContext $context): bool
     {
@@ -41,10 +50,11 @@ final class NoFutureBookingsOnDeleteRule implements ValidationRule
     }
 
     /**
-     * Validate that the availability has no future bookings.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context containing the record
-     * @return ValidationErrorRecord|null An error record if validation fails, null otherwise
+     * Validates that the availability has no future bookings.
+     *
+     * @throws \RuntimeException If the existing entity is not an Availability
      */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
@@ -64,7 +74,7 @@ final class NoFutureBookingsOnDeleteRule implements ValidationRule
     }
 
     /**
-     * Check if the availability has future schedules.
+     * Checks if the availability has future schedules.
      *
      * @param  Availability  $availability  The availability to check
      * @param  DateTimeZuluVO  $now  The current timestamp
@@ -80,7 +90,7 @@ final class NoFutureBookingsOnDeleteRule implements ValidationRule
     }
 
     /**
-     * Create an error for future bookings.
+     * Creates an error for future bookings.
      *
      * @param  Availability  $availability  The availability being deleted
      * @param  DateTimeZuluVO  $now  The current timestamp

@@ -11,101 +11,130 @@ use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\ScheduleRecord;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use Illuminate\Support\Collection;
+use Throwable;
 
 /**
  * Interface for Schedule service operations.
  *
- * Provides high-level business operations for managing schedules,
- * including creation, updates, deletion with validation and business rules.
+ * Defines the contract for high-level business operations to manage schedule
+ * records. Schedules represent planned activities or appointments that can
+ * be created, updated, cancelled, or completed. Each operation includes
+ * validation and business rules enforcement.
+ *
+ * @example
+ * // Create a new schedule
+ * $service->create(new ScheduleRecord([
+ *     'availability_id' => 1,
+ *     'title' => 'Team Meeting',
+ *     'start_time' => new DateTimeZuluVO('2024-01-01 10:00:00'),
+ *     'end_time' => new DateTimeZuluVO('2024-01-01 11:00:00'),
+ * ]));
+ *
+ * // Cancel an existing schedule
+ * $service->cancel($scheduleId);
+ *
+ * // Find all schedules with a specific status
+ * $completedSchedules = $service->findByStatus(ScheduleStatus::COMPLETED);
  */
 interface ScheduleServiceInterface
 {
     /**
-     * Create a new schedule.
+     * Creates a new schedule record.
      *
-     * @param  ScheduleRecord  $record  The schedule data
-     * @return Schedule The created schedule
+     * Validates the record against business rules before creation. If validation
+     * passes, the record is persisted and the created model is returned.
      *
-     * @throws ValidationException If validation fails
-     * @throws \Throwable If creation fails
+     * @param  ScheduleRecord  $record  The schedule data to create
+     * @return Schedule The newly created schedule model
+     *
+     * @throws ValidationException When the record fails business rule validation
+     * @throws Throwable When an unexpected error occurs during creation
      */
     public function create(ScheduleRecord $record): Schedule;
 
     /**
-     * Update an existing schedule.
+     * Updates an existing schedule record.
      *
-     * @param  int  $id  The schedule ID
-     * @param  ScheduleRecord  $record  The updated data
-     * @return Schedule The updated schedule
+     * Finds the existing record, validates the updated data, and applies the
+     * changes. The operation is atomic and includes mutation tracking.
      *
-     * @throws ModelNotFoundException If schedule not found
-     * @throws ValidationException If validation fails
-     * @throws \Throwable If update fails
+     * @param  int  $id  The ID of the schedule to update
+     * @param  ScheduleRecord  $record  The updated schedule data
+     * @return Schedule The updated schedule model
+     *
+     * @throws ModelNotFoundException When no schedule exists with the given ID
+     * @throws ValidationException When the updated data fails validation
+     * @throws Throwable When an unexpected error occurs during update
      */
     public function update(int $id, ScheduleRecord $record): Schedule;
 
     /**
-     * Delete a schedule.
+     * Deletes a schedule record.
      *
-     * @param  int  $id  The schedule ID
-     * @return bool True if deleted
+     * Performs validation before deletion to ensure business rules are respected.
      *
-     * @throws ModelNotFoundException If schedule not found
-     * @throws ValidationException If validation fails
-     * @throws \Throwable If deletion fails
+     * @param  int  $id  The ID of the schedule to delete
+     * @return bool True if the deletion was successful
+     *
+     * @throws ModelNotFoundException When no schedule exists with the given ID
+     * @throws ValidationException When validation fails
+     * @throws Throwable When an unexpected error occurs during deletion
      */
     public function delete(int $id): bool;
 
     /**
-     * Find a schedule by its ID.
+     * Finds a schedule by its ID.
      *
-     * @param  int  $id  The schedule ID
-     * @return Schedule|null The schedule or null if not found
+     * @param  int  $id  The schedule ID to find
+     * @return Schedule|null The schedule model or null if not found
      */
     public function find(int $id): ?Schedule;
 
     /**
-     * Find schedules by availability.
+     * Finds all schedules associated with a specific availability.
      *
-     * @param  int  $availabilityId  The availability ID
-     * @return Collection<int, Schedule> Collection of schedules
+     * @param  int  $availabilityId  The availability ID to filter by
+     * @return Collection<int, Schedule> Collection of schedule models
      */
     public function findByAvailability(int $availabilityId): Collection;
 
     /**
-     * Find schedules by schedulable entity.
+     * Finds all schedules for a given schedulable entity.
      *
-     * @param  string  $schedulableType  The entity type
+     * Traverses through the availability relationship to find schedules
+     * associated with the specified entity.
+     *
+     * @param  string  $schedulableType  The entity type (e.g., 'user', 'location')
      * @param  int  $schedulableId  The entity ID
-     * @return Collection<int, Schedule> Collection of schedules
+     * @return Collection<int, Schedule> Collection of schedule models
      */
     public function findBySchedulable(string $schedulableType, int $schedulableId): Collection;
 
     /**
-     * Find schedules by status.
+     * Finds schedules by their current status.
      *
-     * @param  ScheduleStatus  $status  The schedule status
+     * @param  ScheduleStatus  $status  The status to filter by
      * @param  int|null  $availabilityId  Optional availability filter
-     * @return Collection<int, Schedule> Collection of schedules
+     * @return Collection<int, Schedule> Collection of schedule models
      */
     public function findByStatus(ScheduleStatus $status, ?int $availabilityId = null): Collection;
 
     /**
-     * Find schedules by date.
+     * Finds schedules that occur on a specific date.
      *
-     * @param  DateTimeZuluVO  $date  The date to search
+     * @param  DateTimeZuluVO  $date  The date to search for schedules
      * @param  int|null  $availabilityId  Optional availability filter
-     * @return Collection<int, Schedule> Collection of schedules
+     * @return Collection<int, Schedule> Collection of schedule models
      */
     public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null): Collection;
 
     /**
-     * Find schedules in a date range.
+     * Finds schedules that fall within a date range.
      *
-     * @param  DateTimeZuluVO  $start  The start date
-     * @param  DateTimeZuluVO  $end  The end date
+     * @param  DateTimeZuluVO  $start  The start of the date range
+     * @param  DateTimeZuluVO  $end  The end of the date range
      * @param  int|null  $availabilityId  Optional availability filter
-     * @return Collection<int, Schedule> Collection of schedules
+     * @return Collection<int, Schedule> Collection of schedule models
      */
     public function findInDateRange(
         DateTimeZuluVO $start,
@@ -114,38 +143,53 @@ interface ScheduleServiceInterface
     ): Collection;
 
     /**
-     * Search schedules by title.
+     * Searches for schedules by title text.
      *
-     * @param  string  $search  The search term
+     * Performs a case-insensitive search on the title field.
+     *
+     * @param  string  $search  The search term to look for in the title
      * @param  int|null  $availabilityId  Optional availability filter
-     * @return Collection<int, Schedule> Collection of matching schedules
+     * @return Collection<int, Schedule> Collection of matching schedule models
      */
     public function searchByTitle(string $search, ?int $availabilityId = null): Collection;
 
     /**
-     * Cancel a schedule.
+     * Cancels a schedule.
      *
-     * @param  int  $id  The schedule ID
-     * @return Schedule The cancelled schedule
+     * Transitions the schedule to the CANCELLED status. This operation is
+     * only allowed if the schedule can be cancelled according to business
+     * rules (e.g., not already completed or cancelled).
      *
-     * @throws ModelNotFoundException If schedule not found
-     * @throws ValidationException If schedule cannot be cancelled
+     * @param  int  $id  The ID of the schedule to cancel
+     * @return Schedule The cancelled schedule model
+     *
+     * @throws ModelNotFoundException When no schedule exists with the given ID
+     * @throws ValidationException When the schedule cannot be cancelled
+     * @throws Throwable When an unexpected error occurs during cancellation
      */
     public function cancel(int $id): Schedule;
 
     /**
-     * Complete a schedule.
+     * Completes a schedule.
      *
-     * @param  int  $id  The schedule ID
-     * @return Schedule The completed schedule
+     * Transitions the schedule to the COMPLETED status. This operation is
+     * only allowed if the schedule can be completed according to business
+     * rules (e.g., not already completed or cancelled).
      *
-     * @throws ModelNotFoundException If schedule not found
-     * @throws ValidationException If schedule cannot be completed
+     * @param  int  $id  The ID of the schedule to complete
+     * @return Schedule The completed schedule model
+     *
+     * @throws ModelNotFoundException When no schedule exists with the given ID
+     * @throws ValidationException When the schedule cannot be completed
+     * @throws Throwable When an unexpected error occurs during completion
      */
     public function complete(int $id): Schedule;
 
     /**
-     * Check if a schedule can be cancelled.
+     * Checks if a schedule can be cancelled.
+     *
+     * Determines if the schedule is in a state that allows cancellation
+     * based on business rules.
      *
      * @param  Schedule  $schedule  The schedule to check
      * @return bool True if the schedule can be cancelled
@@ -153,7 +197,10 @@ interface ScheduleServiceInterface
     public function canBeCancelled(Schedule $schedule): bool;
 
     /**
-     * Check if a schedule can be completed.
+     * Checks if a schedule can be completed.
+     *
+     * Determines if the schedule is in a state that allows completion
+     * based on business rules.
      *
      * @param  Schedule  $schedule  The schedule to check
      * @return bool True if the schedule can be completed

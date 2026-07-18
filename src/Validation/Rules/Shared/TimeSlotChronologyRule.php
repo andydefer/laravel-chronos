@@ -19,11 +19,20 @@ use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
  * Ensures that:
  * - Start datetime is before end datetime
  * - Duration is greater than 0 minutes
+ *
+ * @example
+ * $rule = new TimeSlotChronologyRule();
+ * $context = new ValidationContext($record, OperationType::CREATE);
+ * $error = $rule->validate($context);
+ *
+ * if ($error !== null) {
+ *     // Handle chronology error
+ * }
  */
 final class TimeSlotChronologyRule implements ValidationRule
 {
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function getDescription(): string
     {
@@ -31,10 +40,9 @@ final class TimeSlotChronologyRule implements ValidationRule
     }
 
     /**
-     * Determine if this rule supports the given validation context.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context to check
-     * @return bool True if this rule applies to the context
+     * This rule applies to Schedule and Impediment entity types during create or update operations.
      */
     public function supports(ValidationContext $context): bool
     {
@@ -44,16 +52,16 @@ final class TimeSlotChronologyRule implements ValidationRule
     }
 
     /**
-     * Validate the chronological integrity of the time slot.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context containing the record
-     * @return ValidationErrorRecord|null An error record if validation fails, null otherwise
+     * Validates the chronological integrity of the time slot.
+     *
+     * @throws \RuntimeException If the record is not a ScheduleRecord or ImpedimentRecord
      */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
         $record = $context->getRecord();
 
-        // Extract time slot data from the record
         $timeData = $this->extractTimeData($record);
 
         if ($timeData === null) {
@@ -62,13 +70,11 @@ final class TimeSlotChronologyRule implements ValidationRule
 
         [$startDatetime, $endDatetime] = $timeData;
 
-        // Validate start is before end
-        if (! $this->isStartBeforeEnd($startDatetime, $endDatetime)) {
+        if (! $startDatetime->isBefore($endDatetime)) {
             return $this->createChronologyError($startDatetime, $endDatetime);
         }
 
-        // Validate duration is greater than 0
-        if (! $this->hasPositiveDuration($startDatetime, $endDatetime)) {
+        if ($startDatetime->diffInMinutes($endDatetime) <= 0) {
             return $this->createZeroDurationError($startDatetime, $endDatetime);
         }
 
@@ -76,10 +82,11 @@ final class TimeSlotChronologyRule implements ValidationRule
     }
 
     /**
-     * Extract time data from the record.
+     * Extracts time data from the record.
      *
-     * @param mixed $record The record to extract from
-     * @return array{DateTimeZuluVO, DateTimeZuluVO}|null Array of [start, end] or null     */
+     * @param  mixed  $record  The record to extract from
+     * @return array{DateTimeZuluVO, DateTimeZuluVO}|null Array of [start, end] or null
+     */
     private function extractTimeData(mixed $record): ?array
     {
         $startDatetime = null;
@@ -101,31 +108,7 @@ final class TimeSlotChronologyRule implements ValidationRule
     }
 
     /**
-     * Check if start is before end.
-     *
-     * @param  DateTimeZuluVO  $start  The start datetime
-     * @param  DateTimeZuluVO  $end  The end datetime
-     * @return bool True if start is before end
-     */
-    private function isStartBeforeEnd(DateTimeZuluVO $start, DateTimeZuluVO $end): bool
-    {
-        return $start->isBefore($end);
-    }
-
-    /**
-     * Check if duration is positive.
-     *
-     * @param  DateTimeZuluVO  $start  The start datetime
-     * @param  DateTimeZuluVO  $end  The end datetime
-     * @return bool True if duration > 0
-     */
-    private function hasPositiveDuration(DateTimeZuluVO $start, DateTimeZuluVO $end): bool
-    {
-        return $start->diffInMinutes($end) > 0;
-    }
-
-    /**
-     * Create an error for invalid chronology.
+     * Creates an error for invalid chronology.
      *
      * @param  DateTimeZuluVO  $startDatetime  The start datetime
      * @param  DateTimeZuluVO  $endDatetime  The end datetime
@@ -146,7 +129,7 @@ final class TimeSlotChronologyRule implements ValidationRule
     }
 
     /**
-     * Create an error for zero duration.
+     * Creates an error for zero duration.
      *
      * @param  DateTimeZuluVO  $startDatetime  The start datetime
      * @param  DateTimeZuluVO  $endDatetime  The end datetime

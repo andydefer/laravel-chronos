@@ -19,12 +19,19 @@ use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
  *
  * Ensures that when an availability crosses midnight (daily_start > daily_end),
  * the days array has at least 2 consecutive days to cover both the start and end days.
+ *
+ * @example
+ * $rule = new CrossDayAvailabilityRule($helper);
+ * $context = new ValidationContext($record, OperationType::CREATE);
+ * $error = $rule->validate($context);
+ *
+ * if ($error !== null) {
+ *     // Handle cross-day configuration error
+ * }
  */
 final class CrossDayAvailabilityRule implements ValidationRule
 {
     /**
-     * Constructor with dependency injection.
-     *
      * @param  ValidationHelperService  $helper  Helper service for validation utilities
      */
     public function __construct(
@@ -32,7 +39,7 @@ final class CrossDayAvailabilityRule implements ValidationRule
     ) {}
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function getDescription(): string
     {
@@ -40,10 +47,9 @@ final class CrossDayAvailabilityRule implements ValidationRule
     }
 
     /**
-     * Determine if this rule supports the given validation context.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context to check
-     * @return bool True if this rule applies to the context
+     * This rule applies to Availability entity types during create or update operations.
      */
     public function supports(ValidationContext $context): bool
     {
@@ -52,10 +58,11 @@ final class CrossDayAvailabilityRule implements ValidationRule
     }
 
     /**
-     * Validate cross-day availability configuration.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context containing the record
-     * @return ValidationErrorRecord|null An error record if validation fails, null otherwise
+     * Validates cross-day availability configuration.
+     *
+     * @throws \RuntimeException If the record is not an AvailabilityRecord
      */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
@@ -65,17 +72,14 @@ final class CrossDayAvailabilityRule implements ValidationRule
             return null;
         }
 
-        // Skip validation if required data is missing (handled by other rules)
         if ($this->isRequiredDataMissing($record)) {
             return null;
         }
 
-        // Check if this is a cross-day availability
         if (! $this->isCrossDayAvailability($record->daily_start, $record->daily_end)) {
             return null;
         }
 
-        // Validate that days are consecutive and at least 2
         $dayStrings = $record->days->toStrings();
 
         if (! $this->areDaysValidForCrossDay($dayStrings)) {
@@ -86,7 +90,7 @@ final class CrossDayAvailabilityRule implements ValidationRule
     }
 
     /**
-     * Check if required data is missing for validation.
+     * Checks if required data is missing for validation.
      *
      * @param  AvailabilityRecord  $record  The record to check
      * @return bool True if required data is missing
@@ -100,7 +104,7 @@ final class CrossDayAvailabilityRule implements ValidationRule
     }
 
     /**
-     * Check if the availability crosses midnight.
+     * Checks if the availability crosses midnight.
      *
      * @param  TimeZuluVO|null  $dailyStart  The daily start time
      * @param  TimeZuluVO|null  $dailyEnd  The daily end time
@@ -116,15 +120,15 @@ final class CrossDayAvailabilityRule implements ValidationRule
     }
 
     /**
-     * Check if days are valid for a cross-day availability.
-     * Must have at least 2 consecutive days.
+     * Checks if days are valid for a cross-day availability.
+     *
+     * Must have at least 2 consecutive days to cover both sides of midnight.
      *
      * @param  array<string>  $dayStrings  The day strings to check
      * @return bool True if valid (at least 2 consecutive days)
      */
     private function areDaysValidForCrossDay(array $dayStrings): bool
     {
-        // Cross-day availability needs at least 2 days
         if (count($dayStrings) < 2) {
             return false;
         }
@@ -133,7 +137,7 @@ final class CrossDayAvailabilityRule implements ValidationRule
     }
 
     /**
-     * Create an error for non-consecutive days in cross-day availability.
+     * Creates an error for non-consecutive days in cross-day availability.
      *
      * @param  array<string>  $dayStrings  The day strings provided
      * @param  AvailabilityRecord  $record  The record being validated

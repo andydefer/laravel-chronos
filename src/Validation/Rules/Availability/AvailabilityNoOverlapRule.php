@@ -23,12 +23,22 @@ use Illuminate\Database\Eloquent\Builder;
  * - Days of the week
  * - Time slots (daily_start to daily_end)
  * - Validity periods
+ *
+ * This rule prevents double-booking and ensures that availability definitions
+ * are consistent and non-conflicting.
+ *
+ * @example
+ * $rule = new AvailabilityNoOverlapRule($helper);
+ * $context = new ValidationContext($record, OperationType::CREATE);
+ * $error = $rule->validate($context);
+ *
+ * if ($error !== null) {
+ *     // Handle overlap conflict
+ * }
  */
 final class AvailabilityNoOverlapRule implements ValidationRule
 {
     /**
-     * Constructor with dependency injection.
-     *
      * @param  ValidationHelperService  $helper  Helper service for validation utilities
      */
     public function __construct(
@@ -36,7 +46,7 @@ final class AvailabilityNoOverlapRule implements ValidationRule
     ) {}
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function getDescription(): string
     {
@@ -44,10 +54,9 @@ final class AvailabilityNoOverlapRule implements ValidationRule
     }
 
     /**
-     * Determine if this rule supports the given validation context.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context to check
-     * @return bool True if this rule applies to the context
+     * This rule only applies to Availability entity types during create or update operations.
      */
     public function supports(ValidationContext $context): bool
     {
@@ -56,10 +65,11 @@ final class AvailabilityNoOverlapRule implements ValidationRule
     }
 
     /**
-     * Validate that the availability does not overlap with existing ones.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context containing the record
-     * @return ValidationErrorRecord|null An error record if validation fails, null otherwise
+     * Validates that the availability does not overlap with existing ones.
+     *
+     * @throws \RuntimeException If the record is not an AvailabilityRecord
      */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
@@ -69,7 +79,6 @@ final class AvailabilityNoOverlapRule implements ValidationRule
             return null;
         }
 
-        // Skip if required data is missing (handled by other rules)
         if ($this->isRequiredDataMissing($record)) {
             return null;
         }
@@ -84,7 +93,7 @@ final class AvailabilityNoOverlapRule implements ValidationRule
     }
 
     /**
-     * Check if required data for overlap validation is missing.
+     * Checks if required data for overlap validation is missing.
      *
      * @param  AvailabilityRecord  $record  The availability record
      * @return bool True if required data is missing
@@ -100,7 +109,7 @@ final class AvailabilityNoOverlapRule implements ValidationRule
     }
 
     /**
-     * Find a conflicting availability in the database.
+     * Finds a conflicting availability in the database.
      *
      * @param  AvailabilityRecord  $record  The availability record to check
      * @param  ValidationContext  $context  The validation context
@@ -117,7 +126,7 @@ final class AvailabilityNoOverlapRule implements ValidationRule
     }
 
     /**
-     * Build the query to find overlapping availabilities.
+     * Builds the query to find overlapping availabilities.
      *
      * @param  AvailabilityRecord  $record  The availability record
      * @return Builder The query builder
@@ -128,30 +137,25 @@ final class AvailabilityNoOverlapRule implements ValidationRule
 
         return Availability::where('schedulable_type', $record->schedulable_type)
             ->where('schedulable_id', $record->schedulable_id)
-            ->where(function ($query) use ($record, $dayStrings) {
-                // Day condition - compatible avec SQLite
+            ->where(function (Builder $query) use ($record, $dayStrings): void {
                 $this->addDayCondition($query, $dayStrings);
-
-                // Time condition
                 $this->addTimeCondition($query, $record->daily_start, $record->daily_end);
-
-                // Validity period condition
                 $this->addValidityPeriodCondition($query, $record->validity_start, $record->validity_end);
             });
     }
 
     /**
-     * Add day overlap condition to the query.
-     * Utilise une approche compatible SQLite avec JSON_EACH.
+     * Adds day overlap condition to the query.
+     *
+     * Checks if there is at least one common day between the availabilities.
+     * Uses JSON contains for SQLite compatibility.
      *
      * @param  Builder  $query  The query builder
      * @param  array<string>  $dayStrings  The days to check
      */
     private function addDayCondition(Builder $query, array $dayStrings): void
     {
-        // Pour SQLite, on utilise json_each pour vérifier l'intersection
-        // On vérifie qu'au moins un jour commun existe
-        $query->where(function ($subQuery) use ($dayStrings) {
+        $query->where(function (Builder $subQuery) use ($dayStrings): void {
             foreach ($dayStrings as $day) {
                 $subQuery->orWhereJsonContains('days', $day);
             }
@@ -159,7 +163,9 @@ final class AvailabilityNoOverlapRule implements ValidationRule
     }
 
     /**
-     * Add time overlap condition to the query.
+     * Adds time overlap condition to the query.
+     *
+     * Checks if the time ranges overlap using the standard interval overlap formula.
      *
      * @param  Builder  $query  The query builder
      * @param  TimeZuluVO  $dailyStart  The daily start time
@@ -170,14 +176,16 @@ final class AvailabilityNoOverlapRule implements ValidationRule
         TimeZuluVO $dailyStart,
         TimeZuluVO $dailyEnd
     ): void {
-        $query->where(function ($subQuery) use ($dailyStart, $dailyEnd) {
+        $query->where(function (Builder $subQuery) use ($dailyStart, $dailyEnd): void {
             $subQuery->where('daily_start', '<', $dailyEnd->toTimeString())
                 ->where('daily_end', '>', $dailyStart->toTimeString());
         });
     }
 
     /**
-     * Add validity period overlap condition to the query.
+     * Adds validity period overlap condition to the query.
+     *
+     * Checks if the validity periods overlap using the standard interval overlap formula.
      *
      * @param  Builder  $query  The query builder
      * @param  DateTimeZuluVO|null  $validityStart  The validity start date
@@ -189,7 +197,7 @@ final class AvailabilityNoOverlapRule implements ValidationRule
         ?DateTimeZuluVO $validityEnd
     ): void {
         if ($validityStart !== null && $validityEnd !== null) {
-            $query->where(function ($subQuery) use ($validityStart, $validityEnd) {
+            $query->where(function (Builder $subQuery) use ($validityStart, $validityEnd): void {
                 $subQuery->where('validity_start', '<=', $validityEnd->toDateTimeString())
                     ->where('validity_end', '>=', $validityStart->toDateTimeString());
             });
@@ -197,7 +205,7 @@ final class AvailabilityNoOverlapRule implements ValidationRule
     }
 
     /**
-     * Exclude the current entity being updated from the query.
+     * Excludes the current entity being updated from the query.
      *
      * @param  Builder  $query  The query builder
      * @param  ValidationContext  $context  The validation context
@@ -216,7 +224,7 @@ final class AvailabilityNoOverlapRule implements ValidationRule
     }
 
     /**
-     * Create an error for overlapping availability.
+     * Creates an error for overlapping availability.
      *
      * @param  Availability  $conflicting  The conflicting availability
      * @param  AvailabilityRecord  $record  The record being validated

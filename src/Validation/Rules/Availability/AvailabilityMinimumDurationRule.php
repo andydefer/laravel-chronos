@@ -12,20 +12,29 @@ use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
 use AndyDefer\LaravelChronos\Validation\Context\ValidationContext;
 use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 use AndyDefer\LaravelChronos\Validation\Services\ValidationHelperService;
+use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
 
 /**
  * Validates that the availability duration meets the minimum required duration.
  *
  * Ensures that the time between daily_start and daily_end is at least
- * the configured minimum duration.
+ * the configured minimum duration. This prevents creating availabilities
+ * that are too short to be useful for scheduling.
+ *
+ * @example
+ * $rule = new AvailabilityMinimumDurationRule($helper, $config);
+ * $context = new ValidationContext($record, OperationType::CREATE);
+ * $error = $rule->validate($context);
+ *
+ * if ($error !== null) {
+ *     // Handle validation failure
+ * }
  */
 final class AvailabilityMinimumDurationRule implements ValidationRule
 {
     /**
-     * Constructor with dependency injection.
-     *
      * @param  ValidationHelperService  $helper  Helper service for validation utilities
-     * @param  ChronosConfigInterface  $config  Configuration containing min duration
+     * @param  ChronosConfigInterface  $config  Configuration containing minimum duration
      */
     public function __construct(
         private readonly ValidationHelperService $helper,
@@ -33,7 +42,7 @@ final class AvailabilityMinimumDurationRule implements ValidationRule
     ) {}
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function getDescription(): string
     {
@@ -41,10 +50,9 @@ final class AvailabilityMinimumDurationRule implements ValidationRule
     }
 
     /**
-     * Determine if this rule supports the given validation context.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context to check
-     * @return bool True if this rule applies to the context
+     * This rule only applies to Availability entity types during create or update operations.
      */
     public function supports(ValidationContext $context): bool
     {
@@ -53,10 +61,11 @@ final class AvailabilityMinimumDurationRule implements ValidationRule
     }
 
     /**
-     * Validate the availability duration meets minimum requirements.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context containing the record
-     * @return ValidationErrorRecord|null An error record if validation fails, null otherwise
+     * Validates that the duration between daily_start and daily_end meets the minimum.
+     *
+     * @throws \RuntimeException If the record is not an AvailabilityRecord
      */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
@@ -69,7 +78,6 @@ final class AvailabilityMinimumDurationRule implements ValidationRule
         $dailyStart = $record->daily_start;
         $dailyEnd = $record->daily_end;
 
-        // Skip validation if times are not set (handled by other rules)
         if ($this->areTimesMissing($dailyStart, $dailyEnd)) {
             return null;
         }
@@ -77,51 +85,44 @@ final class AvailabilityMinimumDurationRule implements ValidationRule
         $minDuration = $this->config->getMinDuration();
         $actualDuration = $this->helper->getTimeDurationInMinutes($dailyStart, $dailyEnd);
 
-        if ($this->isDurationTooShort($actualDuration, $minDuration)) {
-            return $this->createDurationTooShortError($minDuration, $actualDuration, $dailyStart, $dailyEnd);
+        if ($actualDuration < $minDuration) {
+            return $this->createDurationTooShortError(
+                $minDuration,
+                $actualDuration,
+                $dailyStart,
+                $dailyEnd
+            );
         }
 
         return null;
     }
 
     /**
-     * Check if daily start or end times are missing.
+     * Checks if daily start or end times are missing.
      *
-     * @param  mixed  $dailyStart  The daily start time
-     * @param  mixed  $dailyEnd  The daily end time
+     * @param  TimeZuluVO|null  $dailyStart  The daily start time
+     * @param  TimeZuluVO|null  $dailyEnd  The daily end time
      * @return bool True if either time is missing
      */
-    private function areTimesMissing(mixed $dailyStart, mixed $dailyEnd): bool
+    private function areTimesMissing(?TimeZuluVO $dailyStart, ?TimeZuluVO $dailyEnd): bool
     {
         return $dailyStart === null || $dailyEnd === null;
     }
 
     /**
-     * Check if the duration is too short.
+     * Creates an error for insufficient duration.
      *
+     * @param  int  $minDuration  The minimum required duration in minutes
      * @param  int  $actualDuration  The actual duration in minutes
-     * @param  int  $minDuration  The minimum allowed duration in minutes
-     * @return bool True if duration is below minimum
-     */
-    private function isDurationTooShort(int $actualDuration, int $minDuration): bool
-    {
-        return $actualDuration < $minDuration;
-    }
-
-    /**
-     * Create an error for insufficient duration.
-     *
-     * @param  int  $minDuration  The minimum required duration
-     * @param  int  $actualDuration  The actual duration
-     * @param  mixed  $dailyStart  The daily start time
-     * @param  mixed  $dailyEnd  The daily end time
+     * @param  TimeZuluVO  $dailyStart  The daily start time
+     * @param  TimeZuluVO  $dailyEnd  The daily end time
      * @return ValidationErrorRecord The error record
      */
     private function createDurationTooShortError(
         int $minDuration,
         int $actualDuration,
-        mixed $dailyStart,
-        mixed $dailyEnd
+        TimeZuluVO $dailyStart,
+        TimeZuluVO $dailyEnd
     ): ValidationErrorRecord {
         return new ValidationErrorRecord(
             rule: self::class,

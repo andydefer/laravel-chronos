@@ -15,41 +15,61 @@ use Illuminate\Database\Eloquent\Model;
  * Interface for the validation orchestrator.
  *
  * Manages and executes validation rules for different entity types
- * and operations.
+ * and operations. The validator is responsible for registering rules
+ * and executing them against validation contexts.
+ *
+ * @example
+ * $validator = new Validator();
+ * $validator->addRule(EntityType::AVAILABILITY, new AvailabilityRule());
+ *
+ * $result = $validator->validateRecord($record, OperationType::CREATE);
+ * if ($result->hasErrors()) {
+ *     // Handle validation errors
+ * }
  */
 interface ValidatorInterface
 {
     /**
-     * Add a validation rule for a specific entity type.
+     * Adds a validation rule for a specific entity type.
      *
-     * @param  EntityType  $entityType  The entity type
-     * @param  ValidationRule  $rule  The validation rule
+     * Rules are stored and executed in the order they are added.
+     *
+     * @param  EntityType  $entityType  The entity type to associate the rule with
+     * @param  ValidationRule  $rule  The validation rule to add
+     * @return self Returns the current instance for method chaining
      */
     public function addRule(EntityType $entityType, ValidationRule $rule): self;
 
     /**
-     * Add multiple validation rules for a specific entity type.
+     * Adds multiple validation rules for a specific entity type.
      *
-     * @param  EntityType  $entityType  The entity type
-     * @param  array<ValidationRule>  $rules  Array of validation rules
+     * @param  EntityType  $entityType  The entity type to associate the rules with
+     * @param  array<ValidationRule>  $rules  Array of validation rules to add
+     * @return self Returns the current instance for method chaining
      */
     public function addRules(EntityType $entityType, array $rules): self;
 
     /**
-     * Validate a context against all registered rules.
+     * Validates a context against all registered rules.
      *
-     * @param  ValidationContext  $context  The validation context
-     * @return ValidationResult The validation result
+     * Executes all rules associated with the entity type in the context.
+     * Rules that do not support the context are skipped.
+     *
+     * @param  ValidationContext  $context  The validation context containing record and operation data
+     * @return ValidationResult The validation result containing any errors
      */
     public function validate(ValidationContext $context): ValidationResult;
 
     /**
-     * Validate a record with a specific operation.
+     * Validates a record with a specific operation.
+     *
+     * Convenience method that creates a ValidationContext from the given parameters
+     * and delegates to {@see validate()}.
      *
      * @param  AbstractRecord  $record  The record to validate
-     * @param  OperationType  $operation  The operation type
-     * @param  Model|null  $existingEntity  The existing entity (for updates)
-     * @return ValidationResult The validation result
+     * @param  OperationType  $operation  The operation type (CREATE, UPDATE, DELETE)
+     * @param  Model|null  $existingEntity  The existing entity for update/delete operations
+     * @return ValidationResult The validation result containing any errors
      */
     public function validateRecord(
         AbstractRecord $record,
@@ -58,25 +78,25 @@ interface ValidatorInterface
     ): ValidationResult;
 
     /**
-     * Get all registered rules.
+     * Gets all registered rules.
      *
-     * @return array<string, array<ValidationRule>>
+     * @return array<string, array<ValidationRule>> Array of entity type keys to rule arrays
      */
     public function getRules(): array;
 
     /**
-     * Get rules for a specific entity type.
+     * Gets rules for a specific entity type.
      *
-     * @param  EntityType  $entityType  The entity type
-     * @return array<ValidationRule> Array of validation rules
+     * @param  EntityType  $entityType  The entity type to retrieve rules for
+     * @return array<ValidationRule> Array of validation rules for the entity type
      */
     public function getRulesForEntity(EntityType $entityType): array;
 
     /**
-     * Check if rules exist for a specific entity type.
+     * Checks if rules exist for a specific entity type.
      *
-     * @param  EntityType  $entityType  The entity type
-     * @return bool True if rules exist
+     * @param  EntityType  $entityType  The entity type to check
+     * @return bool True if the entity type has at least one rule registered
      */
     public function hasRulesForEntity(EntityType $entityType): bool;
 }

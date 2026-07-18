@@ -20,20 +20,20 @@ use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
  *
  * Prevents events from exceeding the configured maximum duration,
  * ensuring that no single event blocks the schedule for too long.
+ * This helps maintain fair scheduling and prevents resource monopolization.
+ *
+ * @example
+ * $rule = new MaxDurationRule($helper, $config);
+ * $context = new ValidationContext($record, OperationType::CREATE);
+ * $error = $rule->validate($context);
+ *
+ * if ($error !== null) {
+ *     // Handle duration exceeded error
+ * }
  */
 final class MaxDurationRule implements ValidationRule
 {
     /**
-     * {@inheritdoc}
-     */
-    public function getDescription(): string
-    {
-        return 'Ensures that event duration does not exceed the configured maximum duration.';
-    }
-
-    /**
-     * Constructor with dependency injection.
-     *
      * @param  ValidationHelperService  $helper  Helper service for validation utilities
      * @param  ChronosConfigInterface  $config  Configuration containing max duration
      */
@@ -43,10 +43,17 @@ final class MaxDurationRule implements ValidationRule
     ) {}
 
     /**
-     * Determine if this rule supports the given validation context.
+     * {@inheritDoc}
+     */
+    public function getDescription(): string
+    {
+        return 'Ensures that event duration does not exceed the configured maximum duration.';
+    }
+
+    /**
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context to check
-     * @return bool True if this rule applies to the context
+     * This rule applies to Schedule and Impediment entity types during create or update operations.
      */
     public function supports(ValidationContext $context): bool
     {
@@ -56,16 +63,16 @@ final class MaxDurationRule implements ValidationRule
     }
 
     /**
-     * Validate that the duration does not exceed the maximum allowed.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context containing the record
-     * @return ValidationErrorRecord|null An error record if validation fails, null otherwise
+     * Validates that the duration does not exceed the maximum allowed.
+     *
+     * @throws \RuntimeException If the record is not a ScheduleRecord or ImpedimentRecord
      */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
         $record = $context->getRecord();
 
-        // Extract time data from the record
         $timeData = $this->extractTimeData($record);
 
         if ($timeData === null) {
@@ -90,7 +97,7 @@ final class MaxDurationRule implements ValidationRule
     }
 
     /**
-     * Extract time data from the record.
+     * Extracts time data from the record.
      *
      * @param  mixed  $record  The record to extract from
      * @return array{DateTimeZuluVO, DateTimeZuluVO}|null Array of [start, end] or null
@@ -116,7 +123,7 @@ final class MaxDurationRule implements ValidationRule
     }
 
     /**
-     * Format duration in minutes to human-readable string.
+     * Formats duration in minutes to human-readable string.
      *
      * @param  int  $minutes  The duration in minutes
      * @return string Human-readable duration
@@ -138,7 +145,7 @@ final class MaxDurationRule implements ValidationRule
     }
 
     /**
-     * Create an error for exceeded duration.
+     * Creates an error for exceeded duration.
      *
      * @param  DateTimeZuluVO  $startDatetime  The start datetime
      * @param  DateTimeZuluVO  $endDatetime  The end datetime
@@ -152,15 +159,12 @@ final class MaxDurationRule implements ValidationRule
         int $actualDuration,
         int $maxDuration
     ): ValidationErrorRecord {
-        $actualFormatted = $this->formatDuration($actualDuration);
-        $maxFormatted = $this->formatDuration($maxDuration);
-
         return new ValidationErrorRecord(
             rule: self::class,
             message: sprintf(
                 'Duration (%s) exceeds maximum allowed duration (%s).',
-                $actualFormatted,
-                $maxFormatted
+                $this->formatDuration($actualDuration),
+                $this->formatDuration($maxDuration)
             ),
             context: Associative::from([
                 'duration' => $actualDuration,

@@ -15,7 +15,18 @@ use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
  * Validates that all required fields are present for an availability record.
  *
  * Ensures that critical fields like name, time slots, and schedulable entity
- * information are provided when creating an availability.
+ * information are provided when creating an availability. This rule is only
+ * applied during CREATE operations as UPDATE operations may only modify
+ * a subset of fields.
+ *
+ * @example
+ * $rule = new AvailabilityRequiredFieldsRule();
+ * $context = new ValidationContext($record, OperationType::CREATE);
+ * $error = $rule->validate($context);
+ *
+ * if ($error !== null) {
+ *     // Handle missing fields
+ * }
  */
 final class AvailabilityRequiredFieldsRule implements ValidationRule
 {
@@ -33,7 +44,7 @@ final class AvailabilityRequiredFieldsRule implements ValidationRule
     ];
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function getDescription(): string
     {
@@ -41,10 +52,9 @@ final class AvailabilityRequiredFieldsRule implements ValidationRule
     }
 
     /**
-     * Determine if this rule supports the given validation context.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context to check
-     * @return bool True if this rule applies to the context
+     * This rule only applies to Availability entity types during create operations.
      */
     public function supports(ValidationContext $context): bool
     {
@@ -53,10 +63,11 @@ final class AvailabilityRequiredFieldsRule implements ValidationRule
     }
 
     /**
-     * Validate that all required fields are present.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context containing the record
-     * @return ValidationErrorRecord|null An error record if validation fails, null otherwise
+     * Validates that all required fields are present in the record.
+     *
+     * @throws \RuntimeException If the record is not an AvailabilityRecord
      */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
@@ -69,14 +80,14 @@ final class AvailabilityRequiredFieldsRule implements ValidationRule
         $missingFields = $this->findMissingFields($record);
 
         if (! empty($missingFields)) {
-            return $this->createMissingFieldsError($missingFields, $record);
+            return $this->createMissingFieldsError($missingFields);
         }
 
         return null;
     }
 
     /**
-     * Find which required fields are missing from the record.
+     * Finds which required fields are missing from the record.
      *
      * @param  AvailabilityRecord  $record  The record to check
      * @return array<string> Array of missing field names
@@ -95,7 +106,7 @@ final class AvailabilityRequiredFieldsRule implements ValidationRule
     }
 
     /**
-     * Check if a specific field is missing from the record.
+     * Checks if a specific field is missing from the record.
      *
      * @param  AvailabilityRecord  $record  The record to check
      * @param  string  $field  The field name to check
@@ -116,25 +127,21 @@ final class AvailabilityRequiredFieldsRule implements ValidationRule
     }
 
     /**
-     * Create an error for missing required fields.
+     * Creates an error for missing required fields.
      *
      * @param  array<string>  $missingFields  Array of missing field names
-     * @param  AvailabilityRecord  $record  The record being validated
      * @return ValidationErrorRecord The error record
      */
-    private function createMissingFieldsError(
-        array $missingFields,
-        AvailabilityRecord $record
-    ): ValidationErrorRecord {
+    private function createMissingFieldsError(array $missingFields): ValidationErrorRecord
+    {
         return new ValidationErrorRecord(
             rule: self::class,
             message: sprintf(
-                'The following fields are required for availability: %s',
+                'The following fields are required for availability creation: %s',
                 implode(', ', $missingFields)
             ),
             context: Associative::from([
                 'missing_fields' => $missingFields,
-                'record_type' => get_class($record),
             ])
         );
     }

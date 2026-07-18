@@ -13,15 +13,31 @@ use AndyDefer\LaravelChronos\Validation\Context\ValidationContext;
 use AndyDefer\LaravelChronos\Validation\Result\ValidationResult;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Orchestrates validation rules for different entity types and operations.
+ *
+ * This validator manages a registry of validation rules organized by entity type.
+ * When a validation is requested, it executes all registered rules that support
+ * the given context and collects any validation errors.
+ *
+ * @example
+ * $validator = new Validator();
+ * $validator->addRule(EntityType::AVAILABILITY, new AvailabilityCreateRule());
+ * $validator->addRule(EntityType::AVAILABILITY, new AvailabilityUpdateRule());
+ *
+ * $result = $validator->validateRecord($record, OperationType::CREATE);
+ *
+ * @see ValidatorInterface
+ */
 final class Validator implements ValidatorInterface
 {
     /**
-     * @var array<string, array<ValidationRule>>
+     * @var array<string, array<ValidationRule>> Registry of validation rules by entity type
      */
     private array $rules = [];
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function addRule(EntityType $entityType, ValidationRule $rule): self
     {
@@ -37,7 +53,7 @@ final class Validator implements ValidatorInterface
     }
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function addRules(EntityType $entityType, array $rules): self
     {
@@ -49,18 +65,19 @@ final class Validator implements ValidatorInterface
     }
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function validate(ValidationContext $context): ValidationResult
     {
-        $key = $context->getEntityType()->value;
+        $entityTypeKey = $context->getEntityType()->value;
         $result = new ValidationResult;
 
-        $rules = $this->rules[$key] ?? [];
+        $rules = $this->getRulesForEntityKey($entityTypeKey);
 
         foreach ($rules as $rule) {
             if ($rule->supports($context)) {
                 $error = $rule->validate($context);
+
                 if ($error !== null) {
                     $result->addError($error);
                 }
@@ -71,7 +88,7 @@ final class Validator implements ValidatorInterface
     }
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function validateRecord(
         AbstractRecord $record,
@@ -84,7 +101,7 @@ final class Validator implements ValidatorInterface
     }
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function getRules(): array
     {
@@ -92,18 +109,31 @@ final class Validator implements ValidatorInterface
     }
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function getRulesForEntity(EntityType $entityType): array
     {
-        return $this->rules[$entityType->value] ?? [];
+        return $this->getRulesForEntityKey($entityType->value);
     }
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function hasRulesForEntity(EntityType $entityType): bool
     {
-        return isset($this->rules[$entityType->value]) && ! empty($this->rules[$entityType->value]);
+        $rules = $this->getRulesForEntityKey($entityType->value);
+
+        return ! empty($rules);
+    }
+
+    /**
+     * Retrieves rules for a specific entity type key.
+     *
+     * @param  string  $entityTypeKey  The entity type key (value from EntityType enum)
+     * @return array<ValidationRule> Array of validation rules
+     */
+    private function getRulesForEntityKey(string $entityTypeKey): array
+    {
+        return $this->rules[$entityTypeKey] ?? [];
     }
 }

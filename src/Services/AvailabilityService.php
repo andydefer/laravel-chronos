@@ -16,81 +16,100 @@ use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
 use AndyDefer\LaravelChronos\Support\ServiceContext;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use Illuminate\Support\Collection;
+use Throwable;
 
+/**
+ * Service for managing availability operations.
+ *
+ * This service implements the business logic for availability management,
+ * including validation, authorization, and mutation tracking. All operations
+ * are wrapped in context managers for consistent error handling and auditing.
+ *
+ * @example
+ * $service = new AvailabilityService($repository, $validator);
+ * $availability = $service->create(new AvailabilityRecord(...));
+ *
+ * @see AvailabilityServiceInterface
+ */
 final class AvailabilityService implements AvailabilityServiceInterface
 {
+    /**
+     * @param  AvailabilityRepositoryInterface  $repository  The repository for persistence operations
+     * @param  ValidatorInterface  $validator  The validator for business rule validation
+     */
     public function __construct(
         private readonly AvailabilityRepositoryInterface $repository,
         private readonly ValidatorInterface $validator,
     ) {}
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws ValidationException When the record fails validation
+     * @throws Throwable When the repository operation fails
+     */
     public function create(AvailabilityRecord $record): Availability
     {
         return ServiceContext::within(
             AvailabilityService::class,
-            function () use ($record) {
-                $result = $this->validator->validateRecord($record, OperationType::CREATE);
-
-                if ($result->hasErrors()) {
-                    throw ValidationException::fromValidationResult($result);
-                }
+            function () use ($record): Availability {
+                $this->validateOperation($record, OperationType::CREATE);
 
                 return ChronosMutationContext::withAllowed(
-                    fn () => $this->repository->create($record)
+                    fn (): Availability => $this->repository->create($record)
                 );
             },
             ['operation' => 'create']
         );
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws ModelNotFoundException When the availability does not exist
+     * @throws ValidationException When the record fails validation
+     * @throws Throwable When the repository operation fails
+     */
     public function update(int $id, AvailabilityRecord $record): Availability
     {
         return ServiceContext::within(
             AvailabilityService::class,
-            function () use ($id, $record) {
-                $existing = $this->find($id);
-
-                if ($existing === null) {
-                    throw ModelNotFoundException::create(Availability::class, $id);
-                }
-
-                $result = $this->validator->validateRecord($record, OperationType::UPDATE, $existing);
-
-                if ($result->hasErrors()) {
-                    throw ValidationException::fromValidationResult($result);
-                }
+            function () use ($id, $record): Availability {
+                $existing = $this->findOrFail($id);
+                $this->validateOperation($record, OperationType::UPDATE, $existing);
 
                 return ChronosMutationContext::withAllowed(
-                    fn () => $this->repository->update($id, $record)
+                    fn (): Availability => $this->repository->update($id, $record)
                 );
             },
             ['operation' => 'update', 'id' => $id]
         );
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws ModelNotFoundException When the availability does not exist
+     * @throws ValidationException When validation fails and force is false
+     * @throws Throwable When the repository operation fails
+     */
     public function delete(int $id, bool $force = false): bool
     {
         return ServiceContext::within(
             AvailabilityService::class,
-            function () use ($id, $force) {
-                $existing = $this->find($id);
+            function () use ($id, $force): bool {
+                $existing = $this->findOrFail($id);
 
-                if ($existing === null) {
-                    throw ModelNotFoundException::create(Availability::class, $id);
-                }
-
-                $result = $this->validator->validateRecord(
-                    new AvailabilityRecord,
-                    OperationType::DELETE,
-                    $existing
-                );
-
-                if ($result->hasErrors() && ! $force) {
-                    throw ValidationException::fromValidationResult($result);
+                if (! $force) {
+                    $this->validateOperation(
+                        new AvailabilityRecord,
+                        OperationType::DELETE,
+                        $existing
+                    );
                 }
 
                 return ChronosMutationContext::withAllowed(
-                    fn () => $force
+                    fn (): bool => $force
                         ? $this->repository->forceDelete($id)
                         : $this->repository->delete($id)
                 );
@@ -99,20 +118,26 @@ final class AvailabilityService implements AvailabilityServiceInterface
         );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function find(int $id): ?Availability
     {
         return ServiceContext::within(
             AvailabilityService::class,
-            fn () => $this->repository->find($id),
+            fn (): ?Availability => $this->repository->find($id),
             ['operation' => 'find', 'id' => $id]
         );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function findBySchedulable(string $schedulableType, int $schedulableId): Collection
     {
         return ServiceContext::within(
             AvailabilityService::class,
-            fn () => $this->repository->findBySchedulable($schedulableType, $schedulableId),
+            fn (): Collection => $this->repository->findBySchedulable($schedulableType, $schedulableId),
             [
                 'operation' => 'findBySchedulable',
                 'schedulable_type' => $schedulableType,
@@ -121,15 +146,21 @@ final class AvailabilityService implements AvailabilityServiceInterface
         );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function findByType(string $type): Collection
     {
         return ServiceContext::within(
             AvailabilityService::class,
-            fn () => $this->repository->findByType($type),
+            fn (): Collection => $this->repository->findByType($type),
             ['operation' => 'findByType', 'type' => $type]
         );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function findActiveAtDate(
         string $schedulableType,
         int $schedulableId,
@@ -137,7 +168,11 @@ final class AvailabilityService implements AvailabilityServiceInterface
     ): Collection {
         return ServiceContext::within(
             AvailabilityService::class,
-            fn () => $this->repository->findActiveAtDate($schedulableType, $schedulableId, $date),
+            fn (): Collection => $this->repository->findActiveAtDate(
+                $schedulableType,
+                $schedulableId,
+                $date
+            ),
             [
                 'operation' => 'findActiveAtDate',
                 'schedulable_type' => $schedulableType,
@@ -147,6 +182,9 @@ final class AvailabilityService implements AvailabilityServiceInterface
         );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function findActiveInDateRange(
         string $schedulableType,
         int $schedulableId,
@@ -155,7 +193,7 @@ final class AvailabilityService implements AvailabilityServiceInterface
     ): Collection {
         return ServiceContext::within(
             AvailabilityService::class,
-            fn () => $this->repository->findActiveInDateRange(
+            fn (): Collection => $this->repository->findActiveInDateRange(
                 $schedulableType,
                 $schedulableId,
                 $start,
@@ -171,11 +209,14 @@ final class AvailabilityService implements AvailabilityServiceInterface
         );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function schedulableExists(string $schedulableType, int $schedulableId): bool
     {
         return ServiceContext::within(
             AvailabilityService::class,
-            fn () => $this->repository->schedulableExists($schedulableType, $schedulableId),
+            fn (): bool => $this->repository->schedulableExists($schedulableType, $schedulableId),
             [
                 'operation' => 'schedulableExists',
                 'schedulable_type' => $schedulableType,
@@ -184,15 +225,58 @@ final class AvailabilityService implements AvailabilityServiceInterface
         );
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function getSchedulableModel(string $schedulableType): ?string
     {
         return ServiceContext::within(
             AvailabilityService::class,
-            fn () => $this->repository->getSchedulableModel($schedulableType),
+            fn (): ?string => $this->repository->getSchedulableModel($schedulableType),
             [
                 'operation' => 'getSchedulableModel',
                 'schedulable_type' => $schedulableType,
             ]
         );
+    }
+
+    /**
+     * Finds an availability or throws an exception if not found.
+     *
+     * @param  int  $id  The availability ID
+     * @return Availability The found availability
+     *
+     * @throws ModelNotFoundException When the availability does not exist
+     */
+    private function findOrFail(int $id): Availability
+    {
+        $availability = $this->repository->find($id);
+
+        if ($availability === null) {
+            throw ModelNotFoundException::create(Availability::class, $id);
+        }
+
+        return $availability;
+    }
+
+    /**
+     * Validates an operation against business rules.
+     *
+     * @param  AvailabilityRecord  $record  The record to validate
+     * @param  OperationType  $operation  The operation type
+     * @param  Availability|null  $existing  The existing availability for update/delete operations
+     *
+     * @throws ValidationException When validation fails
+     */
+    private function validateOperation(
+        AvailabilityRecord $record,
+        OperationType $operation,
+        ?Availability $existing = null
+    ): void {
+        $result = $this->validator->validateRecord($record, $operation, $existing);
+
+        if ($result->hasErrors()) {
+            throw ValidationException::fromValidationResult($result);
+        }
     }
 }

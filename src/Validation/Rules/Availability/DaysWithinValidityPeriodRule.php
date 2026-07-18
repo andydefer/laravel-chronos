@@ -18,12 +18,20 @@ use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
  *
  * Ensures that all days selected for an availability are actually present
  * within the date range defined by validity_start and validity_end.
+ * This prevents selecting days that never occur within the availability period.
+ *
+ * @example
+ * $rule = new DaysWithinValidityPeriodRule($helper);
+ * $context = new ValidationContext($record, OperationType::CREATE);
+ * $error = $rule->validate($context);
+ *
+ * if ($error !== null) {
+ *     // Handle days outside validity period
+ * }
  */
 final class DaysWithinValidityPeriodRule implements ValidationRule
 {
     /**
-     * Constructor with dependency injection.
-     *
      * @param  ValidationHelperService  $helper  Helper service for validation utilities
      */
     public function __construct(
@@ -31,7 +39,7 @@ final class DaysWithinValidityPeriodRule implements ValidationRule
     ) {}
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function getDescription(): string
     {
@@ -39,10 +47,9 @@ final class DaysWithinValidityPeriodRule implements ValidationRule
     }
 
     /**
-     * Determine if this rule supports the given validation context.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context to check
-     * @return bool True if this rule applies to the context
+     * This rule applies to Availability entity types during create or update operations.
      */
     public function supports(ValidationContext $context): bool
     {
@@ -51,10 +58,11 @@ final class DaysWithinValidityPeriodRule implements ValidationRule
     }
 
     /**
-     * Validate that days exist within the validity period.
+     * {@inheritDoc}
      *
-     * @param  ValidationContext  $context  The validation context containing the record
-     * @return ValidationErrorRecord|null An error record if validation fails, null otherwise
+     * Validates that days exist within the validity period.
+     *
+     * @throws \RuntimeException If the record is not an AvailabilityRecord
      */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
@@ -64,12 +72,10 @@ final class DaysWithinValidityPeriodRule implements ValidationRule
             return null;
         }
 
-        // Skip validation if no validity period is defined (perpetual availability)
         if ($this->isPerpetualAvailability($record)) {
             return null;
         }
 
-        // Skip if no days are defined (handled by other rules)
         if ($this->isDaysMissing($record)) {
             return null;
         }
@@ -84,7 +90,7 @@ final class DaysWithinValidityPeriodRule implements ValidationRule
     }
 
     /**
-     * Check if the availability is perpetual (no validity dates).
+     * Checks if the availability is perpetual (no validity dates).
      *
      * @param  AvailabilityRecord  $record  The record to check
      * @return bool True if no validity dates are defined
@@ -96,7 +102,7 @@ final class DaysWithinValidityPeriodRule implements ValidationRule
     }
 
     /**
-     * Check if days are missing from the record.
+     * Checks if days are missing from the record.
      *
      * @param  AvailabilityRecord  $record  The record to check
      * @return bool True if days are null or empty
@@ -108,7 +114,7 @@ final class DaysWithinValidityPeriodRule implements ValidationRule
     }
 
     /**
-     * Find days that are not within the validity period.
+     * Finds days that are not within the validity period.
      *
      * @param  AvailabilityRecord  $record  The record to check
      * @return array<string> Array of invalid day strings
@@ -132,7 +138,7 @@ final class DaysWithinValidityPeriodRule implements ValidationRule
     }
 
     /**
-     * Get all day names that appear within the validity period.
+     * Gets all day names that appear within the validity period.
      *
      * @param  DateTimeZuluVO|null  $start  The validity start date
      * @param  DateTimeZuluVO|null  $end  The validity end date
@@ -151,9 +157,11 @@ final class DaysWithinValidityPeriodRule implements ValidationRule
 
         while ($current->isBefore($end) || $current->isEqual($end)) {
             $dayName = strtolower($current->format('l'));
+
             if (! in_array($dayName, $days, true)) {
                 $days[] = $dayName;
             }
+
             $current = $current->addDays(1);
         }
 
@@ -161,7 +169,7 @@ final class DaysWithinValidityPeriodRule implements ValidationRule
     }
 
     /**
-     * Create an error for invalid days outside the validity period.
+     * Creates an error for invalid days outside the validity period.
      *
      * @param  array<string>  $invalidDays  Array of invalid day strings
      * @param  AvailabilityRecord  $record  The record being validated
