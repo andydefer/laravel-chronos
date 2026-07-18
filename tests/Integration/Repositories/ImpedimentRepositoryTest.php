@@ -27,8 +27,22 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        ChronosMutationContext::withAllowed(function () {
+            TestCar::create([
+                'model' => 'Test Model',
+                'license_plate' => 'TEST123',
+                'type' => 'sedan',
+                'capacity' => 5,
+            ]);
+        });
+
         $this->repository = $this->app->make(ImpedimentRepository::class);
         $this->availabilityRepository = $this->app->make(AvailabilityRepository::class);
+
+        // Désactiver l'enforcement du service layer pour les tests
+        $this->repository->withoutServiceEnforcement();
+        $this->availabilityRepository->withoutServiceEnforcement();
     }
 
     // ============================================================

@@ -14,6 +14,7 @@ use AndyDefer\LaravelChronos\Exceptions\ValidationException;
 use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\ScheduleRecord;
 use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
+use AndyDefer\LaravelChronos\Support\ServiceContext;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use Illuminate\Support\Collection;
 
@@ -26,82 +27,132 @@ final class ScheduleService implements ScheduleServiceInterface
 
     public function create(ScheduleRecord $record): Schedule
     {
-        $result = $this->validator->validateRecord($record, OperationType::CREATE);
+        return ServiceContext::within(
+            ScheduleService::class,
+            function () use ($record) {
+                $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
-        if ($result->hasErrors()) {
-            throw ValidationException::fromValidationResult($result);
-        }
+                if ($result->hasErrors()) {
+                    throw ValidationException::fromValidationResult($result);
+                }
 
-        return ChronosMutationContext::withAllowed(
-            fn () => $this->repository->create($record)
+                return ChronosMutationContext::withAllowed(
+                    fn () => $this->repository->create($record)
+                );
+            },
+            ['operation' => 'create']
         );
     }
 
     public function update(int $id, ScheduleRecord $record): Schedule
     {
-        $existing = $this->find($id);
+        return ServiceContext::within(
+            ScheduleService::class,
+            function () use ($id, $record) {
+                $existing = $this->find($id);
 
-        if ($existing === null) {
-            throw ModelNotFoundException::create(Schedule::class, $id);
-        }
+                if ($existing === null) {
+                    throw ModelNotFoundException::create(Schedule::class, $id);
+                }
 
-        $result = $this->validator->validateRecord($record, OperationType::UPDATE, $existing);
+                $result = $this->validator->validateRecord($record, OperationType::UPDATE, $existing);
 
-        if ($result->hasErrors()) {
-            throw ValidationException::fromValidationResult($result);
-        }
+                if ($result->hasErrors()) {
+                    throw ValidationException::fromValidationResult($result);
+                }
 
-        return ChronosMutationContext::withAllowed(
-            fn () => $this->repository->update($id, $record)
+                return ChronosMutationContext::withAllowed(
+                    fn () => $this->repository->update($id, $record)
+                );
+            },
+            ['operation' => 'update', 'id' => $id]
         );
     }
 
     public function delete(int $id): bool
     {
-        $existing = $this->find($id);
+        return ServiceContext::within(
+            ScheduleService::class,
+            function () use ($id) {
+                $existing = $this->find($id);
 
-        if ($existing === null) {
-            throw ModelNotFoundException::create(Schedule::class, $id);
-        }
+                if ($existing === null) {
+                    throw ModelNotFoundException::create(Schedule::class, $id);
+                }
 
-        $result = $this->validator->validateRecord(
-            new ScheduleRecord,
-            OperationType::DELETE,
-            $existing
-        );
+                $result = $this->validator->validateRecord(
+                    new ScheduleRecord,
+                    OperationType::DELETE,
+                    $existing
+                );
 
-        if ($result->hasErrors()) {
-            throw ValidationException::fromValidationResult($result);
-        }
+                if ($result->hasErrors()) {
+                    throw ValidationException::fromValidationResult($result);
+                }
 
-        return ChronosMutationContext::withAllowed(
-            fn () => $this->repository->delete($id)
+                return ChronosMutationContext::withAllowed(
+                    fn () => $this->repository->delete($id)
+                );
+            },
+            ['operation' => 'delete', 'id' => $id]
         );
     }
 
     public function find(int $id): ?Schedule
     {
-        return $this->repository->find($id);
+        return ServiceContext::within(
+            ScheduleService::class,
+            fn () => $this->repository->find($id),
+            ['operation' => 'find', 'id' => $id]
+        );
     }
 
     public function findByAvailability(int $availabilityId): Collection
     {
-        return $this->repository->findByAvailability($availabilityId);
+        return ServiceContext::within(
+            ScheduleService::class,
+            fn () => $this->repository->findByAvailability($availabilityId),
+            ['operation' => 'findByAvailability', 'availability_id' => $availabilityId]
+        );
     }
 
     public function findBySchedulable(string $schedulableType, int $schedulableId): Collection
     {
-        return $this->repository->findBySchedulable($schedulableType, $schedulableId);
+        return ServiceContext::within(
+            ScheduleService::class,
+            fn () => $this->repository->findBySchedulable($schedulableType, $schedulableId),
+            [
+                'operation' => 'findBySchedulable',
+                'schedulable_type' => $schedulableType,
+                'schedulable_id' => $schedulableId,
+            ]
+        );
     }
 
     public function findByStatus(ScheduleStatus $status, ?int $availabilityId = null): Collection
     {
-        return $this->repository->findByStatus($status, $availabilityId);
+        return ServiceContext::within(
+            ScheduleService::class,
+            fn () => $this->repository->findByStatus($status, $availabilityId),
+            [
+                'operation' => 'findByStatus',
+                'status' => $status->value,
+                'availability_id' => $availabilityId,
+            ]
+        );
     }
 
     public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null): Collection
     {
-        return $this->repository->findByDate($date, $availabilityId);
+        return ServiceContext::within(
+            ScheduleService::class,
+            fn () => $this->repository->findByDate($date, $availabilityId),
+            [
+                'operation' => 'findByDate',
+                'date' => $date->toDateTimeString(),
+                'availability_id' => $availabilityId,
+            ]
+        );
     }
 
     public function findInDateRange(
@@ -109,56 +160,85 @@ final class ScheduleService implements ScheduleServiceInterface
         DateTimeZuluVO $end,
         ?int $availabilityId = null
     ): Collection {
-        return $this->repository->findInDateRange($start, $end, $availabilityId);
+        return ServiceContext::within(
+            ScheduleService::class,
+            fn () => $this->repository->findInDateRange($start, $end, $availabilityId),
+            [
+                'operation' => 'findInDateRange',
+                'start' => $start->toDateTimeString(),
+                'end' => $end->toDateTimeString(),
+                'availability_id' => $availabilityId,
+            ]
+        );
     }
 
     public function searchByTitle(string $search, ?int $availabilityId = null): Collection
     {
-        return $this->repository->searchByTitle($search, $availabilityId);
+        return ServiceContext::within(
+            ScheduleService::class,
+            fn () => $this->repository->searchByTitle($search, $availabilityId),
+            [
+                'operation' => 'searchByTitle',
+                'search' => $search,
+                'availability_id' => $availabilityId,
+            ]
+        );
     }
 
     public function cancel(int $id): Schedule
     {
-        $schedule = $this->find($id);
+        return ServiceContext::within(
+            ScheduleService::class,
+            function () use ($id) {
+                $schedule = $this->find($id);
 
-        if ($schedule === null) {
-            throw ModelNotFoundException::create(Schedule::class, $id);
-        }
+                if ($schedule === null) {
+                    throw ModelNotFoundException::create(Schedule::class, $id);
+                }
 
-        if (! $this->canBeCancelled($schedule)) {
-            throw new ValidationException(
-                ['Schedule cannot be cancelled. Current status: '.$schedule->status->value],
-                'Schedule cannot be cancelled.'
-            );
-        }
+                if (! $this->canBeCancelled($schedule)) {
+                    throw new ValidationException(
+                        ['Schedule cannot be cancelled. Current status: '.$schedule->status->value],
+                        'Schedule cannot be cancelled.'
+                    );
+                }
 
-        $record = ScheduleRecord::from([
-            'status' => ScheduleStatus::CANCELLED,
-        ]);
+                $record = ScheduleRecord::from([
+                    'status' => ScheduleStatus::CANCELLED,
+                ]);
 
-        return $this->update($id, $record);
+                return $this->update($id, $record);
+            },
+            ['operation' => 'cancel', 'id' => $id]
+        );
     }
 
     public function complete(int $id): Schedule
     {
-        $schedule = $this->find($id);
+        return ServiceContext::within(
+            ScheduleService::class,
+            function () use ($id) {
+                $schedule = $this->find($id);
 
-        if ($schedule === null) {
-            throw ModelNotFoundException::create(Schedule::class, $id);
-        }
+                if ($schedule === null) {
+                    throw ModelNotFoundException::create(Schedule::class, $id);
+                }
 
-        if (! $this->canBeCompleted($schedule)) {
-            throw new ValidationException(
-                ['Schedule cannot be completed. Current status: '.$schedule->status->value],
-                'Schedule cannot be completed.'
-            );
-        }
+                if (! $this->canBeCompleted($schedule)) {
+                    throw new ValidationException(
+                        ['Schedule cannot be completed. Current status: '.$schedule->status->value],
+                        'Schedule cannot be completed.'
+                    );
+                }
 
-        $record = ScheduleRecord::from([
-            'status' => ScheduleStatus::COMPLETED,
-        ]);
+                $record = ScheduleRecord::from([
+                    'status' => ScheduleStatus::COMPLETED,
+                ]);
 
-        return $this->update($id, $record);
+                return $this->update($id, $record);
+            },
+            ['operation' => 'complete', 'id' => $id]
+        );
     }
 
     public function canBeCancelled(Schedule $schedule): bool

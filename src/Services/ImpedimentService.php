@@ -13,6 +13,7 @@ use AndyDefer\LaravelChronos\Exceptions\ValidationException;
 use AndyDefer\LaravelChronos\Models\Impediment;
 use AndyDefer\LaravelChronos\Records\ImpedimentRecord;
 use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
+use AndyDefer\LaravelChronos\Support\ServiceContext;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use Illuminate\Support\Collection;
 
@@ -23,140 +24,170 @@ final class ImpedimentService implements ImpedimentServiceInterface
         private readonly ValidatorInterface $validator,
     ) {}
 
-    /**
-     * {@inheritdoc}
-     */
     public function create(ImpedimentRecord $record): Impediment
     {
-        $result = $this->validator->validateRecord($record, OperationType::CREATE);
+        return ServiceContext::within(
+            ImpedimentService::class,
+            function () use ($record) {
+                $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
-        if ($result->hasErrors()) {
-            throw ValidationException::fromValidationResult($result);
-        }
+                if ($result->hasErrors()) {
+                    throw ValidationException::fromValidationResult($result);
+                }
 
-        return ChronosMutationContext::withAllowed(
-            fn () => $this->repository->create($record)
+                return ChronosMutationContext::withAllowed(
+                    fn () => $this->repository->create($record)
+                );
+            },
+            ['operation' => 'create']
         );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function update(int $id, ImpedimentRecord $record): Impediment
     {
-        $existing = $this->find($id);
+        return ServiceContext::within(
+            ImpedimentService::class,
+            function () use ($id, $record) {
+                $existing = $this->find($id);
 
-        if ($existing === null) {
-            throw ModelNotFoundException::create(Impediment::class, $id);
-        }
+                if ($existing === null) {
+                    throw ModelNotFoundException::create(Impediment::class, $id);
+                }
 
-        $result = $this->validator->validateRecord($record, OperationType::UPDATE, $existing);
+                $result = $this->validator->validateRecord($record, OperationType::UPDATE, $existing);
 
-        if ($result->hasErrors()) {
-            throw ValidationException::fromValidationResult($result);
-        }
+                if ($result->hasErrors()) {
+                    throw ValidationException::fromValidationResult($result);
+                }
 
-        return ChronosMutationContext::withAllowed(
-            fn () => $this->repository->update($id, $record)
+                return ChronosMutationContext::withAllowed(
+                    fn () => $this->repository->update($id, $record)
+                );
+            },
+            ['operation' => 'update', 'id' => $id]
         );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function delete(int $id): bool
     {
-        $existing = $this->find($id);
+        return ServiceContext::within(
+            ImpedimentService::class,
+            function () use ($id) {
+                $existing = $this->find($id);
 
-        if ($existing === null) {
-            throw ModelNotFoundException::create(Impediment::class, $id);
-        }
+                if ($existing === null) {
+                    throw ModelNotFoundException::create(Impediment::class, $id);
+                }
 
-        $result = $this->validator->validateRecord(
-            new ImpedimentRecord,
-            OperationType::DELETE,
-            $existing
-        );
+                $result = $this->validator->validateRecord(
+                    new ImpedimentRecord,
+                    OperationType::DELETE,
+                    $existing
+                );
 
-        if ($result->hasErrors()) {
-            throw ValidationException::fromValidationResult($result);
-        }
+                if ($result->hasErrors()) {
+                    throw ValidationException::fromValidationResult($result);
+                }
 
-        return ChronosMutationContext::withAllowed(
-            fn () => $this->repository->delete($id)
+                return ChronosMutationContext::withAllowed(
+                    fn () => $this->repository->delete($id)
+                );
+            },
+            ['operation' => 'delete', 'id' => $id]
         );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function find(int $id): ?Impediment
     {
-        return $this->repository->find($id);
+        return ServiceContext::within(
+            ImpedimentService::class,
+            fn () => $this->repository->find($id),
+            ['operation' => 'find', 'id' => $id]
+        );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function findByAvailability(int $availabilityId): Collection
     {
-        return $this->repository->findByAvailability($availabilityId);
+        return ServiceContext::within(
+            ImpedimentService::class,
+            fn () => $this->repository->findByAvailability($availabilityId),
+            ['operation' => 'findByAvailability', 'availability_id' => $availabilityId]
+        );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function findBySchedulable(string $schedulableType, int $schedulableId): Collection
     {
-        return $this->repository->findBySchedulable($schedulableType, $schedulableId);
+        return ServiceContext::within(
+            ImpedimentService::class,
+            fn () => $this->repository->findBySchedulable($schedulableType, $schedulableId),
+            [
+                'operation' => 'findBySchedulable',
+                'schedulable_type' => $schedulableType,
+                'schedulable_id' => $schedulableId,
+            ]
+        );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null): Collection
     {
-        return $this->repository->findByDate($date, $availabilityId);
+        return ServiceContext::within(
+            ImpedimentService::class,
+            fn () => $this->repository->findByDate($date, $availabilityId),
+            [
+                'operation' => 'findByDate',
+                'date' => $date->toDateTimeString(),
+                'availability_id' => $availabilityId,
+            ]
+        );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function findInDateRange(
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
         ?int $availabilityId = null
     ): Collection {
-        return $this->repository->findInDateRange($start, $end, $availabilityId);
+        return ServiceContext::within(
+            ImpedimentService::class,
+            fn () => $this->repository->findInDateRange($start, $end, $availabilityId),
+            [
+                'operation' => 'findInDateRange',
+                'start' => $start->toDateTimeString(),
+                'end' => $end->toDateTimeString(),
+                'availability_id' => $availabilityId,
+            ]
+        );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function findActive(?int $availabilityId = null): Collection
     {
-        return $this->repository->findActive($availabilityId);
+        return ServiceContext::within(
+            ImpedimentService::class,
+            fn () => $this->repository->findActive($availabilityId),
+            [
+                'operation' => 'findActive',
+                'availability_id' => $availabilityId,
+            ]
+        );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function searchByReason(string $search, ?int $availabilityId = null): Collection
     {
-        return $this->repository->searchByReason($search, $availabilityId);
+        return ServiceContext::within(
+            ImpedimentService::class,
+            fn () => $this->repository->searchByReason($search, $availabilityId),
+            [
+                'operation' => 'searchByReason',
+                'search' => $search,
+                'availability_id' => $availabilityId,
+            ]
+        );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function isActive(Impediment $impediment): bool
     {
         return $impediment->isActive();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function overlapsWith(
         Impediment $impediment,
         DateTimeZuluVO $start,
@@ -165,27 +196,39 @@ final class ImpedimentService implements ImpedimentServiceInterface
         return $impediment->overlapsWith($start, $end);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getBlockedSchedules(Impediment $impediment): Collection
     {
-        return $this->repository->getBlockedSchedules($impediment);
+        return ServiceContext::within(
+            ImpedimentService::class,
+            fn () => $this->repository->getBlockedSchedules($impediment),
+            [
+                'operation' => 'getBlockedSchedules',
+                'impediment_id' => $impediment->id,
+            ]
+        );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getFullyBlockedSchedules(Impediment $impediment): Collection
     {
-        return $this->repository->getFullyBlockedSchedules($impediment);
+        return ServiceContext::within(
+            ImpedimentService::class,
+            fn () => $this->repository->getFullyBlockedSchedules($impediment),
+            [
+                'operation' => 'getFullyBlockedSchedules',
+                'impediment_id' => $impediment->id,
+            ]
+        );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getPartiallyBlockedSchedules(Impediment $impediment): Collection
     {
-        return $this->repository->getPartiallyBlockedSchedules($impediment);
+        return ServiceContext::within(
+            ImpedimentService::class,
+            fn () => $this->repository->getPartiallyBlockedSchedules($impediment),
+            [
+                'operation' => 'getPartiallyBlockedSchedules',
+                'impediment_id' => $impediment->id,
+            ]
+        );
     }
 }

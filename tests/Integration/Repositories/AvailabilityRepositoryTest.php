@@ -8,6 +8,7 @@ use AndyDefer\LaravelChronos\Enums\WeekDay;
 use AndyDefer\LaravelChronos\Models\Availability;
 use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
 use AndyDefer\LaravelChronos\Repositories\AvailabilityRepository;
+use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
 use AndyDefer\LaravelChronos\Tests\Fixtures\Models\TestCar;
 use AndyDefer\LaravelChronos\Tests\IntegrationTestCase;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
@@ -21,7 +22,20 @@ final class AvailabilityRepositoryTest extends IntegrationTestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        ChronosMutationContext::withAllowed(function () {
+            TestCar::create([
+                'model' => 'Test Model',
+                'license_plate' => 'TEST123',
+                'type' => 'sedan',
+                'capacity' => 5,
+            ]);
+        });
+
         $this->repository = $this->app->make(AvailabilityRepository::class);
+
+        // Désactiver l'enforcement du service layer pour les tests
+        $this->repository->withoutServiceEnforcement();
     }
 
     // ============================================================
@@ -285,11 +299,15 @@ final class AvailabilityRepositoryTest extends IntegrationTestCase
 
     public function test_schedulable_exists_returns_true_when_exists(): void
     {
-        // Create a TestCar
-        TestCar::create([
-            'model' => 'Test Model',
-            'license_plate' => 'TEST123',
-        ]);
+        // Créer un TestCar avec une plaque unique
+        ChronosMutationContext::withAllowed(function () {
+            TestCar::create([
+                'model' => 'Test Model',
+                'license_plate' => 'TEST456', // Plaque différente
+                'type' => 'sedan',
+                'capacity' => 5,
+            ]);
+        });
 
         $exists = $this->repository->schedulableExists(TestCar::class, 1);
         $this->assertTrue($exists);

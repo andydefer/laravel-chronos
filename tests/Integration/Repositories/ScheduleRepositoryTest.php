@@ -11,6 +11,7 @@ use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
 use AndyDefer\LaravelChronos\Records\ScheduleRecord;
 use AndyDefer\LaravelChronos\Repositories\AvailabilityRepository;
 use AndyDefer\LaravelChronos\Repositories\ScheduleRepository;
+use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
 use AndyDefer\LaravelChronos\Tests\Fixtures\Models\TestCar;
 use AndyDefer\LaravelChronos\Tests\IntegrationTestCase;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
@@ -25,8 +26,22 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        ChronosMutationContext::withAllowed(function () {
+            TestCar::create([
+                'model' => 'Test Model',
+                'license_plate' => 'TEST123',
+                'type' => 'sedan',
+                'capacity' => 5,
+            ]);
+        });
+
         $this->repository = $this->app->make(ScheduleRepository::class);
         $this->availabilityRepository = $this->app->make(AvailabilityRepository::class);
+
+        // Désactiver l'enforcement du service layer pour les tests
+        $this->repository->withoutServiceEnforcement();
+        $this->availabilityRepository->withoutServiceEnforcement();
     }
 
     // ============================================================
@@ -396,11 +411,9 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
 
     public function test_can_find_violating_buffer_time(): void
     {
-
         $availability = $this->createAvailability();
 
-        // Create two schedules with less than 30 minutes buffer
-        $id1 = DB::table('schedules')->insertGetId([
+        DB::table('schedules')->insert([
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
             'schedulable_id' => 1,
@@ -411,28 +424,21 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
             'updated_at' => now(),
         ]);
 
-        $id2 = DB::table('schedules')->insertGetId([
+        DB::table('schedules')->insert([
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
             'schedulable_id' => 1,
             'title' => 'Schedule 2',
-            'start_datetime' => '2024-01-15 11:15:00', // 15 minutes buffer (violates 30 min)
+            'start_datetime' => '2024-01-15 11:15:00',
             'end_datetime' => '2024-01-15 12:00:00',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        // Vérifier les données en base
-        $schedules = DB::table('schedules')
-            ->where('availability_id', $availability->id)
-            ->orderBy('start_datetime')
-            ->get();
-
         $results = $this->repository->findViolatingBufferTime($availability->id, 30);
 
         $this->assertCount(1, $results);
         $this->assertEquals('Schedule 1', $results[0]->title);
-
     }
 
     public function test_has_cross_day_schedule_returns_true(): void

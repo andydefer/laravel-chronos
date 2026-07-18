@@ -33,9 +33,15 @@ final class MutationContextTest extends IntegrationTestCase
     {
         parent::setUp();
 
+        // Désactiver l'enforcement du service layer pour les tests
         $this->availabilityRepository = $this->app->make(AvailabilityRepository::class);
+        $this->availabilityRepository->withoutServiceEnforcement();
+
         $this->scheduleRepository = $this->app->make(ScheduleRepository::class);
+        $this->scheduleRepository->withoutServiceEnforcement();
+
         $this->impedimentRepository = $this->app->make(ImpedimentRepository::class);
+        $this->impedimentRepository->withoutServiceEnforcement();
 
         // Ensure SoftDeletes trait is used
         $this->assertTrue($this->usesSoftDeletes(Availability::class));
