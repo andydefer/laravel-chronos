@@ -62,7 +62,7 @@ final class LaravelChronosServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../../database/Migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
 
         // Register model observers to enforce domain mutation rules
         $this->registerModelObservers();

@@ -6,15 +6,15 @@ namespace AndyDefer\LaravelChronos\Records;
 
 use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 use AndyDefer\DomainStructures\Utils\Associative;
-use AndyDefer\PhpVo\ValueObjects\DateTimeVO;
+use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 
 final class ImpedimentRecord extends AbstractRecord
 {
     public function __construct(
         public readonly ?int $availability_id = null,
         public readonly ?string $reason = null,
-        public readonly ?DateTimeVO $start_datetime = null,
-        public readonly ?DateTimeVO $end_datetime = null,
+        public readonly ?DateTimeZuluVO $start_datetime = null,
+        public readonly ?DateTimeZuluVO $end_datetime = null,
         public readonly ?Associative $metadata = null,
     ) {}
 }

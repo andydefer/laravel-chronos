@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\LaravelChronos\Models;
 
 use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
-use AndyDefer\PhpVo\ValueObjects\DateTimeVO;
+use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -50,62 +50,62 @@ final class Schedule extends Model
     }
 
     /**
-     * Get start datetime as DateTimeVO.
+     * Get start datetime as DateTimeZuluVO.
      */
-    public function getStartDatetime(): ?DateTimeVO
+    public function getStartDatetime(): ?DateTimeZuluVO
     {
         if ($this->start_datetime === null) {
             return null;
         }
 
-        return DateTimeVO::fromCarbon($this->start_datetime);
+        return DateTimeZuluVO::fromCarbon($this->start_datetime);
     }
 
     /**
-     * Get end datetime as DateTimeVO.
+     * Get end datetime as DateTimeZuluVO.
      */
-    public function getEndDatetime(): ?DateTimeVO
+    public function getEndDatetime(): ?DateTimeZuluVO
     {
         if ($this->end_datetime === null) {
             return null;
         }
 
-        return DateTimeVO::fromCarbon($this->end_datetime);
+        return DateTimeZuluVO::fromCarbon($this->end_datetime);
     }
 
     /**
-     * Get created at as DateTimeVO.
+     * Get created at as DateTimeZuluVO.
      */
-    public function getCreatedAt(): ?DateTimeVO
+    public function getCreatedAt(): ?DateTimeZuluVO
     {
         if ($this->created_at === null) {
             return null;
         }
 
-        return DateTimeVO::fromCarbon($this->created_at);
+        return DateTimeZuluVO::fromCarbon($this->created_at);
     }
 
     /**
-     * Get updated at as DateTimeVO.
+     * Get updated at as DateTimeZuluVO.
      */
-    public function getUpdatedAt(): ?DateTimeVO
+    public function getUpdatedAt(): ?DateTimeZuluVO
     {
         if ($this->updated_at === null) {
             return null;
         }
 
-        return DateTimeVO::fromCarbon($this->updated_at);
+        return DateTimeZuluVO::fromCarbon($this->updated_at);
     }
 
     /**
-     * Get deleted at as DateTimeVO.
+     * Get deleted at as DateTimeZuluVO.
      */
-    public function getDeletedAt(): ?DateTimeVO
+    public function getDeletedAt(): ?DateTimeZuluVO
     {
         if ($this->deleted_at === null) {
             return null;
         }
 
-        return DateTimeVO::fromCarbon($this->deleted_at);
+        return DateTimeZuluVO::fromCarbon($this->deleted_at);
     }
 }

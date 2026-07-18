@@ -6,8 +6,8 @@ namespace AndyDefer\LaravelChronos\Models;
 
 use AndyDefer\LaravelChronos\Collections\WeekDayCollection;
 use AndyDefer\LaravelChronos\Enums\WeekDay;
-use AndyDefer\PhpVo\ValueObjects\DateTimeVO;
-use AndyDefer\PhpVo\ValueObjects\TimeVO;
+use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -47,51 +47,51 @@ final class Availability extends Model
     }
 
     /**
-     * Get daily start time as TimeVO.
+     * Get daily start time as TimeZuluVO.
      */
-    public function getDailyStart(): ?TimeVO
+    public function getDailyStart(): ?TimeZuluVO
     {
         if ($this->daily_start === null) {
             return null;
         }
 
-        return TimeVO::from($this->daily_start->format('H:i:s'));
+        return TimeZuluVO::from($this->daily_start->format('H:i:s'));
     }
 
     /**
-     * Get daily end time as TimeVO.
+     * Get daily end time as TimeZuluVO.
      */
-    public function getDailyEnd(): ?TimeVO
+    public function getDailyEnd(): ?TimeZuluVO
     {
         if ($this->daily_end === null) {
             return null;
         }
 
-        return TimeVO::from($this->daily_end->format('H:i:s'));
+        return TimeZuluVO::from($this->daily_end->format('H:i:s'));
     }
 
     /**
-     * Get validity start as DateTimeVO.
+     * Get validity start as DateTimeZuluVO.
      */
-    public function getValidityStart(): ?DateTimeVO
+    public function getValidityStart(): ?DateTimeZuluVO
     {
         if ($this->validity_start === null) {
             return null;
         }
 
-        return DateTimeVO::fromCarbon($this->validity_start);
+        return DateTimeZuluVO::fromCarbon($this->validity_start);
     }
 
     /**
-     * Get validity end as DateTimeVO.
+     * Get validity end as DateTimeZuluVO.
      */
-    public function getValidityEnd(): ?DateTimeVO
+    public function getValidityEnd(): ?DateTimeZuluVO
     {
         if ($this->validity_end === null) {
             return null;
         }
 
-        return DateTimeVO::fromCarbon($this->validity_end);
+        return DateTimeZuluVO::fromCarbon($this->validity_end);
     }
 
     /**

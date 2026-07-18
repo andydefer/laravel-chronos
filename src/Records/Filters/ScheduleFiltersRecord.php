@@ -6,7 +6,7 @@ namespace AndyDefer\LaravelChronos\Records\Filters;
 
 use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
-use AndyDefer\PhpVo\ValueObjects\DateTimeVO;
+use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 
 final class ScheduleFiltersRecord extends AbstractRecord
 {
@@ -16,10 +16,10 @@ final class ScheduleFiltersRecord extends AbstractRecord
         public readonly ?int $schedulable_id = null,
         public readonly ?string $title = null,
         public readonly ?ScheduleStatus $status = null,
-        public readonly ?DateTimeVO $start_datetime_from = null,
-        public readonly ?DateTimeVO $start_datetime_to = null,
-        public readonly ?DateTimeVO $end_datetime_from = null,
-        public readonly ?DateTimeVO $end_datetime_to = null,
+        public readonly ?DateTimeZuluVO $start_datetime_from = null,
+        public readonly ?DateTimeZuluVO $start_datetime_to = null,
+        public readonly ?DateTimeZuluVO $end_datetime_from = null,
+        public readonly ?DateTimeZuluVO $end_datetime_to = null,
         public readonly ?bool $withTrashed = false,
     ) {}
 }

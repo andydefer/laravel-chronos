@@ -29,7 +29,6 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['schedulable_type', 'schedulable_id']);
             $table->index('type');
             $table->index(['validity_start', 'validity_end']);
         });
