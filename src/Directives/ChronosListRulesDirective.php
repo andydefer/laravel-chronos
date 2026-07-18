@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\LaravelChronos\Directives;
 
+use AndyDefer\ConsoleWriter\Console\Components\KeyValue;
 use AndyDefer\ConsoleWriter\Console\Console;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
@@ -21,7 +22,8 @@ final class ChronosListRulesDirective extends AbstractDirective
         return 'chronos:list-rules 
                     ::entity->[availability,schedule,impediment]=?#"Filter by entity type" 
                     {--verbose}#"Show detailed information including context data" 
-                    {--json}#"Output as JSON"';
+                    {--json}#"Output as JSON"
+                    {--raw}#"Output as raw JSON"';
     }
 
     public function getDescription(): string
@@ -228,36 +230,36 @@ final class ChronosListRulesDirective extends AbstractDirective
             return;
         }
 
+        // Construire les données pour KeyValue
+        $kvData = MapCollection::from([]);
+
         foreach ($rules as $ruleData) {
             if (! $ruleData instanceof MapCollection) {
                 continue;
             }
 
-            $this->renderSingleRule($ruleData, $isVerbose);
-        }
+            $index = $ruleData->get('index') ?? '?';
+            $name = $ruleData->get('name') ?? 'Unnamed';
+            $description = $ruleData->get('description') ?? 'No description';
 
-        $this->console->line();
-    }
+            $labelText = sprintf('%2d. %s', $index, $name);
 
-    private function renderSingleRule(MapCollection $ruleData, bool $isVerbose): void
-    {
-        $index = $ruleData->get('index') ?? '?';
-        $name = $ruleData->get('name') ?? 'Unnamed';
-        $description = $ruleData->get('description') ?? 'No description';
+            if ($isVerbose) {
+                $class = $ruleData->get('class') ?? 'Unknown';
+                $methods = $ruleData->get('methods');
+                $methodsText = ! empty($methods) ? ' | Methods: '.implode(', ', $methods) : '';
 
-        $this->console->line(sprintf('  %2d. %s', $index, $name));
-
-        if ($isVerbose) {
-            $class = $ruleData->get('class') ?? 'Unknown';
-            $this->console->line(sprintf('      Class: %s', $class));
-
-            $methods = $ruleData->get('methods');
-            if (! empty($methods)) {
-                $this->console->line(sprintf('      Methods: %s', implode(', ', $methods)));
+                $kvData = $kvData->put(
+                    $labelText,
+                    sprintf('%s%s', $description, $methodsText)
+                );
+            } else {
+                $kvData = $kvData->put($labelText, $description);
             }
         }
 
-        $this->console->line(sprintf('      📝 %s', $description));
+        // Afficher avec KeyValue
+        $this->console->raw(KeyValue::renderWithValueColor($kvData, 'green'));
         $this->console->line();
     }
 
@@ -272,7 +274,11 @@ final class ChronosListRulesDirective extends AbstractDirective
             return ExitCode::RUNTIME_ERROR;
         }
 
-        $this->console->raw($json);
+        if ($this->getArgument('raw')) {
+            $this->console->jsonRaw($json);
+        } else {
+            $this->console->json($json);
+        }
         $this->console->newLine();
 
         return ExitCode::SUCCESS;

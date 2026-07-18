@@ -39,6 +39,7 @@ final class ChronosListRulesDirectiveTest extends IntegrationTestCase
         $this->assertStringContainsString('::entity->[availability,schedule,impediment]=?', $signature);
         $this->assertStringContainsString('--verbose', $signature);
         $this->assertStringContainsString('--json', $signature);
+        $this->assertStringContainsString('--raw', $signature);
     }
 
     public function test_get_description_returns_string(): void
@@ -141,8 +142,13 @@ final class ChronosListRulesDirectiveTest extends IntegrationTestCase
         );
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
-        $this->assertStringContainsString('Class:', $response->output);
+
+        // Vérifier que les méthodes sont affichées (le nom de la classe n'est plus affiché comme "Class:")
+        // On vérifie plutôt que "Methods:" est présent car c'est ce qui est affiché en mode verbose
         $this->assertStringContainsString('Methods:', $response->output);
+        $this->assertStringContainsString('getDescription', $response->output);
+        $this->assertStringContainsString('supports', $response->output);
+        $this->assertStringContainsString('validate', $response->output);
     }
 
     public function test_execute_with_verbose_and_entity_filter(): void
@@ -154,8 +160,13 @@ final class ChronosListRulesDirectiveTest extends IntegrationTestCase
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Availability Rules', $response->output);
-        $this->assertStringContainsString('Class:', $response->output);
+
+        // Vérifier que les méthodes sont affichées
         $this->assertStringContainsString('Methods:', $response->output);
+        $this->assertStringContainsString('getDescription', $response->output);
+        $this->assertStringContainsString('supports', $response->output);
+        $this->assertStringContainsString('validate', $response->output);
+
         $this->assertStringNotContainsString('Schedule Rules', $response->output);
         $this->assertStringNotContainsString('Impediment Rules', $response->output);
     }
@@ -166,7 +177,7 @@ final class ChronosListRulesDirectiveTest extends IntegrationTestCase
     {
         $response = $this->service->runDirective(
             ChronosListRulesDirective::class,
-            ['--json']
+            ['--json', '--raw']
         );
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
@@ -180,7 +191,7 @@ final class ChronosListRulesDirectiveTest extends IntegrationTestCase
     {
         $response = $this->service->runDirective(
             ChronosListRulesDirective::class,
-            ['availability', '--json']
+            ['availability', '--json', '--raw']
         );
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
@@ -194,7 +205,7 @@ final class ChronosListRulesDirectiveTest extends IntegrationTestCase
     {
         $response = $this->service->runDirective(
             ChronosListRulesDirective::class,
-            ['--verbose', '--json']
+            ['--verbose', '--json', '--raw']
         );
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
