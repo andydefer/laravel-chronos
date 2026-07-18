@@ -6,6 +6,7 @@ namespace AndyDefer\LaravelChronos\Providers;
 
 use AndyDefer\LaravelChronos\Configs\ChronosConfig;
 use AndyDefer\LaravelChronos\Contracts\Configs\ChronosConfigInterface;
+use AndyDefer\LaravelChronos\Enums\EntityType;
 use AndyDefer\LaravelChronos\Models\Availability;
 use AndyDefer\LaravelChronos\Models\Impediment;
 use AndyDefer\LaravelChronos\Models\Schedule;
@@ -14,6 +15,23 @@ use AndyDefer\LaravelChronos\Repositories\AvailabilityRepository;
 use AndyDefer\LaravelChronos\Repositories\ImpedimentRepository;
 use AndyDefer\LaravelChronos\Repositories\ScheduleRepository;
 use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
+use AndyDefer\LaravelChronos\Validation\Rules\Availability\AvailabilityDaysFormatRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Availability\AvailabilityMinimumDurationRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Availability\AvailabilityNoOverlapRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Availability\AvailabilityRequiredFieldsRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Availability\AvailabilityValidDateRangeRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Availability\CrossDayAvailabilityRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Availability\DaysWithinValidityPeriodRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Availability\NoFutureBookingsOnDeleteRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Availability\SchedulableExistsRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Shared\AvailabilityOwnershipValidationRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Shared\BufferTimeRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Shared\EntityOwnershipConsistencyRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Shared\MaxDurationRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Shared\NoTemporalConflictRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Shared\TimeSlotChronologyRule;
+use AndyDefer\LaravelChronos\Validation\Rules\Shared\TimeSlotWithinAvailabilityRule;
+use AndyDefer\LaravelChronos\Validation\Services\ValidationHelperService;
 use AndyDefer\LaravelChronos\Validation\Validator;
 use Illuminate\Support\ServiceProvider;
 
@@ -48,9 +66,46 @@ final class LaravelChronosServiceProvider extends ServiceProvider
             fn ($app) => new ImpedimentRepository
         );
 
-        // Validator
+        // Validation Helper Service
+        $this->app->singleton(
+            ValidationHelperService::class,
+            fn ($app) => new ValidationHelperService
+        );
+
+        // Validator with all rules registered
         $this->app->singleton(Validator::class, function ($app) {
-            return new Validator;
+            $validator = new Validator;
+            $helper = $app->make(ValidationHelperService::class);
+            $config = $app->make(ChronosConfigInterface::class);
+
+            // Register Availability rules
+            $validator->addRules(EntityType::AVAILABILITY, [
+                new AvailabilityRequiredFieldsRule,
+                new AvailabilityDaysFormatRule,
+                new DaysWithinValidityPeriodRule($helper),
+                new AvailabilityNoOverlapRule($helper),
+                new AvailabilityMinimumDurationRule($helper, $config),
+                new AvailabilityValidDateRangeRule,
+                new NoFutureBookingsOnDeleteRule,
+                new CrossDayAvailabilityRule($helper),
+                new SchedulableExistsRule,
+            ]);
+
+            // Register Schedule & Impediment rules (shared)
+            $sharedRules = [
+                new EntityOwnershipConsistencyRule,
+                new AvailabilityOwnershipValidationRule,
+                new TimeSlotWithinAvailabilityRule($helper),
+                new NoTemporalConflictRule,
+                new TimeSlotChronologyRule,
+                new BufferTimeRule($helper, $config),
+                new MaxDurationRule($helper, $config),
+            ];
+
+            $validator->addRules(EntityType::SCHEDULE, $sharedRules);
+            $validator->addRules(EntityType::IMPEDIMENT, $sharedRules);
+
+            return $validator;
         });
 
         // Mutation Context
@@ -85,7 +140,6 @@ final class LaravelChronosServiceProvider extends ServiceProvider
 
     /**
      * Register observers for domain models to enforce business rules.
-     * Ensures data integrity and domain constraints during model operations.
      */
     protected function registerModelObservers(): void
     {

@@ -183,4 +183,63 @@ enum WeekDay: string
             default => throw new \InvalidArgumentException("Invalid day number: {$number}"),
         };
     }
+
+    /**
+     * Check if an array of day strings are consecutive.
+     *
+     * @param  array<string>  $days  Array of day strings (e.g., ['monday', 'tuesday'])
+     * @return bool True if days are consecutive in the week cycle
+     */
+    public static function areConsecutive(array $days): bool
+    {
+        if (count($days) < 2) {
+            return true;
+        }
+
+        $dayNumbers = array_map(fn ($day) => self::fromString($day)?->getNumber() ?? 0, $days);
+
+        for ($i = 1; $i < count($dayNumbers); $i++) {
+            $diff = ($dayNumbers[$i] - $dayNumbers[$i - 1] + 7) % 7;
+            if ($diff !== 1) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if an array of WeekDay enums are consecutive.
+     *
+     * @param  array<self>  $days  Array of WeekDay enums
+     * @return bool True if days are consecutive in the week cycle
+     */
+    public static function areEnumsConsecutive(array $days): bool
+    {
+        if (count($days) < 2) {
+            return true;
+        }
+
+        $dayNumbers = array_map(fn (self $day) => $day->getNumber(), $days);
+
+        for ($i = 1; $i < count($dayNumbers); $i++) {
+            $diff = ($dayNumbers[$i] - $dayNumbers[$i - 1] + 7) % 7;
+            if ($diff !== 1) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Get the order value of a day string.
+     *
+     * @param  string  $day  Day string (e.g., 'monday')
+     * @return int Day number (1-7) or 0 if invalid
+     */
+    public static function getOrderValue(string $day): int
+    {
+        return self::fromString($day)?->getNumber() ?? 0;
+    }
 }

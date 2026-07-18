@@ -428,14 +428,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
             ->orderBy('start_datetime')
             ->get();
 
-        foreach ($schedules as $s) {
-        }
-
         $results = $this->repository->findViolatingBufferTime($availability->id, 30);
-
-        echo 'Nombre de résultats: '.$results->count()."\n";
-        foreach ($results as $r) {
-        }
 
         $this->assertCount(1, $results);
         $this->assertEquals('Schedule 1', $results[0]->title);
