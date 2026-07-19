@@ -113,6 +113,30 @@ final class AvailabilityServiceTest extends IntegrationTestCase
         $this->assertEquals('Test Availability', $availabilities->first()->name);
     }
 
+    public function test_find_by_schedulable_with_limit(): void
+    {
+        // Arrange - Create 5 availabilities with different days to avoid overlap
+        $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+        for ($i = 0; $i < 5; $i++) {
+            $this->service->for($this->testCar)->create(AvailabilityRecord::from([
+                'name' => "Availability $i",
+                'days' => [$days[$i]],
+                'daily_start' => '09:00:00',
+                'daily_end' => '17:00:00',
+                'validity_start' => '2024-01-01T00:00:00Z',
+                'validity_end' => '2024-12-31T23:59:59Z',
+            ]));
+        }
+
+        // Act
+        $availabilities = $this->service->for($this->testCar)->findBySchedulable(null, 3);
+
+        // Assert
+        $this->assertCount(3, $availabilities);
+        $this->assertEquals('Availability 0', $availabilities->first()->name);
+        $this->assertEquals('Availability 2', $availabilities->last()->name);
+    }
+
     public function test_find_by_schedulable_with_explicit_entity_works(): void
     {
         $anotherCar = ChronosMutationContext::withAllowed(function () {
@@ -251,6 +275,81 @@ final class AvailabilityServiceTest extends IntegrationTestCase
 
         $this->assertCount(1, $availabilities);
         $this->assertEquals('Updated Chain Test', $availabilities->first()->name);
+    }
+
+    // ============================================================
+    // TESTS: LIMIT
+    // ============================================================
+
+    public function test_find_by_type_with_limit(): void
+    {
+        // Arrange - Create 5 availabilities with type 'test' and different days
+        $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+        for ($i = 0; $i < 5; $i++) {
+            $this->service->for($this->testCar)->create(AvailabilityRecord::from([
+                'name' => "Availability $i",
+                'type' => 'test',
+                'days' => [$days[$i]],
+                'daily_start' => '09:00:00',
+                'daily_end' => '17:00:00',
+                'validity_start' => '2024-01-01T00:00:00Z',
+                'validity_end' => '2024-12-31T23:59:59Z',
+            ]));
+        }
+
+        // Act
+        $availabilities = $this->service->findByType('test', 3);
+
+        // Assert
+        $this->assertCount(3, $availabilities);
+        $this->assertEquals('Availability 0', $availabilities->first()->name);
+    }
+
+    public function test_find_active_at_date_with_limit(): void
+    {
+        // Arrange - Create 5 availabilities active on date with different days
+        $date = DateTimeZuluVO::from('2024-06-15T12:00:00Z');
+        $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+        for ($i = 0; $i < 5; $i++) {
+            $this->service->for($this->testCar)->create(AvailabilityRecord::from([
+                'name' => "Availability $i",
+                'days' => [$days[$i]],
+                'daily_start' => '09:00:00',
+                'daily_end' => '17:00:00',
+                'validity_start' => '2024-01-01T00:00:00Z',
+                'validity_end' => '2024-12-31T23:59:59Z',
+            ]));
+        }
+
+        // Act
+        $availabilities = $this->service->findActiveAtDate($this->testCar, $date, 3);
+
+        // Assert
+        $this->assertCount(3, $availabilities);
+    }
+
+    public function test_find_active_in_date_range_with_limit(): void
+    {
+        // Arrange - Create 5 availabilities in date range with different days
+        $start = DateTimeZuluVO::from('2024-01-01T00:00:00Z');
+        $end = DateTimeZuluVO::from('2024-12-31T23:59:59Z');
+        $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+        for ($i = 0; $i < 5; $i++) {
+            $this->service->for($this->testCar)->create(AvailabilityRecord::from([
+                'name' => "Availability $i",
+                'days' => [$days[$i]],
+                'daily_start' => '09:00:00',
+                'daily_end' => '17:00:00',
+                'validity_start' => '2024-01-01T00:00:00Z',
+                'validity_end' => '2024-12-31T23:59:59Z',
+            ]));
+        }
+
+        // Act
+        $availabilities = $this->service->findActiveInDateRange($this->testCar, $start, $end, 3);
+
+        // Assert
+        $this->assertCount(3, $availabilities);
     }
 
     // ============================================================

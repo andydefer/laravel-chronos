@@ -166,6 +166,33 @@ final class AvailabilityRepositoryTest extends IntegrationTestCase
         $this->assertEquals($availability1->id, $results[0]->id);
     }
 
+    public function test_can_find_by_schedulable_with_limit(): void
+    {
+        // Arrange - Create 5 availabilities
+        for ($i = 1; $i <= 5; $i++) {
+            $record = AvailabilityRecord::from([
+                'name' => "Availability $i",
+                'type' => 'test',
+                'days' => WeekDayCollection::fromStrings(['monday']),
+                'daily_start' => TimeZuluVO::from('09:00:00'),
+                'daily_end' => TimeZuluVO::from('17:00:00'),
+                'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+                'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+            ]);
+            $this->repository->create($record);
+        }
+
+        // Act
+        $results = $this->repository->findBySchedulable($this->testCar, 3);
+
+        // Assert
+        $this->assertCount(3, $results);
+        $this->assertEquals('Availability 1', $results->first()->name);
+        $this->assertEquals('Availability 3', $results->last()->name);
+    }
+
     public function test_can_find_by_day(): void
     {
         // Arrange
@@ -179,6 +206,31 @@ final class AvailabilityRepositoryTest extends IntegrationTestCase
         $this->assertEquals($availability->id, $results[0]->id);
     }
 
+    public function test_can_find_by_day_with_limit(): void
+    {
+        // Arrange - Create 5 availabilities with Monday
+        for ($i = 1; $i <= 5; $i++) {
+            $record = AvailabilityRecord::from([
+                'name' => "Availability $i",
+                'type' => 'test',
+                'days' => WeekDayCollection::fromStrings(['monday']),
+                'daily_start' => TimeZuluVO::from('09:00:00'),
+                'daily_end' => TimeZuluVO::from('17:00:00'),
+                'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+                'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+            ]);
+            $this->repository->create($record);
+        }
+
+        // Act
+        $results = $this->repository->findByDay($this->testCar, WeekDay::MONDAY, 3);
+
+        // Assert
+        $this->assertCount(3, $results);
+    }
+
     public function test_can_find_by_type(): void
     {
         // Arrange
@@ -190,6 +242,31 @@ final class AvailabilityRepositoryTest extends IntegrationTestCase
         // Assert
         $this->assertGreaterThanOrEqual(1, $results->count());
         $this->assertEquals($availability->id, $results[0]->id);
+    }
+
+    public function test_can_find_by_type_with_limit(): void
+    {
+        // Arrange - Create 5 availabilities with type 'test'
+        for ($i = 1; $i <= 5; $i++) {
+            $record = AvailabilityRecord::from([
+                'name' => "Availability $i",
+                'type' => 'test',
+                'days' => WeekDayCollection::fromStrings(['monday']),
+                'daily_start' => TimeZuluVO::from('09:00:00'),
+                'daily_end' => TimeZuluVO::from('17:00:00'),
+                'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+                'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+            ]);
+            $this->repository->create($record);
+        }
+
+        // Act
+        $results = $this->repository->findByType('test', 3);
+
+        // Assert
+        $this->assertCount(3, $results);
     }
 
     public function test_can_find_active_at_date(): void
@@ -206,6 +283,32 @@ final class AvailabilityRepositoryTest extends IntegrationTestCase
         $this->assertEquals($availability->id, $results[0]->id);
     }
 
+    public function test_can_find_active_at_date_with_limit(): void
+    {
+        // Arrange - Create 5 availabilities active on date
+        $date = DateTimeZuluVO::from('2024-06-15T12:00:00Z');
+        for ($i = 1; $i <= 5; $i++) {
+            $record = AvailabilityRecord::from([
+                'name' => "Availability $i",
+                'type' => 'test',
+                'days' => WeekDayCollection::fromStrings(['monday']),
+                'daily_start' => TimeZuluVO::from('09:00:00'),
+                'daily_end' => TimeZuluVO::from('17:00:00'),
+                'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+                'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+            ]);
+            $this->repository->create($record);
+        }
+
+        // Act
+        $results = $this->repository->findActiveAtDate($this->testCar, $date, 3);
+
+        // Assert
+        $this->assertCount(3, $results);
+    }
+
     public function test_can_find_active_in_date_range(): void
     {
         // Arrange
@@ -219,6 +322,33 @@ final class AvailabilityRepositoryTest extends IntegrationTestCase
         // Assert
         $this->assertCount(1, $results);
         $this->assertEquals($availability->id, $results[0]->id);
+    }
+
+    public function test_can_find_active_in_date_range_with_limit(): void
+    {
+        // Arrange - Create 5 availabilities in date range
+        $start = DateTimeZuluVO::from('2024-01-01T00:00:00Z');
+        $end = DateTimeZuluVO::from('2024-12-31T23:59:59Z');
+        for ($i = 1; $i <= 5; $i++) {
+            $record = AvailabilityRecord::from([
+                'name' => "Availability $i",
+                'type' => 'test',
+                'days' => WeekDayCollection::fromStrings(['monday']),
+                'daily_start' => TimeZuluVO::from('09:00:00'),
+                'daily_end' => TimeZuluVO::from('17:00:00'),
+                'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+                'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+            ]);
+            $this->repository->create($record);
+        }
+
+        // Act
+        $results = $this->repository->findActiveInDateRange($this->testCar, $start, $end, null, 3);
+
+        // Assert
+        $this->assertCount(3, $results);
     }
 
     public function test_can_find_overlapping(): void
@@ -243,6 +373,44 @@ final class AvailabilityRepositoryTest extends IntegrationTestCase
         // Assert
         $this->assertCount(1, $results);
         $this->assertEquals($availability->id, $results[0]->id);
+    }
+
+    public function test_find_overlapping_with_limit(): void
+    {
+        // Arrange - Create 5 overlapping availabilities
+        $startTime = TimeZuluVO::from('10:00:00');
+        $endTime = TimeZuluVO::from('12:00:00');
+        $validityStart = DateTimeZuluVO::from('2024-01-01T00:00:00Z');
+        $validityEnd = DateTimeZuluVO::from('2024-12-31T23:59:59Z');
+        for ($i = 1; $i <= 5; $i++) {
+            $record = AvailabilityRecord::from([
+                'name' => "Availability $i",
+                'type' => 'test',
+                'days' => WeekDayCollection::fromStrings(['monday']),
+                'daily_start' => TimeZuluVO::from('09:00:00'),
+                'daily_end' => TimeZuluVO::from('17:00:00'),
+                'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+                'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+            ]);
+            $this->repository->create($record);
+        }
+
+        // Act
+        $results = $this->repository->findOverlapping(
+            $this->testCar,
+            WeekDay::MONDAY,
+            $startTime,
+            $endTime,
+            $validityStart,
+            $validityEnd,
+            null,
+            3
+        );
+
+        // Assert
+        $this->assertCount(3, $results);
     }
 
     public function test_find_overlapping_excludes_given_id(): void
@@ -293,6 +461,31 @@ final class AvailabilityRepositoryTest extends IntegrationTestCase
         $this->assertEquals('Cross Day', $results[0]->name);
     }
 
+    public function test_can_find_cross_day_availabilities_with_limit(): void
+    {
+        // Arrange - Create 5 cross-day availabilities
+        for ($i = 1; $i <= 5; $i++) {
+            $record = AvailabilityRecord::from([
+                'name' => "Cross Day $i",
+                'type' => 'test',
+                'days' => WeekDayCollection::fromStrings(['monday']),
+                'daily_start' => TimeZuluVO::from('22:00:00'),
+                'daily_end' => TimeZuluVO::from('06:00:00'),
+                'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+                'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+            ]);
+            $this->repository->create($record);
+        }
+
+        // Act
+        $results = $this->repository->findCrossDayAvailabilities($this->testCar, 3);
+
+        // Assert
+        $this->assertCount(3, $results);
+    }
+
     public function test_can_find_short_durations(): void
     {
         // Arrange
@@ -317,6 +510,31 @@ final class AvailabilityRepositoryTest extends IntegrationTestCase
         $this->assertEquals('Short Duration', $results[0]->name);
     }
 
+    public function test_can_find_short_durations_with_limit(): void
+    {
+        // Arrange - Create 5 short duration availabilities
+        for ($i = 1; $i <= 5; $i++) {
+            $record = AvailabilityRecord::from([
+                'name' => "Short Duration $i",
+                'type' => 'test',
+                'days' => WeekDayCollection::fromStrings(['monday']),
+                'daily_start' => TimeZuluVO::from('09:00:00'),
+                'daily_end' => TimeZuluVO::from('09:15:00'),
+                'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+                'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+            ]);
+            $this->repository->create($record);
+        }
+
+        // Act
+        $results = $this->repository->findShortDurations($this->testCar, 30, 3);
+
+        // Assert
+        $this->assertCount(3, $results);
+    }
+
     public function test_can_find_invalid_date_ranges(): void
     {
         // Arrange
@@ -339,6 +557,31 @@ final class AvailabilityRepositoryTest extends IntegrationTestCase
         // Assert
         $this->assertCount(1, $results);
         $this->assertEquals('Invalid Range', $results[0]->name);
+    }
+
+    public function test_can_find_invalid_date_ranges_with_limit(): void
+    {
+        // Arrange - Create 5 invalid date range availabilities
+        for ($i = 1; $i <= 5; $i++) {
+            $record = AvailabilityRecord::from([
+                'name' => "Invalid Range $i",
+                'type' => 'test',
+                'days' => WeekDayCollection::fromStrings(['monday']),
+                'daily_start' => TimeZuluVO::from('17:00:00'),
+                'daily_end' => TimeZuluVO::from('09:00:00'),
+                'validity_start' => DateTimeZuluVO::from('2024-12-31T00:00:00Z'),
+                'validity_end' => DateTimeZuluVO::from('2024-01-01T23:59:59Z'),
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+            ]);
+            $this->repository->create($record);
+        }
+
+        // Act
+        $results = $this->repository->findInvalidDateRanges($this->testCar, 3);
+
+        // Assert
+        $this->assertCount(3, $results);
     }
 
     public function test_schedulable_exists_returns_true_when_exists(): void

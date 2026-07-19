@@ -22,18 +22,20 @@ interface AvailabilityRepositoryInterface extends AbstractRepositoryInterface
      * Find availabilities for a specific schedulable entity.
      *
      * @param  Model  $schedulable  The schedulable entity
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Availability> Collection of availabilities
      */
-    public function findBySchedulable(Model $schedulable): Collection;
+    public function findBySchedulable(Model $schedulable, ?int $limit = null): Collection;
 
     /**
      * Find availabilities that contain a specific day of the week.
      *
      * @param  Model  $schedulable  The schedulable entity
      * @param  WeekDay  $day  The day to filter by
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Availability> Collection of availabilities
      */
-    public function findByDay(Model $schedulable, WeekDay $day): Collection;
+    public function findByDay(Model $schedulable, WeekDay $day, ?int $limit = null): Collection;
 
     /**
      * Find availabilities that overlap with a given time range.
@@ -45,6 +47,7 @@ interface AvailabilityRepositoryInterface extends AbstractRepositoryInterface
      * @param  DateTimeZuluVO  $validityStart  The start of validity period
      * @param  DateTimeZuluVO  $validityEnd  The end of validity period
      * @param  int|null  $excludeId  Optional ID to exclude
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Availability> Collection of overlapping availabilities
      */
     public function findOverlapping(
@@ -55,6 +58,7 @@ interface AvailabilityRepositoryInterface extends AbstractRepositoryInterface
         DateTimeZuluVO $validityStart,
         DateTimeZuluVO $validityEnd,
         ?int $excludeId = null,
+        ?int $limit = null,
     ): Collection;
 
     /**
@@ -62,9 +66,10 @@ interface AvailabilityRepositoryInterface extends AbstractRepositoryInterface
      *
      * @param  Model  $schedulable  The schedulable entity
      * @param  DateTimeZuluVO  $date  The date to check
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Availability> Collection of active availabilities
      */
-    public function findActiveAtDate(Model $schedulable, DateTimeZuluVO $date): Collection;
+    public function findActiveAtDate(Model $schedulable, DateTimeZuluVO $date, ?int $limit = null): Collection;
 
     /**
      * Find availabilities with validity period overlapping a range.
@@ -73,6 +78,7 @@ interface AvailabilityRepositoryInterface extends AbstractRepositoryInterface
      * @param  DateTimeZuluVO  $start  The start of the range
      * @param  DateTimeZuluVO  $end  The end of the range
      * @param  int|null  $excludeId  Optional ID to exclude
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Availability> Collection of availabilities in range
      */
     public function findActiveInDateRange(
@@ -80,32 +86,36 @@ interface AvailabilityRepositoryInterface extends AbstractRepositoryInterface
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
         ?int $excludeId = null,
+        ?int $limit = null,
     ): Collection;
 
     /**
      * Find availabilities that cross midnight.
      *
      * @param  Model  $schedulable  The schedulable entity
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Availability> Collection of cross-day availabilities
      */
-    public function findCrossDayAvailabilities(Model $schedulable): Collection;
+    public function findCrossDayAvailabilities(Model $schedulable, ?int $limit = null): Collection;
 
     /**
      * Find availabilities with duration less than minimum.
      *
      * @param  Model  $schedulable  The schedulable entity
      * @param  int  $minMinutes  The minimum duration in minutes
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Availability> Collection of short duration availabilities
      */
-    public function findShortDurations(Model $schedulable, int $minMinutes): Collection;
+    public function findShortDurations(Model $schedulable, int $minMinutes, ?int $limit = null): Collection;
 
     /**
      * Find availabilities with invalid date ranges.
      *
      * @param  Model  $schedulable  The schedulable entity
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Availability> Collection of invalid availabilities
      */
-    public function findInvalidDateRanges(Model $schedulable): Collection;
+    public function findInvalidDateRanges(Model $schedulable, ?int $limit = null): Collection;
 
     /**
      * Find availabilities with future schedules.
@@ -120,9 +130,10 @@ interface AvailabilityRepositoryInterface extends AbstractRepositoryInterface
      * Find availabilities by type.
      *
      * @param  string  $type  The availability type
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Availability> Collection of availabilities
      */
-    public function findByType(string $type): Collection;
+    public function findByType(string $type, ?int $limit = null): Collection;
 
     /**
      * Check if a schedulable entity exists.

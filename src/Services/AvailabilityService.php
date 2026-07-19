@@ -18,20 +18,9 @@ use AndyDefer\LaravelChronos\Support\ServiceContext;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
-use Throwable;
 
 /**
  * Service for managing availability operations.
- *
- * This service implements the business logic for availability management,
- * including validation, authorization, and mutation tracking. All operations
- * are wrapped in context managers for consistent error handling and auditing.
- *
- * @example
- * $service = new AvailabilityService($repository, $validator);
- * $availability = $service->for($doctor)->create(new AvailabilityRecord(...));
- *
- * @see AvailabilityServiceInterface
  */
 final class AvailabilityService implements AvailabilityServiceInterface
 {
@@ -60,9 +49,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
 
     /**
      * {@inheritDoc}
-     *
-     * @throws ValidationException When the record fails validation
-     * @throws Throwable When the repository operation fails
      */
     public function create(AvailabilityRecord $record): Availability
     {
@@ -83,10 +69,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
 
     /**
      * {@inheritDoc}
-     *
-     * @throws ModelNotFoundException When the availability does not exist
-     * @throws ValidationException When the record fails validation
-     * @throws Throwable When the repository operation fails
      */
     public function update(int $id, AvailabilityRecord $record): Availability
     {
@@ -108,10 +90,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
 
     /**
      * {@inheritDoc}
-     *
-     * @throws ModelNotFoundException When the availability does not exist
-     * @throws ValidationException When validation fails and force is false
-     * @throws Throwable When the repository operation fails
      */
     public function delete(int $id, bool $force = false): bool
     {
@@ -170,7 +148,7 @@ final class AvailabilityService implements AvailabilityServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findBySchedulable(?Model $schedulable = null): Collection
+    public function findBySchedulable(?Model $schedulable = null, ?int $limit = null): Collection
     {
         $schedulable = $schedulable ?? $this->scope->getScopedSchedulable();
 
@@ -184,11 +162,12 @@ final class AvailabilityService implements AvailabilityServiceInterface
 
         return ServiceContext::within(
             AvailabilityService::class,
-            fn (): Collection => $this->repository->findBySchedulable($schedulable),
+            fn (): Collection => $this->repository->findBySchedulable($schedulable, $limit),
             [
                 'operation' => 'findBySchedulable',
                 'schedulable_type' => $schedulable->getMorphClass(),
                 'schedulable_id' => $schedulable->getKey(),
+                'limit' => $limit,
             ]
         );
     }
@@ -196,12 +175,12 @@ final class AvailabilityService implements AvailabilityServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findByType(string $type): Collection
+    public function findByType(string $type, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             AvailabilityService::class,
-            fn (): Collection => $this->repository->findByType($type),
-            ['operation' => 'findByType', 'type' => $type]
+            fn (): Collection => $this->repository->findByType($type, $limit),
+            ['operation' => 'findByType', 'type' => $type, 'limit' => $limit]
         );
     }
 
@@ -210,19 +189,18 @@ final class AvailabilityService implements AvailabilityServiceInterface
      */
     public function findActiveAtDate(
         Model $schedulable,
-        DateTimeZuluVO $date
+        DateTimeZuluVO $date,
+        ?int $limit = null
     ): Collection {
         return ServiceContext::within(
             AvailabilityService::class,
-            fn (): Collection => $this->repository->findActiveAtDate(
-                $schedulable,
-                $date
-            ),
+            fn (): Collection => $this->repository->findActiveAtDate($schedulable, $date, $limit),
             [
                 'operation' => 'findActiveAtDate',
                 'schedulable_type' => $schedulable->getMorphClass(),
                 'schedulable_id' => $schedulable->getKey(),
                 'date' => $date->toDateTimeString(),
+                'limit' => $limit,
             ]
         );
     }
@@ -233,21 +211,19 @@ final class AvailabilityService implements AvailabilityServiceInterface
     public function findActiveInDateRange(
         Model $schedulable,
         DateTimeZuluVO $start,
-        DateTimeZuluVO $end
+        DateTimeZuluVO $end,
+        ?int $limit = null
     ): Collection {
         return ServiceContext::within(
             AvailabilityService::class,
-            fn (): Collection => $this->repository->findActiveInDateRange(
-                $schedulable,
-                $start,
-                $end
-            ),
+            fn (): Collection => $this->repository->findActiveInDateRange($schedulable, $start, $end, null, $limit),
             [
                 'operation' => 'findActiveInDateRange',
                 'schedulable_type' => $schedulable->getMorphClass(),
                 'schedulable_id' => $schedulable->getKey(),
                 'start' => $start->toDateTimeString(),
                 'end' => $end->toDateTimeString(),
+                'limit' => $limit,
             ]
         );
     }
@@ -285,9 +261,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
 
     /**
      * Injects scoped entity data into the record if scoped.
-     *
-     * @param  AvailabilityRecord  $record  The record to inject data into
-     * @return AvailabilityRecord The modified record
      */
     private function injectScopedDataIntoRecord(AvailabilityRecord $record): AvailabilityRecord
     {
@@ -306,12 +279,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
 
     /**
      * Finds an availability or throws an exception if not found.
-     *
-     * @param  int  $id  The availability ID
-     * @param  Model|null  $schedulable  Optional schedulable entity for ownership verification
-     * @return Availability The found availability
-     *
-     * @throws ModelNotFoundException When the availability does not exist or does not belong to the entity
      */
     private function findOrFail(int $id, ?Model $schedulable = null): Availability
     {
@@ -333,12 +300,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
 
     /**
      * Validates an operation against business rules.
-     *
-     * @param  AvailabilityRecord  $record  The record to validate
-     * @param  OperationType  $operation  The operation type
-     * @param  Availability|null  $existing  The existing availability for update/delete operations
-     *
-     * @throws ValidationException When validation fails
      */
     private function validateOperation(
         AvailabilityRecord $record,
