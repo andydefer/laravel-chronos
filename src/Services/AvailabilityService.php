@@ -6,6 +6,7 @@ namespace AndyDefer\LaravelChronos\Services;
 
 use AndyDefer\LaravelChronos\Contracts\Repositories\AvailabilityRepositoryInterface;
 use AndyDefer\LaravelChronos\Contracts\Services\AvailabilityServiceInterface;
+use AndyDefer\LaravelChronos\Contracts\Services\ScopedServiceInterface;
 use AndyDefer\LaravelChronos\Contracts\Validation\ValidatorInterface;
 use AndyDefer\LaravelChronos\Enums\OperationType;
 use AndyDefer\LaravelChronos\Exceptions\ModelNotFoundException;
@@ -28,12 +29,14 @@ use Throwable;
  *
  * @example
  * $service = new AvailabilityService($repository, $validator);
- * $availability = $service->create(new AvailabilityRecord(...));
+ * $availability = $service->for($doctor)->create(new AvailabilityRecord(...));
  *
  * @see AvailabilityServiceInterface
  */
 final class AvailabilityService implements AvailabilityServiceInterface
 {
+    private ScopedServiceInterface $scope;
+
     /**
      * @param  AvailabilityRepositoryInterface  $repository  The repository for persistence operations
      * @param  ValidatorInterface  $validator  The validator for business rule validation
@@ -41,7 +44,19 @@ final class AvailabilityService implements AvailabilityServiceInterface
     public function __construct(
         private readonly AvailabilityRepositoryInterface $repository,
         private readonly ValidatorInterface $validator,
-    ) {}
+    ) {
+        $this->scope = new ScopedService;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function for(Model $schedulable): self
+    {
+        $this->scope->for($schedulable);
+
+        return $this;
+    }
 
     /**
      * {@inheritDoc}
@@ -51,6 +66,8 @@ final class AvailabilityService implements AvailabilityServiceInterface
      */
     public function create(AvailabilityRecord $record): Availability
     {
+        $record = $this->injectScopedDataIntoRecord($record);
+
         return ServiceContext::within(
             AvailabilityService::class,
             function () use ($record): Availability {
@@ -73,6 +90,8 @@ final class AvailabilityService implements AvailabilityServiceInterface
      */
     public function update(int $id, AvailabilityRecord $record): Availability
     {
+        $record = $this->injectScopedDataIntoRecord($record);
+
         return ServiceContext::within(
             AvailabilityService::class,
             function () use ($id, $record): Availability {
@@ -96,10 +115,13 @@ final class AvailabilityService implements AvailabilityServiceInterface
      */
     public function delete(int $id, bool $force = false): bool
     {
+        $schedulable = $this->scope->getScopedSchedulable();
+        $this->scope->clearScope();
+
         return ServiceContext::within(
             AvailabilityService::class,
-            function () use ($id, $force): bool {
-                $existing = $this->findOrFail($id);
+            function () use ($id, $force, $schedulable): bool {
+                $existing = $this->findOrFail($id, $schedulable);
 
                 if (! $force) {
                     $this->validateOperation(
@@ -124,9 +146,23 @@ final class AvailabilityService implements AvailabilityServiceInterface
      */
     public function find(int $id): ?Availability
     {
+        $schedulable = $this->scope->getScopedSchedulable();
+        $this->scope->clearScope();
+
         return ServiceContext::within(
             AvailabilityService::class,
-            fn (): ?Availability => $this->repository->find($id),
+            function () use ($id, $schedulable): ?Availability {
+                $availability = $this->repository->find($id);
+
+                if ($availability !== null && $schedulable !== null) {
+                    if ($availability->schedulable_type !== $schedulable->getMorphClass() ||
+                        $availability->schedulable_id !== $schedulable->getKey()) {
+                        return null;
+                    }
+                }
+
+                return $availability;
+            },
             ['operation' => 'find', 'id' => $id]
         );
     }
@@ -134,8 +170,18 @@ final class AvailabilityService implements AvailabilityServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findBySchedulable(Model $schedulable): Collection
+    public function findBySchedulable(?Model $schedulable = null): Collection
     {
+        $schedulable = $schedulable ?? $this->scope->getScopedSchedulable();
+
+        if ($schedulable === null) {
+            throw new \RuntimeException(
+                'No schedulable entity defined. Use for() or pass a model to findBySchedulable().'
+            );
+        }
+
+        $this->scope->clearScope();
+
         return ServiceContext::within(
             AvailabilityService::class,
             fn (): Collection => $this->repository->findBySchedulable($schedulable),
@@ -238,19 +284,48 @@ final class AvailabilityService implements AvailabilityServiceInterface
     }
 
     /**
+     * Injects scoped entity data into the record if scoped.
+     *
+     * @param  AvailabilityRecord  $record  The record to inject data into
+     * @return AvailabilityRecord The modified record
+     */
+    private function injectScopedDataIntoRecord(AvailabilityRecord $record): AvailabilityRecord
+    {
+        if (! $this->scope->isScoped()) {
+            return $record;
+        }
+
+        $data = $record->toArray();
+        $data['schedulable_type'] = $this->scope->getScopedSchedulableType();
+        $data['schedulable_id'] = $this->scope->getScopedSchedulableId();
+
+        $this->scope->clearScope();
+
+        return AvailabilityRecord::from($data);
+    }
+
+    /**
      * Finds an availability or throws an exception if not found.
      *
      * @param  int  $id  The availability ID
+     * @param  Model|null  $schedulable  Optional schedulable entity for ownership verification
      * @return Availability The found availability
      *
-     * @throws ModelNotFoundException When the availability does not exist
+     * @throws ModelNotFoundException When the availability does not exist or does not belong to the entity
      */
-    private function findOrFail(int $id): Availability
+    private function findOrFail(int $id, ?Model $schedulable = null): Availability
     {
         $availability = $this->repository->find($id);
 
         if ($availability === null) {
             throw ModelNotFoundException::create(Availability::class, $id);
+        }
+
+        if ($schedulable !== null) {
+            if ($availability->schedulable_type !== $schedulable->getMorphClass() ||
+                $availability->schedulable_id !== $schedulable->getKey()) {
+                throw ModelNotFoundException::create(Availability::class, $id);
+            }
         }
 
         return $availability;

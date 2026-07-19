@@ -22,30 +22,76 @@ use Throwable;
  * context managers for consistent error handling and auditing.
  *
  * @example
- * // Create a new availability
- * $service->create(new AvailabilityRecord([
- *     'schedulable_type' => 'user',
- *     'schedulable_id' => 1,
- *     'start_time' => new DateTimeZuluVO('2024-01-01 09:00:00'),
- *     'end_time' => new DateTimeZuluVO('2024-01-01 17:00:00'),
+ * // Create a new availability with scoping
+ * $service->for($doctor)->create(AvailabilityRecord::from([
+ *     'name' => 'Consultations',
+ *     'days' => ['monday', 'wednesday', 'friday'],
+ *     'daily_start' => '09:00:00',
+ *     'daily_end' => '17:00:00',
+ *     'validity_start' => '2024-01-01T00:00:00Z',
+ *     'validity_end' => '2024-12-31T23:59:59Z',
  * ]));
  *
  * // Find all availabilities for a schedulable entity
- * $availabilities = $service->findBySchedulable($user);
+ * $availabilities = $service->findBySchedulable($doctor);
+ *
+ * // Find using scoped entity
+ * $availabilities = $service->for($doctor)->findBySchedulable();
  */
 interface AvailabilityServiceInterface
 {
+    /**
+     * Sets the schedulable entity context for subsequent operations.
+     *
+     * This method allows you to define the entity (e.g., Doctor, User) that
+     * the availability operations will be scoped to. When used, the entity type
+     * and ID will be automatically injected into records.
+     *
+     * @param  Model  $schedulable  The schedulable entity (e.g., Doctor::find(42))
+     * @return self Returns the service instance for method chaining
+     *
+     * @example
+     * $service->for($doctor)->create($record);
+     * $service->for($doctor)->findBySchedulable();
+     */
+    public function for(Model $schedulable): self;
+
     /**
      * Creates a new availability record.
      *
      * Validates the record against business rules before creation. If validation
      * passes, the record is persisted and the created model is returned.
+     * If the service is scoped via for(), the schedulable_type and schedulable_id
+     * are automatically injected.
      *
      * @param  AvailabilityRecord  $record  The availability data to create
      * @return Availability The newly created availability model
      *
      * @throws ValidationException When the record fails business rule validation
      * @throws Throwable When an unexpected error occurs during creation
+     *
+     * @example
+     * // With for() - auto-injects schedulable_type and schedulable_id
+     * $availability = $service->for($doctor)->create(AvailabilityRecord::from([
+     *     'name' => 'Consultations',
+     *     'days' => ['monday', 'wednesday', 'friday'],
+     *     'daily_start' => '09:00:00',
+     *     'daily_end' => '17:00:00',
+     *     'validity_start' => '2024-01-01T00:00:00Z',
+     *     'validity_end' => '2024-12-31T23:59:59Z',
+     * ]));
+     *
+     * // Without for() - must specify schedulable_type and schedulable_id
+     * $availability = $service->create(AvailabilityRecord::from([
+     *     'name' => 'Consultations',
+     *     'days' => ['monday', 'wednesday', 'friday'],
+     *     'daily_start' => '09:00:00',
+     *     'daily_end' => '17:00:00',
+     *     'validity_start' => '2024-01-01T00:00:00Z',
+     *     'validity_end' => '2024-12-31T23:59:59Z',
+     *     'schedulable_type' => Doctor::class,
+     *     'schedulable_id' => 42,
+     * ]));
      */
     public function create(AvailabilityRecord $record): Availability;
 
@@ -85,6 +131,9 @@ interface AvailabilityServiceInterface
     /**
      * Finds an availability by its ID.
      *
+     * If the service is scoped via for(), only availabilities belonging to
+     * that entity will be returned.
+     *
      * @param  int  $id  The availability ID to find
      * @return Availability|null The availability model or null if not found
      */
@@ -93,13 +142,21 @@ interface AvailabilityServiceInterface
     /**
      * Finds all availabilities for a given schedulable entity.
      *
-     * Returns all availabilities associated with the specified entity,
-     * regardless of their active status.
+     * If the service is scoped via for(), you can omit the parameter.
      *
-     * @param  Model  $schedulable  The schedulable entity
+     * @param  Model|null  $schedulable  The schedulable entity, or null to use the scoped entity
      * @return Collection<int, Availability> Collection of availability models
+     *
+     * @throws \RuntimeException When no schedulable entity is provided and none is scoped
+     *
+     * @example
+     * // Using scoped entity
+     * $availabilities = $service->for($doctor)->findBySchedulable();
+     *
+     * // Using explicit entity
+     * $availabilities = $service->findBySchedulable($doctor);
      */
-    public function findBySchedulable(Model $schedulable): Collection;
+    public function findBySchedulable(?Model $schedulable = null): Collection;
 
     /**
      * Finds all availabilities of a specific type.

@@ -23,12 +23,12 @@ use Throwable;
  * with availability records.
  *
  * @example
- * // Create an impediment
- * $service->create(new ImpedimentRecord([
+ * // Create an impediment with scoping
+ * $service->for($doctor)->create(ImpedimentRecord::from([
  *     'availability_id' => 1,
  *     'reason' => 'Team meeting',
- *     'start_time' => new DateTimeZuluVO('2024-01-01 10:00:00'),
- *     'end_time' => new DateTimeZuluVO('2024-01-01 11:00:00'),
+ *     'start_datetime' => '2024-01-01T10:00:00Z',
+ *     'end_datetime' => '2024-01-01T11:00:00Z',
  * ]));
  *
  * // Find all active impediments
@@ -37,16 +37,53 @@ use Throwable;
 interface ImpedimentServiceInterface
 {
     /**
+     * Sets the schedulable entity context for subsequent operations.
+     *
+     * This method allows you to define the entity (e.g., Doctor, User) that
+     * the impediment operations will be scoped to. When used, the entity type
+     * and ID will be automatically injected into records.
+     *
+     * @param  Model  $schedulable  The schedulable entity (e.g., Doctor::find(42))
+     * @return self Returns the service instance for method chaining
+     *
+     * @example
+     * $service->for($doctor)->create($record);
+     * $service->for($doctor)->findBySchedulable();
+     */
+    public function for(Model $schedulable): self;
+
+    /**
      * Creates a new impediment record.
      *
      * Validates the record against business rules before creation. If validation
      * passes, the record is persisted and the created model is returned.
+     * If the service is scoped via for(), the schedulable_type and schedulable_id
+     * are automatically injected.
      *
      * @param  ImpedimentRecord  $record  The impediment data to create
      * @return Impediment The newly created impediment model
      *
      * @throws ValidationException When the record fails business rule validation
      * @throws Throwable When an unexpected error occurs during creation
+     *
+     * @example
+     * // With for() - auto-injects schedulable_type and schedulable_id
+     * $impediment = $service->for($doctor)->create(ImpedimentRecord::from([
+     *     'availability_id' => 1,
+     *     'reason' => 'Formation',
+     *     'start_datetime' => '2024-01-15T09:00:00Z',
+     *     'end_datetime' => '2024-01-15T17:00:00Z',
+     * ]));
+     *
+     * // Without for() - must specify schedulable_type and schedulable_id
+     * $impediment = $service->create(ImpedimentRecord::from([
+     *     'availability_id' => 1,
+     *     'schedulable_type' => Doctor::class,
+     *     'schedulable_id' => 42,
+     *     'reason' => 'Formation',
+     *     'start_datetime' => '2024-01-15T09:00:00Z',
+     *     'end_datetime' => '2024-01-15T17:00:00Z',
+     * ]));
      */
     public function create(ImpedimentRecord $record): Impediment;
 
@@ -83,6 +120,9 @@ interface ImpedimentServiceInterface
     /**
      * Finds an impediment by its ID.
      *
+     * If the service is scoped via for(), only impediments belonging to
+     * that entity will be returned.
+     *
      * @param  int  $id  The impediment ID to find
      * @return Impediment|null The impediment model or null if not found
      */
@@ -99,13 +139,21 @@ interface ImpedimentServiceInterface
     /**
      * Finds all impediments for a given schedulable entity.
      *
-     * Traverses through the availability relationship to find impediments
-     * associated with the specified entity.
+     * If the service is scoped via for(), you can omit the parameter.
      *
-     * @param  Model  $schedulable  The schedulable entity
+     * @param  Model|null  $schedulable  The schedulable entity, or null to use the scoped entity
      * @return Collection<int, Impediment> Collection of impediment models
+     *
+     * @throws \RuntimeException When no schedulable entity is provided and none is scoped
+     *
+     * @example
+     * // Using scoped entity
+     * $impediments = $service->for($doctor)->findBySchedulable();
+     *
+     * // Using explicit entity
+     * $impediments = $service->findBySchedulable($doctor);
      */
-    public function findBySchedulable(Model $schedulable): Collection;
+    public function findBySchedulable(?Model $schedulable = null): Collection;
 
     /**
      * Finds impediments that occur on a specific date.

@@ -6,6 +6,7 @@ namespace AndyDefer\LaravelChronos\Services;
 
 use AndyDefer\LaravelChronos\Contracts\Repositories\ImpedimentRepositoryInterface;
 use AndyDefer\LaravelChronos\Contracts\Services\ImpedimentServiceInterface;
+use AndyDefer\LaravelChronos\Contracts\Services\ScopedServiceInterface;
 use AndyDefer\LaravelChronos\Contracts\Validation\ValidatorInterface;
 use AndyDefer\LaravelChronos\Enums\OperationType;
 use AndyDefer\LaravelChronos\Exceptions\ModelNotFoundException;
@@ -28,12 +29,14 @@ use Throwable;
  *
  * @example
  * $service = new ImpedimentService($repository, $validator);
- * $impediment = $service->create(new ImpedimentRecord(...));
+ * $impediment = $service->for($doctor)->create(new ImpedimentRecord(...));
  *
  * @see ImpedimentServiceInterface
  */
 final class ImpedimentService implements ImpedimentServiceInterface
 {
+    private ScopedServiceInterface $scope;
+
     /**
      * @param  ImpedimentRepositoryInterface  $repository  The repository for persistence operations
      * @param  ValidatorInterface  $validator  The validator for business rule validation
@@ -41,7 +44,19 @@ final class ImpedimentService implements ImpedimentServiceInterface
     public function __construct(
         private readonly ImpedimentRepositoryInterface $repository,
         private readonly ValidatorInterface $validator,
-    ) {}
+    ) {
+        $this->scope = new ScopedService;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function for(Model $schedulable): self
+    {
+        $this->scope->for($schedulable);
+
+        return $this;
+    }
 
     /**
      * {@inheritDoc}
@@ -51,6 +66,8 @@ final class ImpedimentService implements ImpedimentServiceInterface
      */
     public function create(ImpedimentRecord $record): Impediment
     {
+        $record = $this->injectScopedDataIntoRecord($record);
+
         return ServiceContext::within(
             ImpedimentService::class,
             function () use ($record): Impediment {
@@ -73,6 +90,8 @@ final class ImpedimentService implements ImpedimentServiceInterface
      */
     public function update(int $id, ImpedimentRecord $record): Impediment
     {
+        $record = $this->injectScopedDataIntoRecord($record);
+
         return ServiceContext::within(
             ImpedimentService::class,
             function () use ($id, $record): Impediment {
@@ -96,10 +115,13 @@ final class ImpedimentService implements ImpedimentServiceInterface
      */
     public function delete(int $id): bool
     {
+        $schedulable = $this->scope->getScopedSchedulable();
+        $this->scope->clearScope();
+
         return ServiceContext::within(
             ImpedimentService::class,
-            function () use ($id): bool {
-                $existing = $this->findOrFail($id);
+            function () use ($id, $schedulable): bool {
+                $existing = $this->findOrFail($id, $schedulable);
                 $this->validateOperation(
                     new ImpedimentRecord,
                     OperationType::DELETE,
@@ -119,9 +141,26 @@ final class ImpedimentService implements ImpedimentServiceInterface
      */
     public function find(int $id): ?Impediment
     {
+        $schedulable = $this->scope->getScopedSchedulable();
+        $this->scope->clearScope();
+
         return ServiceContext::within(
             ImpedimentService::class,
-            fn (): ?Impediment => $this->repository->find($id),
+            function () use ($id, $schedulable): ?Impediment {
+                $impediment = $this->repository->find($id);
+
+                if ($impediment !== null && $schedulable !== null) {
+                    // Impediments don't have schedulable_type directly, but we verify via availability
+                    $availability = $impediment->availability;
+                    if ($availability === null ||
+                        $availability->schedulable_type !== $schedulable->getMorphClass() ||
+                        $availability->schedulable_id !== $schedulable->getKey()) {
+                        return null;
+                    }
+                }
+
+                return $impediment;
+            },
             ['operation' => 'find', 'id' => $id]
         );
     }
@@ -141,8 +180,18 @@ final class ImpedimentService implements ImpedimentServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findBySchedulable(Model $schedulable): Collection
+    public function findBySchedulable(?Model $schedulable = null): Collection
     {
+        $schedulable = $schedulable ?? $this->scope->getScopedSchedulable();
+
+        if ($schedulable === null) {
+            throw new \RuntimeException(
+                'No schedulable entity defined. Use for() or pass a model to findBySchedulable().'
+            );
+        }
+
+        $this->scope->clearScope();
+
         return ServiceContext::within(
             ImpedimentService::class,
             fn (): Collection => $this->repository->findBySchedulable($schedulable),
@@ -223,8 +272,6 @@ final class ImpedimentService implements ImpedimentServiceInterface
 
     /**
      * {@inheritDoc}
-     *
-     * Delegates to the impediment model for business logic.
      */
     public function isActive(Impediment $impediment): bool
     {
@@ -233,8 +280,6 @@ final class ImpedimentService implements ImpedimentServiceInterface
 
     /**
      * {@inheritDoc}
-     *
-     * Delegates to the impediment model for business logic.
      */
     public function overlapsWith(
         Impediment $impediment,
@@ -290,19 +335,43 @@ final class ImpedimentService implements ImpedimentServiceInterface
     }
 
     /**
+     * Injects scoped entity data into the record if scoped.
+     *
+     * @param  ImpedimentRecord  $record  The record to inject data into
+     * @return ImpedimentRecord The modified record
+     */
+    private function injectScopedDataIntoRecord(ImpedimentRecord $record): ImpedimentRecord
+    {
+        // Impediments don't have schedulable_type directly.
+        // They inherit from availability, so we don't inject here.
+        // The scope is used for findBySchedulable() and ownership checks.
+        return $record;
+    }
+
+    /**
      * Finds an impediment or throws an exception if not found.
      *
      * @param  int  $id  The impediment ID
+     * @param  Model|null  $schedulable  Optional schedulable entity for ownership verification
      * @return Impediment The found impediment
      *
-     * @throws ModelNotFoundException When the impediment does not exist
+     * @throws ModelNotFoundException When the impediment does not exist or does not belong to the entity
      */
-    private function findOrFail(int $id): Impediment
+    private function findOrFail(int $id, ?Model $schedulable = null): Impediment
     {
         $impediment = $this->repository->find($id);
 
         if ($impediment === null) {
             throw ModelNotFoundException::create(Impediment::class, $id);
+        }
+
+        if ($schedulable !== null) {
+            $availability = $impediment->availability;
+            if ($availability === null ||
+                $availability->schedulable_type !== $schedulable->getMorphClass() ||
+                $availability->schedulable_id !== $schedulable->getKey()) {
+                throw ModelNotFoundException::create(Impediment::class, $id);
+            }
         }
 
         return $impediment;

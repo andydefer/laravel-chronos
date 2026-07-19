@@ -43,6 +43,162 @@ final class ImpedimentServiceTest extends IntegrationTestCase
         $this->availabilityService = $this->app->make(AvailabilityServiceInterface::class);
     }
 
+    // ============================================================
+    // TESTS: FOR() METHOD
+    // ============================================================
+
+    public function test_for_method_sets_schedulable_context(): void
+    {
+        $result = $this->impedimentService->for($this->testCar);
+
+        $this->assertInstanceOf(ImpedimentServiceInterface::class, $result);
+    }
+
+    public function test_find_by_schedulable_without_parameter_uses_scoped_entity(): void
+    {
+        $availability = $this->createAvailability();
+
+        $this->impedimentService->for($this->testCar)->create(ImpedimentRecord::from([
+            'availability_id' => $availability->id,
+            'reason' => 'Test Impediment',
+            'start_datetime' => '2024-01-15T10:00:00Z',
+            'end_datetime' => '2024-01-15T12:00:00Z',
+        ]));
+
+        $impediments = $this->impedimentService->for($this->testCar)->findBySchedulable();
+
+        $this->assertCount(1, $impediments);
+        $this->assertEquals('Test Impediment', $impediments->first()->reason);
+    }
+
+    public function test_find_by_schedulable_with_explicit_entity_works(): void
+    {
+        $anotherCar = ChronosMutationContext::withAllowed(function () {
+            return TestCar::create([
+                'model' => 'Another Model',
+                'license_plate' => 'TEST456',
+                'type' => 'suv',
+                'capacity' => 7,
+            ]);
+        });
+
+        $anotherAvailability = $this->createAvailabilityFor($anotherCar);
+
+        $this->impedimentService->for($anotherCar)->create(ImpedimentRecord::from([
+            'availability_id' => $anotherAvailability->id,
+            'reason' => 'Another Impediment',
+            'start_datetime' => '2024-01-15T10:00:00Z',
+            'end_datetime' => '2024-01-15T12:00:00Z',
+        ]));
+
+        $impediments = $this->impedimentService->for($this->testCar)->findBySchedulable($anotherCar);
+
+        $this->assertCount(1, $impediments);
+        $this->assertEquals('Another Impediment', $impediments->first()->reason);
+    }
+
+    public function test_find_by_schedulable_without_entity_and_without_for_throws_exception(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('No schedulable entity defined');
+
+        $this->impedimentService->findBySchedulable();
+    }
+
+    public function test_find_with_for_filters_by_ownership(): void
+    {
+        $availability = $this->createAvailability();
+
+        $impediment = $this->impedimentService->for($this->testCar)->create(ImpedimentRecord::from([
+            'availability_id' => $availability->id,
+            'reason' => 'Test Impediment',
+            'start_datetime' => '2024-01-15T10:00:00Z',
+            'end_datetime' => '2024-01-15T12:00:00Z',
+        ]));
+
+        $found = $this->impedimentService->for($this->testCar)->find($impediment->id);
+        $this->assertNotNull($found);
+        $this->assertEquals($impediment->id, $found->id);
+
+        $notFound = $this->impedimentService->for($this->testCar)->find(99999);
+        $this->assertNull($notFound);
+    }
+
+    public function test_find_with_for_returns_null_for_other_entity_impediment(): void
+    {
+        $anotherCar = ChronosMutationContext::withAllowed(function () {
+            return TestCar::create([
+                'model' => 'Another Model',
+                'license_plate' => 'TEST456',
+                'type' => 'suv',
+                'capacity' => 7,
+            ]);
+        });
+
+        $anotherAvailability = $this->createAvailabilityFor($anotherCar);
+
+        $impediment2 = $this->impedimentService->for($anotherCar)->create(ImpedimentRecord::from([
+            'availability_id' => $anotherAvailability->id,
+            'reason' => 'Another Impediment',
+            'start_datetime' => '2024-01-15T10:00:00Z',
+            'end_datetime' => '2024-01-15T12:00:00Z',
+        ]));
+
+        $notFound = $this->impedimentService->for($this->testCar)->find($impediment2->id);
+        $this->assertNull($notFound);
+    }
+
+    public function test_delete_with_for_verifies_ownership(): void
+    {
+        $availability = $this->createAvailability();
+
+        $impediment = $this->impedimentService->for($this->testCar)->create(ImpedimentRecord::from([
+            'availability_id' => $availability->id,
+            'reason' => 'Test Impediment',
+            'start_datetime' => '2024-01-15T10:00:00Z',
+            'end_datetime' => '2024-01-15T12:00:00Z',
+        ]));
+
+        $deleted = $this->impedimentService->for($this->testCar)->delete($impediment->id);
+
+        $this->assertTrue($deleted);
+        $this->assertNotNull(Impediment::withTrashed()->find($impediment->id)->deleted_at);
+    }
+
+    public function test_chained_methods_with_for_work_correctly(): void
+    {
+        $availability = $this->createAvailability();
+
+        $impediment = $this->impedimentService
+            ->for($this->testCar)
+            ->create(ImpedimentRecord::from([
+                'availability_id' => $availability->id,
+                'reason' => 'Chain Test',
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T12:00:00Z',
+            ]));
+
+        $this->assertEquals($availability->id, $impediment->availability_id);
+
+        $updated = $this->impedimentService
+            ->for($this->testCar)
+            ->update($impediment->id, ImpedimentRecord::from([
+                'reason' => 'Updated Chain Test',
+            ]));
+
+        $this->assertEquals('Updated Chain Test', $updated->reason);
+
+        $impediments = $this->impedimentService
+            ->for($this->testCar)
+            ->findBySchedulable();
+
+        $this->assertCount(1, $impediments);
+    }
+
+    // ============================================================
+    // TESTS: ORIGINAL METHODS
+    // ============================================================
+
     public function test_can_create_impediment(): void
     {
         $availability = $this->createAvailability();
@@ -62,7 +218,6 @@ final class ImpedimentServiceTest extends IntegrationTestCase
     {
         $availability = $this->createAvailability();
 
-        // Create a schedule
         ChronosMutationContext::withAllowed(function () use ($availability) {
             Schedule::create([
                 'availability_id' => $availability->id,
@@ -74,7 +229,6 @@ final class ImpedimentServiceTest extends IntegrationTestCase
             ]);
         });
 
-        // Create impediment that overlaps
         $record = new ImpedimentRecord(
             availability_id: $availability->id,
             reason: 'Overlapping Impediment',
@@ -275,6 +429,11 @@ final class ImpedimentServiceTest extends IntegrationTestCase
 
     private function createAvailability(): Availability
     {
+        return $this->createAvailabilityFor($this->testCar);
+    }
+
+    private function createAvailabilityFor(TestCar $car): Availability
+    {
         $record = AvailabilityRecord::from([
             'name' => 'Test Availability',
             'type' => 'test',
@@ -284,7 +443,7 @@ final class ImpedimentServiceTest extends IntegrationTestCase
             'validity_start' => '2024-01-01T00:00:00Z',
             'validity_end' => '2024-12-31T23:59:59Z',
             'schedulable_type' => TestCar::class,
-            'schedulable_id' => $this->testCar->id,
+            'schedulable_id' => $car->id,
         ]);
 
         return $this->availabilityService->create($record);

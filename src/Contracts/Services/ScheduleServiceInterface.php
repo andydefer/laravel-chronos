@@ -27,8 +27,8 @@ use Throwable;
  * $service->for($doctor)->create(ScheduleRecord::from([
  *     'availability_id' => 1,
  *     'title' => 'Team Meeting',
- *     'start_time' => new DateTimeZuluVO('2024-01-01 10:00:00'),
- *     'end_time' => new DateTimeZuluVO('2024-01-01 11:00:00'),
+ *     'start_datetime' => '2024-01-01T10:00:00Z',
+ *     'end_datetime' => '2024-01-01T11:00:00Z',
  * ]));
  *
  * // Cancel an existing schedule
@@ -124,6 +124,9 @@ interface ScheduleServiceInterface
 
     /**
      * Finds a schedule by its ID.
+     *
+     * If the service is scoped via for(), only schedules belonging to
+     * that entity will be returned.
      *
      * @param  int  $id  The schedule ID to find
      * @return Schedule|null The schedule model or null if not found

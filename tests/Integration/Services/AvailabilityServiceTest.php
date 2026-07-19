@@ -37,6 +37,226 @@ final class AvailabilityServiceTest extends IntegrationTestCase
         $this->service = $this->app->make(AvailabilityServiceInterface::class);
     }
 
+    // ============================================================
+    // TESTS: FOR() METHOD
+    // ============================================================
+
+    public function test_for_method_sets_schedulable_context(): void
+    {
+        $result = $this->service->for($this->testCar);
+
+        $this->assertInstanceOf(AvailabilityServiceInterface::class, $result);
+    }
+
+    public function test_create_with_for_injects_schedulable_fields(): void
+    {
+        $availability = $this->service->for($this->testCar)->create(AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'type' => 'test',
+            'days' => ['monday', 'wednesday', 'friday'],
+            'daily_start' => '09:00:00',
+            'daily_end' => '17:00:00',
+            'validity_start' => '2024-01-01T00:00:00Z',
+            'validity_end' => '2024-12-31T23:59:59Z',
+        ]));
+
+        $this->assertInstanceOf(Availability::class, $availability);
+        $this->assertEquals(TestCar::class, $availability->schedulable_type);
+        $this->assertEquals($this->testCar->id, $availability->schedulable_id);
+        $this->assertEquals('Test Availability', $availability->name);
+    }
+
+    public function test_create_with_for_auto_resets_context(): void
+    {
+        // First call with for()
+        $availability1 = $this->service->for($this->testCar)->create(AvailabilityRecord::from([
+            'name' => 'Availability 1',
+            'days' => ['monday'],
+            'daily_start' => '09:00:00',
+            'daily_end' => '17:00:00',
+            'validity_start' => '2024-01-01T00:00:00Z',
+            'validity_end' => '2024-12-31T23:59:59Z',
+        ]));
+
+        $this->assertEquals(TestCar::class, $availability1->schedulable_type);
+
+        // Second call without for() should work normally
+        $availability2 = $this->service->create(AvailabilityRecord::from([
+            'name' => 'Availability 2',
+            'days' => ['tuesday'],
+            'daily_start' => '09:00:00',
+            'daily_end' => '17:00:00',
+            'validity_start' => '2024-01-01T00:00:00Z',
+            'validity_end' => '2024-12-31T23:59:59Z',
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => $this->testCar->id,
+        ]));
+
+        $this->assertInstanceOf(Availability::class, $availability2);
+        $this->assertEquals('Availability 2', $availability2->name);
+    }
+
+    public function test_find_by_schedulable_without_parameter_uses_scoped_entity(): void
+    {
+        $this->service->for($this->testCar)->create(AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'days' => ['monday'],
+            'daily_start' => '09:00:00',
+            'daily_end' => '17:00:00',
+            'validity_start' => '2024-01-01T00:00:00Z',
+            'validity_end' => '2024-12-31T23:59:59Z',
+        ]));
+
+        $availabilities = $this->service->for($this->testCar)->findBySchedulable();
+
+        $this->assertCount(1, $availabilities);
+        $this->assertEquals('Test Availability', $availabilities->first()->name);
+    }
+
+    public function test_find_by_schedulable_with_explicit_entity_works(): void
+    {
+        $anotherCar = ChronosMutationContext::withAllowed(function () {
+            return TestCar::create([
+                'model' => 'Another Model',
+                'license_plate' => 'TEST456',
+                'type' => 'suv',
+                'capacity' => 7,
+            ]);
+        });
+
+        // Create availability for anotherCar
+        $this->service->for($anotherCar)->create(AvailabilityRecord::from([
+            'name' => 'Another Availability',
+            'days' => ['tuesday'],
+            'daily_start' => '09:00:00',
+            'daily_end' => '17:00:00',
+            'validity_start' => '2024-01-01T00:00:00Z',
+            'validity_end' => '2024-12-31T23:59:59Z',
+        ]));
+
+        // Search with explicit entity
+        $availabilities = $this->service->for($this->testCar)->findBySchedulable($anotherCar);
+
+        $this->assertCount(1, $availabilities);
+        $this->assertEquals('Another Availability', $availabilities->first()->name);
+    }
+
+    public function test_find_by_schedulable_without_entity_and_without_for_throws_exception(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('No schedulable entity defined');
+
+        $this->service->findBySchedulable();
+    }
+
+    public function test_find_with_for_filters_by_ownership(): void
+    {
+        $availability1 = $this->service->for($this->testCar)->create(AvailabilityRecord::from([
+            'name' => 'Test Availability 1',
+            'days' => ['monday'],
+            'daily_start' => '09:00:00',
+            'daily_end' => '17:00:00',
+            'validity_start' => '2024-01-01T00:00:00Z',
+            'validity_end' => '2024-12-31T23:59:59Z',
+        ]));
+
+        // Find with for() - should return own availability
+        $found = $this->service->for($this->testCar)->find($availability1->id);
+        $this->assertNotNull($found);
+        $this->assertEquals($availability1->id, $found->id);
+
+        // Should not find availability with wrong ID
+        $notFound = $this->service->for($this->testCar)->find(99999);
+        $this->assertNull($notFound);
+    }
+
+    public function test_find_with_for_returns_null_for_other_entity_availability(): void
+    {
+        $anotherCar = ChronosMutationContext::withAllowed(function () {
+            return TestCar::create([
+                'model' => 'Another Model',
+                'license_plate' => 'TEST456',
+                'type' => 'suv',
+                'capacity' => 7,
+            ]);
+        });
+
+        $availability2 = $this->service->for($anotherCar)->create(AvailabilityRecord::from([
+            'name' => 'Test Availability 2',
+            'days' => ['tuesday'],
+            'daily_start' => '09:00:00',
+            'daily_end' => '17:00:00',
+            'validity_start' => '2024-01-01T00:00:00Z',
+            'validity_end' => '2024-12-31T23:59:59Z',
+        ]));
+
+        // Find with for() for testCar - should not find anotherCar's availability
+        $notFound = $this->service->for($this->testCar)->find($availability2->id);
+        $this->assertNull($notFound);
+    }
+
+    public function test_delete_with_for_verifies_ownership(): void
+    {
+        $availability = $this->service->for($this->testCar)->create(AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'days' => ['monday'],
+            'daily_start' => '09:00:00',
+            'daily_end' => '17:00:00',
+            'validity_start' => '2024-01-01T00:00:00Z',
+            'validity_end' => '2024-12-31T23:59:59Z',
+        ]));
+
+        $deleted = $this->service->for($this->testCar)->delete($availability->id);
+
+        $this->assertTrue($deleted);
+        $this->assertNotNull(Availability::withTrashed()->find($availability->id)->deleted_at);
+    }
+
+    public function test_chained_methods_with_for_work_correctly(): void
+    {
+        // Create with chained for()
+        $availability = $this->service
+            ->for($this->testCar)
+            ->create(AvailabilityRecord::from([
+                'name' => 'Chain Test',
+                'days' => ['monday'],
+                'daily_start' => '09:00:00',
+                'daily_end' => '17:00:00',
+                'validity_start' => '2024-01-01T00:00:00Z',
+                'validity_end' => '2024-12-31T23:59:59Z',
+            ]));
+
+        $this->assertEquals(TestCar::class, $availability->schedulable_type);
+        $this->assertEquals($this->testCar->id, $availability->schedulable_id);
+
+        // Update with chained for() - specifying all fields to avoid validation errors
+        $updated = $this->service
+            ->for($this->testCar)
+            ->update($availability->id, AvailabilityRecord::from([
+                'name' => 'Updated Chain Test',
+                'days' => ['monday'],
+                'daily_start' => '09:00:00',
+                'daily_end' => '18:00:00',
+                'validity_start' => '2024-01-01T00:00:00Z',
+                'validity_end' => '2024-12-31T23:59:59Z',
+            ]));
+
+        $this->assertEquals('Updated Chain Test', $updated->name);
+        $this->assertEquals('18:00:00', $updated->daily_end->format('H:i:s'));
+
+        // Find by schedulable with chained for()
+        $availabilities = $this->service
+            ->for($this->testCar)
+            ->findBySchedulable();
+
+        $this->assertCount(1, $availabilities);
+        $this->assertEquals('Updated Chain Test', $availabilities->first()->name);
+    }
+
+    // ============================================================
+    // TESTS: ORIGINAL METHODS
+    // ============================================================
+
     public function test_can_create_availability(): void
     {
         $record = $this->createAvailabilityRecord();

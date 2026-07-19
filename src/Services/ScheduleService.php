@@ -6,6 +6,7 @@ namespace AndyDefer\LaravelChronos\Services;
 
 use AndyDefer\LaravelChronos\Contracts\Repositories\ScheduleRepositoryInterface;
 use AndyDefer\LaravelChronos\Contracts\Services\ScheduleServiceInterface;
+use AndyDefer\LaravelChronos\Contracts\Services\ScopedServiceInterface;
 use AndyDefer\LaravelChronos\Contracts\Validation\ValidatorInterface;
 use AndyDefer\LaravelChronos\Enums\OperationType;
 use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
@@ -37,7 +38,7 @@ use Throwable;
  */
 final class ScheduleService implements ScheduleServiceInterface
 {
-    private ?Model $schedulable = null;
+    private ScopedServiceInterface $scope;
 
     /**
      * @param  ScheduleRepositoryInterface  $repository  The repository for persistence operations
@@ -46,14 +47,16 @@ final class ScheduleService implements ScheduleServiceInterface
     public function __construct(
         private readonly ScheduleRepositoryInterface $repository,
         private readonly ValidatorInterface $validator,
-    ) {}
+    ) {
+        $this->scope = new ScopedService;
+    }
 
     /**
      * {@inheritDoc}
      */
     public function for(Model $schedulable): self
     {
-        $this->schedulable = $schedulable;
+        $this->scope->for($schedulable);
 
         return $this;
     }
@@ -66,14 +69,7 @@ final class ScheduleService implements ScheduleServiceInterface
      */
     public function create(ScheduleRecord $record): Schedule
     {
-        // If scoped via for(), inject schedulable_type and schedulable_id
-        if ($this->schedulable !== null) {
-            $data = $record->toArray();
-            $data['schedulable_type'] = $this->schedulable->getMorphClass();
-            $data['schedulable_id'] = $this->schedulable->getKey();
-            $record = ScheduleRecord::from($data);
-            $this->schedulable = null; // Reset after use
-        }
+        $record = $this->injectScopedDataIntoRecord($record);
 
         return ServiceContext::within(
             ScheduleService::class,
@@ -97,14 +93,7 @@ final class ScheduleService implements ScheduleServiceInterface
      */
     public function update(int $id, ScheduleRecord $record): Schedule
     {
-        // If scoped via for(), inject schedulable_type and schedulable_id
-        if ($this->schedulable !== null) {
-            $data = $record->toArray();
-            $data['schedulable_type'] = $this->schedulable->getMorphClass();
-            $data['schedulable_id'] = $this->schedulable->getKey();
-            $record = ScheduleRecord::from($data);
-            $this->schedulable = null; // Reset after use
-        }
+        $record = $this->injectScopedDataIntoRecord($record);
 
         return ServiceContext::within(
             ScheduleService::class,
@@ -129,8 +118,8 @@ final class ScheduleService implements ScheduleServiceInterface
      */
     public function delete(int $id): bool
     {
-        $schedulable = $this->schedulable;
-        $this->schedulable = null; // Reset after use
+        $schedulable = $this->scope->getScopedSchedulable();
+        $this->scope->clearScope();
 
         return ServiceContext::within(
             ScheduleService::class,
@@ -155,15 +144,14 @@ final class ScheduleService implements ScheduleServiceInterface
      */
     public function find(int $id): ?Schedule
     {
-        $schedulable = $this->schedulable;
-        $this->schedulable = null; // Reset after use
+        $schedulable = $this->scope->getScopedSchedulable();
+        $this->scope->clearScope();
 
         return ServiceContext::within(
             ScheduleService::class,
             function () use ($id, $schedulable): ?Schedule {
                 $schedule = $this->repository->find($id);
 
-                // If scoped, verify ownership
                 if ($schedule !== null && $schedulable !== null) {
                     if ($schedule->schedulable_type !== $schedulable->getMorphClass() ||
                         $schedule->schedulable_id !== $schedulable->getKey()) {
@@ -194,7 +182,7 @@ final class ScheduleService implements ScheduleServiceInterface
      */
     public function findBySchedulable(?Model $schedulable = null): Collection
     {
-        $schedulable = $schedulable ?? $this->schedulable;
+        $schedulable = $schedulable ?? $this->scope->getScopedSchedulable();
 
         if ($schedulable === null) {
             throw new \RuntimeException(
@@ -202,7 +190,7 @@ final class ScheduleService implements ScheduleServiceInterface
             );
         }
 
-        $this->schedulable = null; // Reset after use
+        $this->scope->clearScope();
 
         return ServiceContext::within(
             ScheduleService::class,
@@ -292,8 +280,8 @@ final class ScheduleService implements ScheduleServiceInterface
      */
     public function cancel(int $id): Schedule
     {
-        $schedulable = $this->schedulable;
-        $this->schedulable = null; // Reset after use
+        $schedulable = $this->scope->getScopedSchedulable();
+        $this->scope->clearScope();
 
         return ServiceContext::within(
             ScheduleService::class,
@@ -326,8 +314,8 @@ final class ScheduleService implements ScheduleServiceInterface
      */
     public function complete(int $id): Schedule
     {
-        $schedulable = $this->schedulable;
-        $this->schedulable = null; // Reset after use
+        $schedulable = $this->scope->getScopedSchedulable();
+        $this->scope->clearScope();
 
         return ServiceContext::within(
             ScheduleService::class,
@@ -368,6 +356,27 @@ final class ScheduleService implements ScheduleServiceInterface
     }
 
     /**
+     * Injects scoped entity data into the record if scoped.
+     *
+     * @param  ScheduleRecord  $record  The record to inject data into
+     * @return ScheduleRecord The modified record
+     */
+    private function injectScopedDataIntoRecord(ScheduleRecord $record): ScheduleRecord
+    {
+        if (! $this->scope->isScoped()) {
+            return $record;
+        }
+
+        $data = $record->toArray();
+        $data['schedulable_type'] = $this->scope->getScopedSchedulableType();
+        $data['schedulable_id'] = $this->scope->getScopedSchedulableId();
+
+        $this->scope->clearScope();
+
+        return ScheduleRecord::from($data);
+    }
+
+    /**
      * Finds a schedule or throws an exception if not found.
      *
      * @param  int  $id  The schedule ID
@@ -384,7 +393,6 @@ final class ScheduleService implements ScheduleServiceInterface
             throw ModelNotFoundException::create(Schedule::class, $id);
         }
 
-        // If scoped, verify ownership
         if ($schedulable !== null) {
             if ($schedule->schedulable_type !== $schedulable->getMorphClass() ||
                 $schedule->schedulable_id !== $schedulable->getKey()) {
