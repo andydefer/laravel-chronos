@@ -20,24 +20,25 @@ Gérer l'accès aux données des empêchements qui bloquent ou restreignent les 
 
 ## API
 
-### `findByAvailability(int $availabilityId): Collection`
+### `findByAvailability(int $availabilityId, ?int $limit = null): Collection`
 
 Retourne tous les empêchements associés à une disponibilité.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
 | `$availabilityId` | `int` | ID de la disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Impediment>` - Collection d'empêchements
 
 **Exemple :**
 ```php
-$impediments = $repository->findByAvailability(42);
+$impediments = $repository->findByAvailability(42, 10);
 ```
 
 ---
 
-### `findInDateRange(DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $availabilityId = null): Collection`
+### `findInDateRange(DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $availabilityId = null, ?int $limit = null): Collection`
 
 Trouve les empêchements dans une plage de dates.
 
@@ -46,12 +47,13 @@ Trouve les empêchements dans une plage de dates.
 | `$start` | `DateTimeZuluVO` | Début de la plage |
 | `$end` | `DateTimeZuluVO` | Fin de la plage |
 | `$availabilityId` | `int|null` | Filtre par disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Impediment>` - Empêchements dans la plage
 
 ---
 
-### `findOverlapping(int $availabilityId, DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $excludeId = null): Collection`
+### `findOverlapping(int $availabilityId, DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $excludeId = null, ?int $limit = null): Collection`
 
 Trouve les empêchements qui chevauchent une plage horaire.
 
@@ -61,6 +63,7 @@ Trouve les empêchements qui chevauchent une plage horaire.
 | `$start` | `DateTimeZuluVO` | Début de la plage |
 | `$end` | `DateTimeZuluVO` | Fin de la plage |
 | `$excludeId` | `int|null` | ID à exclure |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Impediment>` - Empêchements en conflit
 
@@ -69,31 +72,34 @@ Trouve les empêchements qui chevauchent une plage horaire.
 $overlapping = $repository->findOverlapping(
     42,
     DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-    DateTimeZuluVO::from('2024-01-15T12:00:00Z')
+    DateTimeZuluVO::from('2024-01-15T12:00:00Z'),
+    null,
+    5
 );
 ```
 
 ---
 
-### `findBySchedulable(Model $schedulable): Collection`
+### `findBySchedulable(Model $schedulable, ?int $limit = null): Collection`
 
 Trouve les empêchements via la relation avec la disponibilité.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
 | `$schedulable` | `Model` | Entité planifiable (ex: `User::find(42)`) |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Impediment>` - Empêchements pour l'entité
 
 **Exemple :**
 ```php
 $user = User::find(42);
-$impediments = $repository->findBySchedulable($user);
+$impediments = $repository->findBySchedulable($user, 10);
 ```
 
 ---
 
-### `searchByReason(string $search, ?int $availabilityId = null): Collection`
+### `searchByReason(string $search, ?int $availabilityId = null, ?int $limit = null): Collection`
 
 Recherche des empêchements par motif.
 
@@ -101,17 +107,18 @@ Recherche des empêchements par motif.
 |-----------|------|-------------|
 | `$search` | `string` | Terme de recherche |
 | `$availabilityId` | `int|null` | Filtre par disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Impediment>` - Empêchements correspondants
 
 **Exemple :**
 ```php
-$results = $repository->searchByReason('formation');
+$results = $repository->searchByReason('formation', null, 5);
 ```
 
 ---
 
-### `findByDate(DateTimeZuluVO $date, ?int $availabilityId = null): Collection`
+### `findByDate(DateTimeZuluVO $date, ?int $availabilityId = null, ?int $limit = null): Collection`
 
 Trouve les empêchements pour une date spécifique.
 
@@ -119,46 +126,60 @@ Trouve les empêchements pour une date spécifique.
 |-----------|------|-------------|
 | `$date` | `DateTimeZuluVO` | Date à rechercher |
 | `$availabilityId` | `int|null` | Filtre par disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Impediment>` - Empêchements pour la date
 
 ---
 
-### `findActive(?int $availabilityId = null): Collection`
+### `findActive(?int $availabilityId = null, ?int $limit = null): Collection`
 
 Trouve les empêchements actifs (en cours).
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
 | `$availabilityId` | `int|null` | Filtre par disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Impediment>` - Empêchements actifs
 
 **Exemple :**
 ```php
-$activeImpediments = $repository->findActive();
+$activeImpediments = $repository->findActive(null, 10);
 // Empêchements où start <= now <= end
 ```
 
 ---
 
-### `findConflicting(int $availabilityId, DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $excludeId = null): Collection`
+### `findConflicting(int $availabilityId, DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $excludeId = null, ?int $limit = null): Collection`
 
 Alias de `findOverlapping()` pour la détection de conflits.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$availabilityId` | `int` | ID de la disponibilité |
+| `$start` | `DateTimeZuluVO` | Début de la plage |
+| `$end` | `DateTimeZuluVO` | Fin de la plage |
+| `$excludeId` | `int|null` | ID à exclure |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Impediment>` - Empêchements en conflit
 
 ---
 
-### `findWithInvalidChronology(): Collection`
+### `findWithInvalidChronology(?int $limit = null): Collection`
 
 Trouve les empêchements avec une chronologie invalide (start >= end).
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Impediment>` - Empêchements invalides
 
 ---
 
-### `findWithExceedingDuration(int $availabilityId, int $maxDurationMinutes): Collection`
+### `findWithExceedingDuration(int $availabilityId, int $maxDurationMinutes, ?int $limit = null): Collection`
 
 Trouve les empêchements qui dépassent une durée maximale.
 
@@ -166,12 +187,13 @@ Trouve les empêchements qui dépassent une durée maximale.
 |-----------|------|-------------|
 | `$availabilityId` | `int` | ID de la disponibilité |
 | `$maxDurationMinutes` | `int` | Durée maximale en minutes |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Impediment>` - Empêchements trop longs
 
 ---
 
-### `findViolatingBufferTime(int $availabilityId, int $bufferMinutes): Collection`
+### `findViolatingBufferTime(int $availabilityId, int $bufferMinutes, ?int $limit = null): Collection`
 
 Trouve les empêchements qui ne respectent pas le temps de buffer.
 
@@ -179,38 +201,54 @@ Trouve les empêchements qui ne respectent pas le temps de buffer.
 |-----------|------|-------------|
 | `$availabilityId` | `int` | ID de la disponibilité |
 | `$bufferMinutes` | `int` | Buffer minimum en minutes |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Impediment>` - Empêchements violant le buffer
 
 ---
 
-### `getBlockedSchedules(Impediment $impediment): Collection`
+### `getBlockedSchedules(Impediment $impediment, ?int $limit = null): Collection`
 
 Retourne tous les plannings bloqués par un empêchement.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$impediment` | `Impediment` | L'empêchement à analyser |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings bloqués (partiellement ou totalement)
 
 ---
 
-### `getFullyBlockedSchedules(Impediment $impediment): Collection`
+### `getFullyBlockedSchedules(Impediment $impediment, ?int $limit = null): Collection`
 
 Retourne les plannings totalement bloqués par un empêchement.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$impediment` | `Impediment` | L'empêchement à analyser |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings entièrement dans l'empêchement
 
 ---
 
-### `getPartiallyBlockedSchedules(Impediment $impediment): Collection`
+### `getPartiallyBlockedSchedules(Impediment $impediment, ?int $limit = null): Collection`
 
 Retourne les plannings partiellement bloqués par un empêchement.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$impediment` | `Impediment` | L'empêchement à analyser |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings chevauchant partiellement
 
 ---
 
-## Cas d'utilisation
+## Cas d'utilisation avec limit
 
-### Cas 1 : Détection de conflits
+### Cas 1 : Détection de conflits avec limite
 
 ```php
 $user = User::find(42);
@@ -218,10 +256,10 @@ $start = DateTimeZuluVO::from('2024-01-15T10:00:00Z');
 $end = DateTimeZuluVO::from('2024-01-15T12:00:00Z');
 
 // Récupérer les empêchements via l'utilisateur
-$impediments = $repository->findBySchedulable($user);
+$impediments = $repository->findBySchedulable($user, 20);
 
-// Vérifier les conflits sur une disponibilité spécifique
-$conflicts = $repository->findOverlapping(42, $start, $end);
+// Vérifier les conflits sur une disponibilité spécifique (limité à 5)
+$conflicts = $repository->findOverlapping(42, $start, $end, null, 5);
 
 if ($conflicts->isEmpty()) {
     // Créer l'empêchement
@@ -231,36 +269,46 @@ if ($conflicts->isEmpty()) {
 }
 ```
 
-### Cas 2 : Analyse d'impact sur les plannings
+### Cas 2 : Analyse d'impact sur les plannings avec limite
 
 ```php
 $impediment = $repository->find(1);
 
-$fullyBlocked = $repository->getFullyBlockedSchedules($impediment);
-$partiallyBlocked = $repository->getPartiallyBlockedSchedules($impediment);
+$fullyBlocked = $repository->getFullyBlockedSchedules($impediment, 10);
+$partiallyBlocked = $repository->getPartiallyBlockedSchedules($impediment, 10);
 
 echo "Plannings totalement bloqués: " . $fullyBlocked->count();
 echo "Plannings partiellement bloqués: " . $partiallyBlocked->count();
 ```
 
-### Cas 3 : Nettoyage des données invalides
+### Cas 3 : Nettoyage des données invalides avec limite
 
 ```php
-$invalid = $repository->findWithInvalidChronology();
+$invalid = $repository->findWithInvalidChronology(50);
 
 foreach ($invalid as $impediment) {
     $repository->delete($impediment->id);
 }
 ```
 
-### Cas 4 : Surveillance des empêchements actifs
+### Cas 4 : Surveillance des empêchements actifs avec limite
 
 ```php
-$active = $repository->findActive();
+$active = $repository->findActive(null, 10);
 
 foreach ($active as $impediment) {
-    $blockedSchedules = $repository->getBlockedSchedules($impediment);
+    $blockedSchedules = $repository->getBlockedSchedules($impediment, 5);
 }
+```
+
+### Cas 5 : Recherche paginée
+
+```php
+$page = 1;
+$perPage = 15;
+
+$impediments = $repository->findByAvailability(42, $perPage);
+// Utiliser la collection pour la pagination manuelle
 ```
 
 ---
@@ -281,8 +329,9 @@ foreach ($active as $impediment) {
 |--------|---------------|
 | **Index recommandés** | `availability_id`, `start_datetime`, `end_datetime` |
 | **Requêtes complexes** | Jointures avec `schedules` pour les analyses d'impact |
-| **Buffer time** | Requête avec jointure sur elle-même - à optimiser pour gros volumes |
+| **Buffer time** | Requête avec jointure sur elle-même - utiliser `$limit` pour réduire la charge |
 | **Cache** | Non utilisé - données en temps réel |
+| **Limite** | Utiliser `$limit` pour réduire la charge sur les grandes bases de données |
 
 ---
 
@@ -297,7 +346,7 @@ foreach ($active as $impediment) {
 
 ---
 
-## Exemple complet
+## Exemple complet avec limit
 
 ```php
 <?php
@@ -321,29 +370,34 @@ $record = ImpedimentRecord::from([
 
 $impediment = $repository->create($record);
 
-// Trouver les empêchements pour un utilisateur
-$userImpediments = $repository->findBySchedulable($user);
+// Trouver les empêchements pour un utilisateur (limité à 10)
+$userImpediments = $repository->findBySchedulable($user, 10);
 
-// Vérifier les conflits
+// Vérifier les conflits (limité à 5)
 $conflicts = $repository->findConflicting(
     42,
     DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
-    DateTimeZuluVO::from('2024-01-15T13:00:00Z')
+    DateTimeZuluVO::from('2024-01-15T13:00:00Z'),
+    null,
+    5
 );
 
 if ($conflicts->isNotEmpty()) {
     echo "Conflit avec l'empêchement #{$conflicts->first()->id}";
 }
 
-// Analyser l'impact
-$blocked = $repository->getBlockedSchedules($impediment);
-$fullyBlocked = $repository->getFullyBlockedSchedules($impediment);
+// Analyser l'impact (limité à 10)
+$blocked = $repository->getBlockedSchedules($impediment, 10);
+$fullyBlocked = $repository->getFullyBlockedSchedules($impediment, 10);
 
-// Vérifier la durée
-$tooLong = $repository->findWithExceedingDuration(42, 60);
+// Vérifier la durée (limité à 10)
+$tooLong = $repository->findWithExceedingDuration(42, 60, 10);
 
-// Vérifier le buffer
-$bufferViolations = $repository->findViolatingBufferTime(42, 15);
+// Vérifier le buffer (limité à 10)
+$bufferViolations = $repository->findViolatingBufferTime(42, 15, 10);
+
+// Récupérer les empêchements actifs (limité à 20)
+$active = $repository->findActive(null, 20);
 ```
 
 ---

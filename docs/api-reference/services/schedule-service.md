@@ -2,7 +2,7 @@
 
 ## Description
 
-Service métier pour la gestion des plannings (Schedule). Encapsule la logique métier, la validation, le tracking des mutations et les transitions d'état (annulation, complétion) pour les opérations CRUD sur les plannings.
+Service métier pour la gestion des plannings (Schedule). Encapsule la logique métier, la validation et le tracking des mutations pour les opérations CRUD sur les plannings. Gère également les transitions de statut (annulation, complétion) et les vérifications de règles métier associées.
 
 ## Hiérarchie
 
@@ -17,12 +17,32 @@ Orchestrer les opérations sur les plannings avec :
 - Validation des règles métier via `ValidatorInterface`
 - Tracking des mutations via `ChronosMutationContext`
 - Journalisation des opérations via `ServiceContext`
-- Transitions d'état (cancel, complete)
-- Validation des conditions de transition
+- Gestion centralisée des exceptions
+- **Scoping** via la méthode `for()` pour les opérations sur une entité planifiable
+- **Transitions de statut** : Annulation et complétion avec validation des règles métier
 
 ---
 
 ## API
+
+### `for(Model $schedulable): self`
+
+Définit le contexte d'entité planifiable pour les opérations suivantes.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$schedulable` | `Model` | Entité planifiable (ex: `User::find(42)`) |
+
+**Retourne :** `self` - Le service pour le chaînage
+
+**Exemple :**
+```php
+// Toutes les opérations suivantes sont scopées sur cet utilisateur
+$service->for($user)->create($record);
+$service->for($user)->findBySchedulable();
+```
+
+---
 
 ### `create(ScheduleRecord $record): Schedule`
 
@@ -40,18 +60,24 @@ Crée un nouveau planning.
 
 **Exemple :**
 ```php
-$user = User::find(1);
+$user = User::find(42);
 $record = ScheduleRecord::from([
-    'availability_id' => 42,
-    'schedulable_type' => get_class($user),
-    'schedulable_id' => $user->id,
+    'availability_id' => 1,
     'title' => 'Réunion d\'équipe',
-    'status' => ScheduleStatus::BOOKED,
     'start_datetime' => '2024-01-15T10:00:00Z',
     'end_datetime' => '2024-01-15T11:00:00Z',
+    'status' => ScheduleStatus::BOOKED,
 ]);
 
-$schedule = $service->create($record);
+// Avec scoping - injecte automatiquement schedulable_type et schedulable_id
+$schedule = $service->for($user)->create($record);
+
+// Sans scoping
+$schedule = $service->create(ScheduleRecord::from([
+    ...$record->toArray(),
+    'schedulable_type' => get_class($user),
+    'schedulable_id' => $user->id,
+]));
 ```
 
 ---
@@ -72,6 +98,16 @@ Met à jour un planning existant.
 - `ValidationException` - Si la validation échoue
 - `Throwable` - Si l'opération échoue
 
+**Exemple :**
+```php
+$record = ScheduleRecord::from([
+    'title' => 'Réunion reportée',
+    'start_datetime' => '2024-01-15T14:00:00Z',
+]);
+
+$schedule = $service->update(42, $record);
+```
+
 ---
 
 ### `delete(int $id): bool`
@@ -89,47 +125,78 @@ Supprime un planning.
 - `ValidationException` - Si la validation échoue
 - `Throwable` - Si l'opération échoue
 
+**Exemple :**
+```php
+$service->delete(42);
+```
+
 ---
 
 ### `find(int $id): ?Schedule`
 
 Trouve un planning par son ID.
 
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$id` | `int` | ID du planning |
+
 **Retourne :** `Schedule|null` - Le planning ou null
-
----
-
-### `findByAvailability(int $availabilityId): Collection`
-
-Trouve tous les plannings pour une disponibilité.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$availabilityId` | `int` | ID de la disponibilité |
-
-**Retourne :** `Collection<int, Schedule>` - Plannings de la disponibilité
-
----
-
-### `findBySchedulable(Model $schedulable): Collection`
-
-Trouve les plannings pour une entité planifiable.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$schedulable` | `Model` | Entité planifiable (ex: `User::find(42)`) |
-
-**Retourne :** `Collection<int, Schedule>` - Plannings pour l'entité
 
 **Exemple :**
 ```php
-$user = User::find(42);
-$schedules = $service->findBySchedulable($user);
+$schedule = $service->find(42);
+if ($schedule) {
+    echo $schedule->title;
+}
 ```
 
 ---
 
-### `findByStatus(ScheduleStatus $status, ?int $availabilityId = null): Collection`
+### `findByAvailability(int $availabilityId, ?int $limit = null): Collection`
+
+Trouve tous les plannings associés à une disponibilité.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$availabilityId` | `int` | ID de la disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
+
+**Retourne :** `Collection<int, Schedule>` - Plannings de la disponibilité
+
+**Exemple :**
+```php
+$schedules = $service->findByAvailability(42, 10);
+```
+
+---
+
+### `findBySchedulable(?Model $schedulable = null, ?int $limit = null): Collection`
+
+Trouve tous les plannings pour une entité planifiable.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$schedulable` | `Model|null` | Entité planifiable ou null pour utiliser l'entité scopée |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
+
+**Retourne :** `Collection<int, Schedule>` - Plannings de l'entité
+
+**Exceptions :**
+- `RuntimeException` - Si aucun schedulable n'est fourni et aucun n'est scopé
+
+**Exemple :**
+```php
+// Avec scoping
+$user = User::find(42);
+$schedules = $service->for($user)->findBySchedulable();
+
+// Sans scoping
+$schedules = $service->findBySchedulable($user, 10);
+```
+
+---
+
+### `findByStatus(ScheduleStatus $status, ?int $availabilityId = null, ?int $limit = null): Collection`
 
 Trouve les plannings par statut.
 
@@ -137,18 +204,18 @@ Trouve les plannings par statut.
 |-----------|------|-------------|
 | `$status` | `ScheduleStatus` | Statut (BOOKED, AVAILABLE, CANCELLED, COMPLETED) |
 | `$availabilityId` | `int|null` | Filtre par disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings avec le statut
 
 **Exemple :**
 ```php
-$booked = $service->findByStatus(ScheduleStatus::BOOKED);
-$cancelled = $service->findByStatus(ScheduleStatus::CANCELLED, 42);
+$booked = $service->findByStatus(ScheduleStatus::BOOKED, null, 10);
 ```
 
 ---
 
-### `findByDate(DateTimeZuluVO $date, ?int $availabilityId = null): Collection`
+### `findByDate(DateTimeZuluVO $date, ?int $availabilityId = null, ?int $limit = null): Collection`
 
 Trouve les plannings pour une date spécifique.
 
@@ -156,20 +223,28 @@ Trouve les plannings pour une date spécifique.
 |-----------|------|-------------|
 | `$date` | `DateTimeZuluVO` | Date à rechercher |
 | `$availabilityId` | `int|null` | Filtre par disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings pour la date
 
 ---
 
-### `findInDateRange(DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $availabilityId = null): Collection`
+### `findInDateRange(DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $availabilityId = null, ?int $limit = null): Collection`
 
 Trouve les plannings dans une plage de dates.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$start` | `DateTimeZuluVO` | Début de la plage |
+| `$end` | `DateTimeZuluVO` | Fin de la plage |
+| `$availabilityId` | `int|null` | Filtre par disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings dans la plage
 
 ---
 
-### `searchByTitle(string $search, ?int $availabilityId = null): Collection`
+### `searchByTitle(string $search, ?int $availabilityId = null, ?int $limit = null): Collection`
 
 Recherche des plannings par titre.
 
@@ -177,25 +252,35 @@ Recherche des plannings par titre.
 |-----------|------|-------------|
 | `$search` | `string` | Terme de recherche |
 | `$availabilityId` | `int|null` | Filtre par disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings correspondants
+
+**Exemple :**
+```php
+$results = $service->searchByTitle('réunion', null, 10);
+```
 
 ---
 
 ### `cancel(int $id): Schedule`
 
-Annule un planning.
+Annule un planning (passe le statut à CANCELLED).
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
 | `$id` | `int` | ID du planning |
 
-**Retourne :** `Schedule` - Le planning annulé (statut CANCELLED)
+**Retourne :** `Schedule` - Le planning annulé
 
 **Exceptions :**
 - `ModelNotFoundException` - Si le planning n'existe pas
 - `ValidationException` - Si le planning ne peut pas être annulé
 - `Throwable` - Si l'opération échoue
+
+**Règles métier :**
+- Ne peut pas annuler un planning déjà annulé
+- Ne peut pas annuler un planning déjà complété
 
 **Exemple :**
 ```php
@@ -207,18 +292,22 @@ echo "Planning annulé: " . $cancelled->status->value;
 
 ### `complete(int $id): Schedule`
 
-Marque un planning comme complété.
+Complète un planning (passe le statut à COMPLETED).
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
 | `$id` | `int` | ID du planning |
 
-**Retourne :** `Schedule` - Le planning complété (statut COMPLETED)
+**Retourne :** `Schedule` - Le planning complété
 
 **Exceptions :**
 - `ModelNotFoundException` - Si le planning n'existe pas
 - `ValidationException` - Si le planning ne peut pas être complété
 - `Throwable` - Si l'opération échoue
+
+**Règles métier :**
+- Ne peut compléter qu'un planning avec statut BOOKED
+- Ne peut compléter qu'un planning passé (end_datetime < now)
 
 **Exemple :**
 ```php
@@ -236,7 +325,7 @@ Vérifie si un planning peut être annulé.
 |-----------|------|-------------|
 | `$schedule` | `Schedule` | Le planning à vérifier |
 
-**Retourne :** `bool` - True si annulable
+**Retourne :** `bool` - True si le planning peut être annulé
 
 **Exemple :**
 ```php
@@ -255,7 +344,7 @@ Vérifie si un planning peut être complété.
 |-----------|------|-------------|
 | `$schedule` | `Schedule` | Le planning à vérifier |
 
-**Retourne :** `bool` - True si complétable
+**Retourne :** `bool` - True si le planning peut être complété
 
 **Exemple :**
 ```php
@@ -266,44 +355,23 @@ if ($service->canBeCompleted($schedule)) {
 
 ---
 
-## Transitions d'état
-
-```mermaid
-stateDiagram-v2
-    [*] --> BOOKED: create()
-    [*] --> AVAILABLE: create()
-    BOOKED --> CANCELLED: cancel()
-    BOOKED --> COMPLETED: complete()
-    AVAILABLE --> CANCELLED: cancel()
-    AVAILABLE --> COMPLETED: complete()
-    CANCELLED --> [*]
-    COMPLETED --> [*]
-```
-
-**Règles de transition :**
-- `cancel()` : Un planning peut être annulé s'il n'est pas déjà CANCELLED ou COMPLETED
-- `complete()` : Un planning peut être complété s'il n'est pas déjà CANCELLED ou COMPLETED
-
----
-
 ## Cas d'utilisation
 
-### Cas 1 : Création d'un planning avec validation
+### Cas 1 : Création d'un planning avec scoping
 
 ```php
+$user = User::find(42);
+
 try {
-    $user = User::find(1);
     $record = ScheduleRecord::from([
-        'availability_id' => 42,
-        'schedulable_type' => get_class($user),
-        'schedulable_id' => $user->id,
-        'title' => 'Formation PHP',
+        'availability_id' => 1,
+        'title' => 'Réunion d\'équipe',
+        'start_datetime' => '2024-01-15T10:00:00Z',
+        'end_datetime' => '2024-01-15T11:00:00Z',
         'status' => ScheduleStatus::BOOKED,
-        'start_datetime' => '2024-01-20T09:00:00Z',
-        'end_datetime' => '2024-01-20T17:00:00Z',
     ]);
 
-    $schedule = $service->create($record);
+    $schedule = $service->for($user)->create($record);
     echo "Planning créé avec l'ID: " . $schedule->id;
 
 } catch (ValidationException $e) {
@@ -317,55 +385,47 @@ try {
 try {
     $schedule = $service->find(42);
     
-    if ($schedule === null) {
-        throw new RuntimeException('Planning non trouvé');
-    }
-
     if ($service->canBeCancelled($schedule)) {
         $cancelled = $service->cancel($schedule->id);
-        echo "Planning annulé avec succès";
+        echo "Planning annulé";
     } else {
-        echo "Le planning ne peut pas être annulé (statut: " . $schedule->status->value . ")";
+        echo "Ce planning ne peut pas être annulé";
     }
 
 } catch (ModelNotFoundException $e) {
     echo "Planning non trouvé";
 } catch (ValidationException $e) {
-    echo "Impossible d'annuler: " . $e->getMessage();
+    echo "Erreur: " . $e->getMessage();
 }
 ```
 
-### Cas 3 : Gestion des statuts
+### Cas 3 : Complétion des plannings passés
 
 ```php
-$booked = $service->findByStatus(ScheduleStatus::BOOKED);
+$booked = $service->findByStatus(ScheduleStatus::BOOKED, null, 20);
 
 foreach ($booked as $schedule) {
-    $now = DateTimeZuluVO::now();
-    
-    if ($schedule->end_datetime < $now) {
-        if ($service->canBeCompleted($schedule)) {
+    if ($service->canBeCompleted($schedule)) {
+        try {
             $service->complete($schedule->id);
             echo "Planning #{$schedule->id} complété\n";
-        }
-    }
-    
-    if ($schedule->start_datetime->diffInHours($now) < 2) {
-        if ($service->canBeCancelled($schedule)) {
-            echo "Planning #{$schedule->id} peut encore être annulé\n";
+        } catch (ValidationException $e) {
+            echo "Erreur pour le planning #{$schedule->id}: " . $e->getMessage() . "\n";
         }
     }
 }
 ```
 
-### Cas 4 : Recherche par entité planifiable
+### Cas 4 : Recherche avec limite
 
 ```php
 $user = User::find(42);
-$schedules = $service->findBySchedulable($user);
+
+// Récupère les 10 prochains plannings de l'utilisateur
+$schedules = $service->for($user)->findBySchedulable(null, 10);
 
 foreach ($schedules as $schedule) {
-    echo $schedule->title . " - " . $schedule->status->value . "\n";
+    echo $schedule->title . " - " . $schedule->status->getLabel() . "\n";
 }
 ```
 
@@ -379,7 +439,7 @@ foreach ($schedules as $schedule) {
 | Validation échoue | `ValidationException` | Messages des règles de validation |
 | Annulation impossible | `ValidationException` | `Schedule cannot be cancelled. Current status: X` |
 | Complétion impossible | `ValidationException` | `Schedule cannot be completed. Current status: X` |
-| Création échoue | `Throwable` | Variable selon le contexte |
+| Aucun schedulable défini | `RuntimeException` | `No schedulable entity defined. Use for() or pass a model to findBySchedulable().` |
 
 ---
 
@@ -391,9 +451,10 @@ graph TD
     A --> C[ValidatorInterface]
     A --> D[ServiceContext]
     A --> E[ChronosMutationContext]
-    B --> F[Schedule Model]
-    C --> G[Validation Rules]
-    F --> H[Status Transitions]
+    A --> F[ScopedService]
+    B --> G[Schedule Model]
+    C --> H[Validation Rules]
+    F --> I[Schedulable Entity]
 ```
 
 Le service s'intègre avec :
@@ -401,7 +462,7 @@ Le service s'intègre avec :
 - **ValidatorInterface** : Pour la validation des règles métier
 - **ServiceContext** : Pour le tracking des opérations
 - **ChronosMutationContext** : Pour le contrôle des mutations
-- **Schedule Model** : Pour les transitions d'état
+- **ScopedService** : Pour le scoping des entités planifiables
 
 ---
 
@@ -410,9 +471,12 @@ Le service s'intègre avec :
 | Aspect | Considération |
 |--------|---------------|
 | **Complexité** | O(1) - Opérations CRUD simples |
-| **Transitions** | O(1) - Mise à jour du statut |
 | **Validation** | Exécute toutes les règles enregistrées |
+| **Scoping** | Vérification d'appartenance pour les opérations |
+| **Transitions** | Vérification des règles métier avant changement |
 | **Contexts** | Overhead minimal pour le tracking |
+| **Limite** | Utiliser `$limit` pour réduire la charge |
+| **Cache** | Non utilisé - données en temps réel |
 
 ---
 
@@ -435,47 +499,59 @@ Le service s'intègre avec :
 declare(strict_types=1);
 
 use AndyDefer\LaravelChronos\Services\ScheduleService;
-use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
 use AndyDefer\LaravelChronos\Records\ScheduleRecord;
+use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use AndyDefer\LaravelChronos\Exceptions\ValidationException;
 use AndyDefer\LaravelChronos\Exceptions\ModelNotFoundException;
 
 $service = $app->make(ScheduleService::class);
-$user = User::find(1);
+$user = User::find(42);
 
-// 1. Créer un planning
 try {
+    // 1. Créer un planning avec scoping
     $record = ScheduleRecord::from([
-        'availability_id' => 42,
-        'schedulable_type' => get_class($user),
-        'schedulable_id' => $user->id,
+        'availability_id' => 1,
         'title' => 'Réunion d\'équipe',
-        'status' => ScheduleStatus::BOOKED,
         'start_datetime' => '2024-01-15T10:00:00Z',
         'end_datetime' => '2024-01-15T11:00:00Z',
+        'status' => ScheduleStatus::BOOKED,
     ]);
 
-    $schedule = $service->create($record);
+    $schedule = $service->for($user)->create($record);
     echo "Créé: " . $schedule->id . "\n";
 
     // 2. Trouver le planning
-    $found = $service->find($schedule->id);
+    $found = $service->for($user)->find($schedule->id);
     echo "Trouvé: " . $found->title . "\n";
 
-    // 3. Vérifier les statuts
-    $booked = $service->findByStatus(ScheduleStatus::BOOKED);
-    echo "Plannings bookés: " . $booked->count() . "\n";
+    // 3. Récupérer les plannings de l'utilisateur (limité à 10)
+    $schedules = $service->for($user)->findBySchedulable(null, 10);
+    echo "Plannings: " . $schedules->count() . "\n";
 
-    // 4. Annuler le planning
+    // 4. Vérifier les plannings par statut (limité à 5)
+    $booked = $service->findByStatus(ScheduleStatus::BOOKED, null, 5);
+    echo "Plannings réservés: " . $booked->count() . "\n";
+
+    // 5. Rechercher par titre
+    $results = $service->searchByTitle('réunion', null, 5);
+    echo "Résultats de recherche: " . $results->count() . "\n";
+
+    // 6. Annuler le planning
     if ($service->canBeCancelled($schedule)) {
         $cancelled = $service->cancel($schedule->id);
         echo "Annulé: " . $cancelled->status->value . "\n";
     }
 
-    // 5. Recherche par entité
-    $userSchedules = $service->findBySchedulable($user);
-    echo "Plannings de l'utilisateur: " . $userSchedules->count() . "\n";
+    // 7. Compléter le planning (si BOOKED et passé)
+    if ($service->canBeCompleted($schedule)) {
+        $completed = $service->complete($schedule->id);
+        echo "Complété: " . $completed->status->value . "\n";
+    }
+
+    // 8. Supprimer
+    $service->for($user)->delete($schedule->id);
+    echo "Supprimé\n";
 
 } catch (ValidationException $e) {
     echo "Erreur de validation: " . $e->getMessage() . "\n";
@@ -493,6 +569,7 @@ try {
 - `ScheduleServiceInterface` - Interface du service
 - `ScheduleRepositoryInterface` - Repository des plannings
 - `ValidatorInterface` - Interface de validation
+- `ScopedServiceInterface` - Interface de scoping
 - `ScheduleRecord` - Record de données
 - `Schedule` - Modèle Eloquent
 - `ScheduleStatus` - Énumération des statuts

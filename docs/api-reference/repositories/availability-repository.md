@@ -20,25 +20,26 @@ Gérer l'accès aux données des disponibilités en encapsulant les requêtes co
 
 ## API
 
-### `findBySchedulable(Model $schedulable): Collection`
+### `findBySchedulable(Model $schedulable, ?int $limit = null): Collection`
 
 Retourne toutes les disponibilités pour une entité planifiable donnée.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
 | `$schedulable` | `Model` | Entité planifiable (ex: `User::find(42)`) |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Availability>` - Collection de disponibilités
 
 **Exemple :**
 ```php
 $user = User::find(42);
-$availabilities = $repository->findBySchedulable($user);
+$availabilities = $repository->findBySchedulable($user, 10);
 ```
 
 ---
 
-### `findByDay(Model $schedulable, WeekDay $day): Collection`
+### `findByDay(Model $schedulable, WeekDay $day, ?int $limit = null): Collection`
 
 Retourne les disponibilités pour un jour spécifique.
 
@@ -46,13 +47,14 @@ Retourne les disponibilités pour un jour spécifique.
 |-----------|------|-------------|
 | `$schedulable` | `Model` | Entité planifiable |
 | `$day` | `WeekDay` | Jour de la semaine |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Availability>` - Disponibilités pour ce jour
 
 **Exemple :**
 ```php
 $user = User::find(42);
-$mondaySlots = $repository->findByDay($user, WeekDay::MONDAY);
+$mondaySlots = $repository->findByDay($user, WeekDay::MONDAY, 5);
 ```
 
 ---
@@ -70,6 +72,7 @@ Trouve les disponibilités qui chevauchent une plage horaire donnée.
 | `$validityStart` | `DateTimeZuluVO` | Début de la période de validité |
 | `$validityEnd` | `DateTimeZuluVO` | Fin de la période de validité |
 | `$excludeId` | `int|null` | ID à exclure (pour les mises à jour) |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Availability>` - Disponibilités en conflit
 
@@ -82,13 +85,15 @@ $overlapping = $repository->findOverlapping(
     TimeZuluVO::from('09:00:00'),
     TimeZuluVO::from('17:00:00'),
     DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-    DateTimeZuluVO::from('2024-12-31T23:59:59Z')
+    DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+    null,
+    5
 );
 ```
 
 ---
 
-### `findActiveAtDate(Model $schedulable, DateTimeZuluVO $date): Collection`
+### `findActiveAtDate(Model $schedulable, DateTimeZuluVO $date, ?int $limit = null): Collection`
 
 Trouve les disponibilités actives à une date donnée.
 
@@ -96,13 +101,14 @@ Trouve les disponibilités actives à une date donnée.
 |-----------|------|-------------|
 | `$schedulable` | `Model` | Entité planifiable |
 | `$date` | `DateTimeZuluVO` | Date à vérifier |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Availability>` - Disponibilités actives
 
 **Exemple :**
 ```php
 $user = User::find(42);
-$todaySlots = $repository->findActiveAtDate($user, DateTimeZuluVO::now());
+$todaySlots = $repository->findActiveAtDate($user, DateTimeZuluVO::now(), 10);
 ```
 
 ---
@@ -117,27 +123,33 @@ Trouve les disponibilités actives dans une plage de dates.
 | `$start` | `DateTimeZuluVO` | Début de la plage |
 | `$end` | `DateTimeZuluVO` | Fin de la plage |
 | `$excludeId` | `int|null` | ID à exclure |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Availability>` - Disponibilités dans la plage
 
 ---
 
-### `findCrossDayAvailabilities(Model $schedulable): Collection`
+### `findCrossDayAvailabilities(Model $schedulable, ?int $limit = null): Collection`
 
 Trouve les disponibilités qui chevauchent minuit (daily_start > daily_end).
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$schedulable` | `Model` | Entité planifiable |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Availability>` - Disponibilités cross-day
 
 **Exemple :**
 ```php
 $user = User::find(42);
-$crossDay = $repository->findCrossDayAvailabilities($user);
+$crossDay = $repository->findCrossDayAvailabilities($user, 5);
 // Ex: 22:00 - 06:00
 ```
 
 ---
 
-### `findShortDurations(Model $schedulable, int $minMinutes): Collection`
+### `findShortDurations(Model $schedulable, int $minMinutes, ?int $limit = null): Collection`
 
 Trouve les disponibilités avec une durée inférieure à un seuil.
 
@@ -145,14 +157,20 @@ Trouve les disponibilités avec une durée inférieure à un seuil.
 |-----------|------|-------------|
 | `$schedulable` | `Model` | Entité planifiable |
 | `$minMinutes` | `int` | Durée minimale en minutes |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Availability>` - Disponibilités trop courtes
 
 ---
 
-### `findInvalidDateRanges(Model $schedulable): Collection`
+### `findInvalidDateRanges(Model $schedulable, ?int $limit = null): Collection`
 
 Trouve les disponibilités avec des plages de dates invalides.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$schedulable` | `Model` | Entité planifiable |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Availability>` - Disponibilités invalides
 
@@ -167,6 +185,11 @@ Trouve les disponibilités avec des plages de dates invalides.
 
 Vérifie si une disponibilité a des rendez-vous futurs.
 
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$availabilityId` | `int` | ID de la disponibilité |
+| `$now` | `DateTimeZuluVO` | Date/heure de référence |
+
 **Retourne :** `bool` - True si des rendez-vous futurs existent
 
 **Exemple :**
@@ -179,9 +202,14 @@ $hasFuture = $repository->findWithFutureSchedules(
 
 ---
 
-### `findByType(string $type): Collection`
+### `findByType(string $type, ?int $limit = null): Collection`
 
 Trouve les disponibilités par type.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$type` | `string` | Type de disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Availability>` - Disponibilités du type
 
@@ -239,7 +267,9 @@ $conflicts = $repository->findOverlapping(
     TimeZuluVO::from('10:00:00'),
     TimeZuluVO::from('11:00:00'),
     DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-    DateTimeZuluVO::from('2024-12-31T23:59:59Z')
+    DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+    null,
+    10
 );
 
 if ($conflicts->isEmpty()) {
@@ -247,15 +277,15 @@ if ($conflicts->isEmpty()) {
 }
 ```
 
-### Cas 2 : Planning hebdomadaire
+### Cas 2 : Planning hebdomadaire avec limite
 
 ```php
 $user = User::find(42);
 
-$allAvailabilities = $repository->findBySchedulable($user);
+$allAvailabilities = $repository->findBySchedulable($user, 10);
 
-$mondaySlots = $repository->findByDay($user, WeekDay::MONDAY);
-$tuesdaySlots = $repository->findByDay($user, WeekDay::TUESDAY);
+$mondaySlots = $repository->findByDay($user, WeekDay::MONDAY, 3);
+$tuesdaySlots = $repository->findByDay($user, WeekDay::TUESDAY, 3);
 ```
 
 ### Cas 3 : Validation des données
@@ -263,22 +293,22 @@ $tuesdaySlots = $repository->findByDay($user, WeekDay::TUESDAY);
 ```php
 $user = User::find(42);
 
-$invalid = $repository->findInvalidDateRanges($user);
+$invalid = $repository->findInvalidDateRanges($user, 20);
 
 foreach ($invalid as $availability) {
     $repository->delete($availability->id);
 }
 ```
 
-### Cas 4 : Vérification d'existence
+### Cas 4 : Récupération avec pagination
 
 ```php
 $user = User::find(42);
+$page = 1;
+$perPage = 15;
 
-if ($repository->schedulableExists($user)) {
-    $class = $repository->getSchedulableModel($user);
-    echo "L'entité $class existe";
-}
+$availabilities = $repository->findBySchedulable($user, $perPage);
+// Utiliser la collection pour la pagination manuelle
 ```
 
 ---
@@ -301,6 +331,7 @@ if ($repository->schedulableExists($user)) {
 | **Requêtes** | Optimisées avec des `where` conditionnels |
 | **Collections** | Utilisation de `Collection` pour la manipulation des résultats |
 | **Cache** | Non utilisé - données en temps réel |
+| **Limite** | Utiliser `$limit` pour réduire la charge sur les grandes bases de données |
 
 ---
 
@@ -315,7 +346,7 @@ if ($repository->schedulableExists($user)) {
 
 ---
 
-## Exemple complet
+## Exemple complet avec limit
 
 ```php
 <?php
@@ -347,25 +378,30 @@ $record = AvailabilityRecord::from([
 
 $availability = $repository->create($record);
 
-// Vérifier les conflits
+// Vérifier les conflits (limité à 5 résultats)
 $conflicts = $repository->findOverlapping(
     $user,
     WeekDay::MONDAY,
     TimeZuluVO::from('09:00:00'),
     TimeZuluVO::from('12:00:00'),
     DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-    DateTimeZuluVO::from('2024-12-31T23:59:59Z')
+    DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+    null,
+    5
 );
 
 if ($conflicts->isNotEmpty()) {
     echo 'Conflit détecté pour ' . $conflicts->first()->name;
 }
 
-// Vérifier la disponibilité pour aujourd'hui
+// Vérifier la disponibilité pour aujourd'hui (limité à 3 résultats)
 $today = DateTimeZuluVO::now();
-$active = $repository->findActiveAtDate($user, $today);
+$active = $repository->findActiveAtDate($user, $today, 3);
 
 echo 'Disponibilités actives aujourd\'hui: ' . $active->count();
+
+// Récupérer les disponibilités cross-day (limité à 5)
+$crossDay = $repository->findCrossDayAvailabilities($user, 5);
 
 // Vérifier si l'utilisateur existe
 if ($repository->schedulableExists($user)) {

@@ -18,10 +18,30 @@ Orchestrer les opérations sur les disponibilités avec :
 - Tracking des mutations via `ChronosMutationContext`
 - Journalisation des opérations via `ServiceContext`
 - Gestion centralisée des exceptions
+- **Scoping** via la méthode `for()` pour les opérations sur une entité planifiable
 
 ---
 
 ## API
+
+### `for(Model $schedulable): self`
+
+Définit le contexte d'entité planifiable pour les opérations suivantes.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$schedulable` | `Model` | Entité planifiable (ex: `User::find(42)`) |
+
+**Retourne :** `self` - Le service pour le chaînage
+
+**Exemple :**
+```php
+// Toutes les opérations suivantes sont scopées sur cet utilisateur
+$service->for($user)->create($record);
+$service->for($user)->findBySchedulable();
+```
+
+---
 
 ### `create(AvailabilityRecord $record): Availability`
 
@@ -48,11 +68,17 @@ $record = AvailabilityRecord::from([
     'daily_end' => '17:00:00',
     'validity_start' => '2024-01-01T00:00:00Z',
     'validity_end' => '2024-12-31T23:59:59Z',
-    'schedulable_type' => get_class($user),
-    'schedulable_id' => $user->id,
 ]);
 
-$availability = $service->create($record);
+// Avec scoping - injecte automatiquement schedulable_type et schedulable_id
+$availability = $service->for($user)->create($record);
+
+// Sans scoping - doit spécifier manuellement
+$availability = $service->create(AvailabilityRecord::from([
+    ...$record->toArray(),
+    'schedulable_type' => get_class($user),
+    'schedulable_id' => $user->id,
+]));
 ```
 
 ---
@@ -116,6 +142,10 @@ $service->delete(42, true);
 
 Trouve une disponibilité par son ID.
 
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$id` | `int` | ID de la disponibilité |
+
 **Retourne :** `Availability|null` - La disponibilité ou null
 
 **Exemple :**
@@ -128,33 +158,55 @@ if ($availability) {
 
 ---
 
-### `findBySchedulable(Model $schedulable): Collection`
+### `findBySchedulable(?Model $schedulable = null, ?int $limit = null): Collection`
 
 Trouve toutes les disponibilités pour une entité planifiable.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$schedulable` | `Model` | Entité planifiable (ex: `User::find(42)`) |
+| `$schedulable` | `Model|null` | Entité planifiable ou null pour utiliser l'entité scopée |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Availability>` - Disponibilités de l'entité
 
+**Exceptions :**
+- `RuntimeException` - Si aucun schedulable n'est fourni et aucun n'est scopé
+
 **Exemple :**
 ```php
+// Avec scoping
+$user = User::find(42);
+$availabilities = $service->for($user)->findBySchedulable();
+
+// Sans scoping
 $user = User::find(42);
 $availabilities = $service->findBySchedulable($user);
+
+// Avec limite
+$availabilities = $service->findBySchedulable($user, 10);
 ```
 
 ---
 
-### `findByType(string $type): Collection`
+### `findByType(string $type, ?int $limit = null): Collection`
 
 Trouve les disponibilités par type.
 
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$type` | `string` | Type de disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
+
 **Retourne :** `Collection<int, Availability>` - Disponibilités du type
+
+**Exemple :**
+```php
+$standard = $service->findByType('standard', 10);
+```
 
 ---
 
-### `findActiveAtDate(Model $schedulable, DateTimeZuluVO $date): Collection`
+### `findActiveAtDate(Model $schedulable, DateTimeZuluVO $date, ?int $limit = null): Collection`
 
 Trouve les disponibilités actives à une date donnée.
 
@@ -162,6 +214,7 @@ Trouve les disponibilités actives à une date donnée.
 |-----------|------|-------------|
 | `$schedulable` | `Model` | Entité planifiable |
 | `$date` | `DateTimeZuluVO` | Date à vérifier |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Availability>` - Disponibilités actives
 
@@ -169,12 +222,12 @@ Trouve les disponibilités actives à une date donnée.
 ```php
 $user = User::find(42);
 $today = DateTimeZuluVO::now();
-$active = $service->findActiveAtDate($user, $today);
+$active = $service->findActiveAtDate($user, $today, 5);
 ```
 
 ---
 
-### `findActiveInDateRange(Model $schedulable, DateTimeZuluVO $start, DateTimeZuluVO $end): Collection`
+### `findActiveInDateRange(Model $schedulable, DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $limit = null): Collection`
 
 Trouve les disponibilités actives dans une plage de dates.
 
@@ -183,6 +236,7 @@ Trouve les disponibilités actives dans une plage de dates.
 | `$schedulable` | `Model` | Entité planifiable |
 | `$start` | `DateTimeZuluVO` | Début de la plage |
 | `$end` | `DateTimeZuluVO` | Fin de la plage |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Availability>` - Disponibilités dans la plage
 
@@ -229,11 +283,12 @@ $class = $service->getSchedulableModel($user);
 
 ## Cas d'utilisation
 
-### Cas 1 : Création d'une disponibilité avec validation
+### Cas 1 : Création d'une disponibilité avec scoping
 
 ```php
+$user = User::find(42);
+
 try {
-    $user = User::find(42);
     $record = AvailabilityRecord::from([
         'name' => 'Heures de travail',
         'type' => 'standard',
@@ -242,68 +297,56 @@ try {
         'daily_end' => '17:00:00',
         'validity_start' => '2024-01-01T00:00:00Z',
         'validity_end' => '2024-12-31T23:59:59Z',
-        'schedulable_type' => get_class($user),
-        'schedulable_id' => $user->id,
     ]);
 
-    $availability = $service->create($record);
+    // Le scoping injecte automatiquement schedulable_type et schedulable_id
+    $availability = $service->for($user)->create($record);
     echo "Disponibilité créée avec l'ID: " . $availability->id;
 
 } catch (ValidationException $e) {
     echo "Erreur de validation: " . $e->getMessage();
-} catch (Throwable $e) {
-    echo "Erreur: " . $e->getMessage();
 }
 ```
 
-### Cas 2 : Mise à jour d'une disponibilité
-
-```php
-try {
-    $availability = $service->find(42);
-    
-    if ($availability === null) {
-        throw new RuntimeException('Disponibilité non trouvée');
-    }
-
-    $record = AvailabilityRecord::from([
-        'name' => 'Nouveaux horaires',
-        'daily_start' => '08:00:00',
-        'daily_end' => '18:00:00',
-    ]);
-
-    $updated = $service->update(42, $record);
-    echo "Disponibilité mise à jour: " . $updated->name;
-
-} catch (ModelNotFoundException $e) {
-    echo "Disponibilité non trouvée";
-} catch (ValidationException $e) {
-    echo "Erreur de validation: " . $e->getMessage();
-}
-```
-
-### Cas 3 : Suppression d'une disponibilité
-
-```php
-try {
-    $service->delete(42);
-    echo "Disponibilité supprimée avec succès";
-
-} catch (ModelNotFoundException $e) {
-    echo "Disponibilité non trouvée";
-} catch (ValidationException $e) {
-    echo "Impossible de supprimer: " . $e->getMessage();
-}
-```
-
-### Cas 4 : Recherche par entité planifiable
+### Cas 2 : Récupération des disponibilités d'un utilisateur avec limite
 
 ```php
 $user = User::find(42);
-$availabilities = $service->findBySchedulable($user);
+
+// Récupère les 10 premières disponibilités de l'utilisateur
+$availabilities = $service->for($user)->findBySchedulable(null, 10);
 
 foreach ($availabilities as $availability) {
     echo $availability->name . "\n";
+}
+```
+
+### Cas 3 : Vérification des disponibilités actives avec limite
+
+```php
+$user = User::find(42);
+$today = DateTimeZuluVO::now();
+
+// Récupère les 5 premières disponibilités actives aujourd'hui
+$active = $service->findActiveAtDate($user, $today, 5);
+
+foreach ($active as $availability) {
+    echo $availability->name . " est active aujourd'hui\n";
+}
+```
+
+### Cas 4 : Suppression d'une disponibilité avec scoping
+
+```php
+$user = User::find(42);
+
+try {
+    // Vérifie que la disponibilité appartient bien à l'utilisateur
+    $service->for($user)->delete(42);
+    echo "Disponibilité supprimée avec succès";
+
+} catch (ModelNotFoundException $e) {
+    echo "Disponibilité non trouvée ou n'appartient pas à l'utilisateur";
 }
 ```
 
@@ -315,6 +358,7 @@ foreach ($availabilities as $availability) {
 |-----------|-----------|---------|
 | Disponibilité inexistante | `ModelNotFoundException` | `Availability with ID X not found` |
 | Validation échoue | `ValidationException` | Messages des règles de validation |
+| Aucun schedulable défini | `RuntimeException` | `No schedulable entity defined. Use for() or pass a model to findBySchedulable().` |
 | Entité planifiable inexistante | `Throwable` | Variable selon le contexte |
 | Création échoue | `Throwable` | Variable selon le contexte |
 | Mise à jour échoue | `Throwable` | Variable selon le contexte |
@@ -329,8 +373,10 @@ graph TD
     A --> C[ValidatorInterface]
     A --> D[ServiceContext]
     A --> E[ChronosMutationContext]
-    B --> F[Availability Model]
-    C --> G[Validation Rules]
+    A --> F[ScopedService]
+    B --> G[Availability Model]
+    C --> H[Validation Rules]
+    F --> I[Schedulable Entity]
 ```
 
 Le service s'intègre avec :
@@ -338,6 +384,7 @@ Le service s'intègre avec :
 - **ValidatorInterface** : Pour la validation des règles métier
 - **ServiceContext** : Pour le tracking des opérations
 - **ChronosMutationContext** : Pour le contrôle des mutations
+- **ScopedService** : Pour le scoping des entités planifiables
 
 ---
 
@@ -347,7 +394,9 @@ Le service s'intègre avec :
 |--------|---------------|
 | **Complexité** | O(1) - Opérations CRUD simples |
 | **Validation** | Exécute toutes les règles enregistrées |
+| **Scoping** | Vérification d'appartenance pour les opérations |
 | **Contexts** | Overhead minimal pour le tracking |
+| **Limite** | Utiliser `$limit` pour réduire la charge |
 | **Cache** | Non utilisé - données en temps réel |
 
 ---
@@ -379,7 +428,7 @@ use AndyDefer\LaravelChronos\Exceptions\ModelNotFoundException;
 $service = $app->make(AvailabilityService::class);
 $user = User::find(42);
 
-// 1. Créer une disponibilité
+// 1. Créer une disponibilité avec scoping
 try {
     $record = AvailabilityRecord::from([
         'name' => 'Heures de bureau',
@@ -389,32 +438,35 @@ try {
         'daily_end' => '17:00:00',
         'validity_start' => '2024-01-01T00:00:00Z',
         'validity_end' => '2024-12-31T23:59:59Z',
-        'schedulable_type' => get_class($user),
-        'schedulable_id' => $user->id,
     ]);
 
-    $availability = $service->create($record);
+    // Le scoping injecte automatiquement schedulable_type et schedulable_id
+    $availability = $service->for($user)->create($record);
     echo "Créé: " . $availability->id . "\n";
 
     // 2. Trouver la disponibilité
-    $found = $service->find($availability->id);
+    $found = $service->for($user)->find($availability->id);
     echo "Trouvé: " . $found->name . "\n";
 
-    // 3. Vérifier les disponibilités actives aujourd'hui
+    // 3. Récupérer toutes les disponibilités de l'utilisateur (limité à 10)
+    $availabilities = $service->for($user)->findBySchedulable(null, 10);
+    echo "Disponibilités: " . $availabilities->count() . "\n";
+
+    // 4. Vérifier les disponibilités actives aujourd'hui (limité à 5)
     $today = DateTimeZuluVO::now();
-    $active = $service->findActiveAtDate($user, $today);
+    $active = $service->findActiveAtDate($user, $today, 5);
     echo "Disponibilités actives aujourd'hui: " . $active->count() . "\n";
 
-    // 4. Mettre à jour
+    // 5. Mettre à jour
     $updateRecord = AvailabilityRecord::from([
         'name' => 'Heures étendues',
         'daily_end' => '18:00:00',
     ]);
-    $updated = $service->update($availability->id, $updateRecord);
+    $updated = $service->for($user)->update($availability->id, $updateRecord);
     echo "Mis à jour: " . $updated->name . "\n";
 
-    // 5. Supprimer
-    $service->delete($availability->id);
+    // 6. Supprimer
+    $service->for($user)->delete($availability->id);
     echo "Supprimé\n";
 
 } catch (ValidationException $e) {
@@ -433,6 +485,7 @@ try {
 - `AvailabilityServiceInterface` - Interface du service
 - `AvailabilityRepositoryInterface` - Repository des disponibilités
 - `ValidatorInterface` - Interface de validation
+- `ScopedServiceInterface` - Interface de scoping
 - `AvailabilityRecord` - Record de données
 - `Availability` - Modèle Eloquent
 - `ModelNotFoundException` - Exception métier

@@ -1,4 +1,4 @@
-# ScheduleRepository - Référence Technique
+# ScheduleRepository - Référence Technique 
 
 ## Description
 
@@ -20,24 +20,25 @@ Gérer l'accès aux données des plannings qui représentent les événements ou
 
 ## API
 
-### `findByAvailability(int $availabilityId): Collection`
+### `findByAvailability(int $availabilityId, ?int $limit = null): Collection`
 
 Retourne tous les plannings associés à une disponibilité.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
 | `$availabilityId` | `int` | ID de la disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Collection de plannings
 
 **Exemple :**
 ```php
-$schedules = $repository->findByAvailability(42);
+$schedules = $repository->findByAvailability(42, 10);
 ```
 
 ---
 
-### `findOverlapping(int $availabilityId, DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $excludeId = null): Collection`
+### `findOverlapping(int $availabilityId, DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $excludeId = null, ?int $limit = null): Collection`
 
 Trouve les plannings qui chevauchent une plage horaire.
 
@@ -47,6 +48,7 @@ Trouve les plannings qui chevauchent une plage horaire.
 | `$start` | `DateTimeZuluVO` | Début de la plage |
 | `$end` | `DateTimeZuluVO` | Fin de la plage |
 | `$excludeId` | `int|null` | ID à exclure |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings en conflit
 
@@ -55,13 +57,15 @@ Trouve les plannings qui chevauchent une plage horaire.
 $overlapping = $repository->findOverlapping(
     42,
     DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-    DateTimeZuluVO::from('2024-01-15T12:00:00Z')
+    DateTimeZuluVO::from('2024-01-15T12:00:00Z'),
+    null,
+    5
 );
 ```
 
 ---
 
-### `findByStatus(ScheduleStatus $status, ?int $availabilityId = null): Collection`
+### `findByStatus(ScheduleStatus $status, ?int $availabilityId = null, ?int $limit = null): Collection`
 
 Trouve les plannings par statut.
 
@@ -69,18 +73,19 @@ Trouve les plannings par statut.
 |-----------|------|-------------|
 | `$status` | `ScheduleStatus` | Statut (BOOKED, AVAILABLE, CANCELLED, COMPLETED) |
 | `$availabilityId` | `int|null` | Filtre par disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings avec le statut
 
 **Exemple :**
 ```php
-$booked = $repository->findByStatus(ScheduleStatus::BOOKED);
-$cancelled = $repository->findByStatus(ScheduleStatus::CANCELLED, 42);
+$booked = $repository->findByStatus(ScheduleStatus::BOOKED, null, 20);
+$cancelled = $repository->findByStatus(ScheduleStatus::CANCELLED, 42, 10);
 ```
 
 ---
 
-### `searchByTitle(string $search, ?int $availabilityId = null): Collection`
+### `searchByTitle(string $search, ?int $availabilityId = null, ?int $limit = null): Collection`
 
 Recherche des plannings par titre.
 
@@ -88,17 +93,18 @@ Recherche des plannings par titre.
 |-----------|------|-------------|
 | `$search` | `string` | Terme de recherche |
 | `$availabilityId` | `int|null` | Filtre par disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings correspondants
 
 **Exemple :**
 ```php
-$results = $repository->searchByTitle('Réunion');
+$results = $repository->searchByTitle('Réunion', null, 10);
 ```
 
 ---
 
-### `findByDate(DateTimeZuluVO $date, ?int $availabilityId = null): Collection`
+### `findByDate(DateTimeZuluVO $date, ?int $availabilityId = null, ?int $limit = null): Collection`
 
 Trouve les plannings pour une date spécifique.
 
@@ -106,12 +112,13 @@ Trouve les plannings pour une date spécifique.
 |-----------|------|-------------|
 | `$date` | `DateTimeZuluVO` | Date à rechercher |
 | `$availabilityId` | `int|null` | Filtre par disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings pour la date
 
 ---
 
-### `findInDateRange(DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $availabilityId = null): Collection`
+### `findInDateRange(DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $availabilityId = null, ?int $limit = null): Collection`
 
 Trouve les plannings dans une plage de dates.
 
@@ -120,12 +127,13 @@ Trouve les plannings dans une plage de dates.
 | `$start` | `DateTimeZuluVO` | Début de la plage |
 | `$end` | `DateTimeZuluVO` | Fin de la plage |
 | `$availabilityId` | `int|null` | Filtre par disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings dans la plage
 
 ---
 
-### `findByDayOfWeek(int $dayOfWeek, ?int $availabilityId = null): Collection`
+### `findByDayOfWeek(int $dayOfWeek, ?int $availabilityId = null, ?int $limit = null): Collection`
 
 Trouve les plannings par jour de la semaine.
 
@@ -133,44 +141,50 @@ Trouve les plannings par jour de la semaine.
 |-----------|------|-------------|
 | `$dayOfWeek` | `int` | Jour de la semaine (0=dimanche, 1=lundi, etc.) |
 | `$availabilityId` | `int|null` | Filtre par disponibilité |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings pour ce jour
 
 **Exemple :**
 ```php
-$mondaySchedules = $repository->findByDayOfWeek(1);
+$mondaySchedules = $repository->findByDayOfWeek(1, null, 10);
 // 1 = Monday (en SQLite)
 ```
 
 ---
 
-### `findBySchedulable(Model $schedulable): Collection`
+### `findBySchedulable(Model $schedulable, ?int $limit = null): Collection`
 
 Trouve les plannings pour une entité planifiable.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
 | `$schedulable` | `Model` | Entité planifiable (ex: `User::find(42)`) |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings pour l'entité
 
 **Exemple :**
 ```php
 $user = User::find(42);
-$schedules = $repository->findBySchedulable($user);
+$schedules = $repository->findBySchedulable($user, 15);
 ```
 
 ---
 
-### `findWithInvalidChronology(): Collection`
+### `findWithInvalidChronology(?int $limit = null): Collection`
 
 Trouve les plannings avec une chronologie invalide (start >= end).
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings invalides
 
 ---
 
-### `findWithExceedingDuration(int $availabilityId, int $maxDurationMinutes): Collection`
+### `findWithExceedingDuration(int $availabilityId, int $maxDurationMinutes, ?int $limit = null): Collection`
 
 Trouve les plannings qui dépassent une durée maximale.
 
@@ -178,12 +192,13 @@ Trouve les plannings qui dépassent une durée maximale.
 |-----------|------|-------------|
 | `$availabilityId` | `int` | ID de la disponibilité |
 | `$maxDurationMinutes` | `int` | Durée maximale en minutes |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings trop longs
 
 ---
 
-### `findViolatingBufferTime(int $availabilityId, int $bufferMinutes): Collection`
+### `findViolatingBufferTime(int $availabilityId, int $bufferMinutes, ?int $limit = null): Collection`
 
 Trouve les plannings qui ne respectent pas le temps de buffer.
 
@@ -191,20 +206,29 @@ Trouve les plannings qui ne respectent pas le temps de buffer.
 |-----------|------|-------------|
 | `$availabilityId` | `int` | ID de la disponibilité |
 | `$bufferMinutes` | `int` | Buffer minimum en minutes |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings violant le buffer
 
 **Exemple :**
 ```php
-$violations = $repository->findViolatingBufferTime(42, 15);
+$violations = $repository->findViolatingBufferTime(42, 15, 10);
 // Plannings avec moins de 15 minutes entre la fin d'un et le début du suivant
 ```
 
 ---
 
-### `findConflicting(int $availabilityId, DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $excludeId = null): Collection`
+### `findConflicting(int $availabilityId, DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $excludeId = null, ?int $limit = null): Collection`
 
 Alias de `findOverlapping()` pour la détection de conflits.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$availabilityId` | `int` | ID de la disponibilité |
+| `$start` | `DateTimeZuluVO` | Début de la plage |
+| `$end` | `DateTimeZuluVO` | Fin de la plage |
+| `$excludeId` | `int|null` | ID à exclure |
+| `$limit` | `int|null` | Nombre maximum de résultats à retourner |
 
 **Retourne :** `Collection<int, Schedule>` - Plannings en conflit
 
@@ -229,7 +253,7 @@ if ($repository->hasCrossDaySchedule(42)) {
 
 ---
 
-## Cas d'utilisation
+## Cas d'utilisation avec limit
 
 ### Cas 1 : Détection de conflits pour un nouveau planning
 
@@ -238,7 +262,7 @@ $user = User::find(42);
 $start = DateTimeZuluVO::from('2024-01-15T10:00:00Z');
 $end = DateTimeZuluVO::from('2024-01-15T12:00:00Z');
 
-$conflicts = $repository->findConflicting(42, $start, $end);
+$conflicts = $repository->findConflicting(42, $start, $end, null, 5);
 
 if ($conflicts->isEmpty()) {
     // Créer le planning
@@ -248,10 +272,10 @@ if ($conflicts->isEmpty()) {
 }
 ```
 
-### Cas 2 : Gestion des statuts
+### Cas 2 : Gestion des statuts avec limite
 
 ```php
-$booked = $repository->findByStatus(ScheduleStatus::BOOKED);
+$booked = $repository->findByStatus(ScheduleStatus::BOOKED, null, 50);
 
 foreach ($booked as $schedule) {
     if ($schedule->end_datetime < now()) {
@@ -262,31 +286,41 @@ foreach ($booked as $schedule) {
 }
 ```
 
-### Cas 3 : Nettoyage des données invalides
+### Cas 3 : Nettoyage des données invalides avec limite
 
 ```php
-$invalid = $repository->findWithInvalidChronology();
+$invalid = $repository->findWithInvalidChronology(100);
 
 foreach ($invalid as $schedule) {
     $repository->delete($schedule->id);
 }
 ```
 
-### Cas 4 : Analyse des violations de buffer
+### Cas 4 : Analyse des violations de buffer avec limite
 
 ```php
-$violations = $repository->findViolatingBufferTime(42, 15);
+$violations = $repository->findViolatingBufferTime(42, 15, 20);
 
 if ($violations->isNotEmpty()) {
     echo "Buffer violations trouvées: " . $violations->count();
 }
 ```
 
-### Cas 5 : Recherche par entité planifiable
+### Cas 5 : Recherche par entité planifiable avec limite
 
 ```php
 $user = User::find(42);
-$userSchedules = $repository->findBySchedulable($user);
+$userSchedules = $repository->findBySchedulable($user, 10);
+```
+
+### Cas 6 : Pagination
+
+```php
+$page = 1;
+$perPage = 15;
+
+$schedules = $repository->findByAvailability(42, $perPage);
+// Utiliser la collection pour la pagination manuelle
 ```
 
 ---
@@ -306,9 +340,10 @@ $userSchedules = $repository->findBySchedulable($user);
 | Aspect | Considération |
 |--------|---------------|
 | **Index recommandés** | `availability_id`, `start_datetime`, `end_datetime`, `status` |
-| **Buffer time** | Requête complexe avec jointure - à optimiser pour gros volumes |
+| **Buffer time** | Requête complexe avec jointure - utiliser `$limit` pour réduire la charge |
 | **Cross-day** | Vérification rapide avec `DATE()` |
 | **Cache** | Non utilisé - données en temps réel |
+| **Limite** | Utiliser `$limit` pour réduire la charge sur les grandes bases de données |
 
 ---
 
@@ -323,7 +358,7 @@ $userSchedules = $repository->findBySchedulable($user);
 
 ---
 
-## Exemple complet
+## Exemple complet avec limit
 
 ```php
 <?php
@@ -351,31 +386,36 @@ $record = ScheduleRecord::from([
 
 $schedule = $repository->create($record);
 
-// Vérifier les conflits
+// Vérifier les conflits (limité à 5)
 $conflicts = $repository->findConflicting(
     42,
     DateTimeZuluVO::from('2024-01-15T10:30:00Z'),
-    DateTimeZuluVO::from('2024-01-15T11:30:00Z')
+    DateTimeZuluVO::from('2024-01-15T11:30:00Z'),
+    null,
+    5
 );
 
 if ($conflicts->isNotEmpty()) {
     echo "Conflit avec le planning #{$conflicts->first()->id}";
 }
 
-// Trouver les plannings du jour
+// Trouver les plannings du jour (limité à 10)
 $today = DateTimeZuluVO::now();
-$daySchedules = $repository->findByDate($today);
+$daySchedules = $repository->findByDate($today, null, 10);
 
-// Récupérer les plannings d'un utilisateur
-$userSchedules = $repository->findBySchedulable($user);
+// Récupérer les plannings d'un utilisateur (limité à 20)
+$userSchedules = $repository->findBySchedulable($user, 20);
 
-// Vérifier le buffer
-$bufferViolations = $repository->findViolatingBufferTime(42, 15);
+// Vérifier le buffer (limité à 10)
+$bufferViolations = $repository->findViolatingBufferTime(42, 15, 10);
 
 // Vérifier les plannings cross-day
 if ($repository->hasCrossDaySchedule(42)) {
     echo "Disponibilité #42 a des plannings cross-day";
 }
+
+// Récupérer les plannings annulés (limité à 5)
+$cancelled = $repository->findByStatus(ScheduleStatus::CANCELLED, null, 5);
 ```
 
 ---

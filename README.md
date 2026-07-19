@@ -53,31 +53,31 @@ $availabilityService = app(AvailabilityServiceInterface::class);
 $scheduleService = app(ScheduleServiceInterface::class);
 $slotService = app(SlotServiceInterface::class);
 
-// 1. Créer une disponibilité
-$availability = $availabilityService->create(AvailabilityRecord::from([
-    'name' => 'Consultations',
-    'days' => ['monday', 'wednesday', 'friday'],
-    'daily_start' => '09:00:00',
-    'daily_end' => '17:00:00',
-    'validity_start' => '2024-01-01T00:00:00Z',
-    'validity_end' => '2024-12-31T23:59:59Z',
-    'schedulable_type' => Doctor::class,
-    'schedulable_id' => $doctor->id,
-]));
+// 1. Créer une disponibilité avec scoping
+$availability = $availabilityService
+    ->for($doctor)
+    ->create(AvailabilityRecord::from([
+        'name' => 'Consultations',
+        'days' => ['monday', 'wednesday', 'friday'],
+        'daily_start' => '09:00:00',
+        'daily_end' => '17:00:00',
+        'validity_start' => '2024-01-01T00:00:00Z',
+        'validity_end' => '2024-12-31T23:59:59Z',
+    ]));
 
-// 2. Créer un rendez-vous
-$schedule = $scheduleService->create(ScheduleRecord::from([
-    'availability_id' => $availability->id,
-    'schedulable_type' => Doctor::class,
-    'schedulable_id' => $doctor->id,
-    'title' => 'Consultation patient',
-    'start_datetime' => '2024-01-15T10:00:00Z',
-    'end_datetime' => '2024-01-15T10:30:00Z',
-    'status' => ScheduleStatus::BOOKED,
-]));
+// 2. Créer un rendez-vous avec scoping
+$schedule = $scheduleService
+    ->for($doctor)
+    ->create(ScheduleRecord::from([
+        'availability_id' => $availability->id,
+        'title' => 'Consultation patient',
+        'start_datetime' => '2024-01-15T10:00:00Z',
+        'end_datetime' => '2024-01-15T10:30:00Z',
+        'status' => ScheduleStatus::BOOKED,
+    ]));
 
 // 3. Trouver le prochain créneau disponible
-$nextSlot = $slotService->findNextSlot($doctor, now(), 30);
+$nextSlot = $slotService->findNextSlot($doctor, DateTimeZuluVO::now(), 30);
 ```
 
 ---
@@ -86,76 +86,81 @@ $nextSlot = $slotService->findNextSlot($doctor, now(), 30);
 
 ### Scénario 1 : Gestion d'un cabinet médical
 
-#### 1.1 Créer le planning d'un médecin
+#### 1.1 Créer le planning d'un médecin avec scoping
 
 ```php
-use AndyDefer\LaravelChronos\Services\AvailabilityService;
+use AndyDefer\LaravelChronos\Contracts\Services\AvailabilityServiceInterface;
 use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
 
 class DoctorScheduleSetup
 {
-    public function __construct(private AvailabilityService $availabilityService) {}
+    public function __construct(
+        private AvailabilityServiceInterface $availabilityService
+    ) {}
 
     public function setup(Doctor $doctor): void
     {
         // Matin : Consultations classiques
-        $this->availabilityService->create(AvailabilityRecord::from([
-            'name' => 'Consultations matin',
-            'days' => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-            'daily_start' => '09:00:00',
-            'daily_end' => '12:00:00',
-            'validity_start' => '2024-01-01T00:00:00Z',
-            'validity_end' => '2024-12-31T23:59:59Z',
-            'schedulable_type' => Doctor::class,
-            'schedulable_id' => $doctor->id,
-        ]));
+        $this->availabilityService
+            ->for($doctor)
+            ->create(AvailabilityRecord::from([
+                'name' => 'Consultations matin',
+                'days' => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+                'daily_start' => '09:00:00',
+                'daily_end' => '12:00:00',
+                'validity_start' => '2024-01-01T00:00:00Z',
+                'validity_end' => '2024-12-31T23:59:59Z',
+            ]));
 
         // Après-midi : Consultations uniquement certains jours
-        $this->availabilityService->create(AvailabilityRecord::from([
-            'name' => 'Consultations après-midi',
-            'days' => ['monday', 'tuesday', 'thursday'],
-            'daily_start' => '14:00:00',
-            'daily_end' => '18:00:00',
-            'validity_start' => '2024-01-01T00:00:00Z',
-            'validity_end' => '2024-12-31T23:59:59Z',
-            'schedulable_type' => Doctor::class,
-            'schedulable_id' => $doctor->id,
-        ]));
+        $this->availabilityService
+            ->for($doctor)
+            ->create(AvailabilityRecord::from([
+                'name' => 'Consultations après-midi',
+                'days' => ['monday', 'tuesday', 'thursday'],
+                'daily_start' => '14:00:00',
+                'daily_end' => '18:00:00',
+                'validity_start' => '2024-01-01T00:00:00Z',
+                'validity_end' => '2024-12-31T23:59:59Z',
+            ]));
 
         // Permanence téléphonique
-        $this->availabilityService->create(AvailabilityRecord::from([
-            'name' => 'Permanence téléphonique',
-            'days' => ['monday', 'wednesday'],
-            'daily_start' => '19:00:00',
-            'daily_end' => '21:00:00',
-            'validity_start' => '2024-01-01T00:00:00Z',
-            'validity_end' => '2024-06-30T23:59:59Z',
-            'schedulable_type' => Doctor::class,
-            'schedulable_id' => $doctor->id,
-        ]));
+        $this->availabilityService
+            ->for($doctor)
+            ->create(AvailabilityRecord::from([
+                'name' => 'Permanence téléphonique',
+                'days' => ['monday', 'wednesday'],
+                'daily_start' => '19:00:00',
+                'daily_end' => '21:00:00',
+                'validity_start' => '2024-01-01T00:00:00Z',
+                'validity_end' => '2024-06-30T23:59:59Z',
+            ]));
     }
 }
 ```
 
-#### 1.2 Prendre un rendez-vous
+#### 1.2 Prendre un rendez-vous avec scoping
 
 ```php
-use AndyDefer\LaravelChronos\Services\SlotService;
-use AndyDefer\LaravelChronos\Services\ScheduleService;
+use AndyDefer\LaravelChronos\Contracts\Services\SlotServiceInterface;
+use AndyDefer\LaravelChronos\Contracts\Services\ScheduleServiceInterface;
+use AndyDefer\LaravelChronos\Contracts\Services\AvailabilityServiceInterface;
 use AndyDefer\LaravelChronos\Records\ScheduleRecord;
 use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
+use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 
 class BookingService
 {
     public function __construct(
-        private SlotService $slotService,
-        private ScheduleService $scheduleService
+        private SlotServiceInterface $slotService,
+        private ScheduleServiceInterface $scheduleService,
+        private AvailabilityServiceInterface $availabilityService
     ) {}
 
     public function book(Doctor $doctor, Patient $patient, int $duration): Schedule
     {
         // Trouver le prochain créneau disponible
-        $slot = $this->slotService->findNextSlot($doctor, now(), $duration);
+        $slot = $this->slotService->findNextSlot($doctor, DateTimeZuluVO::now(), $duration);
 
         if (!$slot) {
             throw new \RuntimeException('Aucun créneau disponible');
@@ -166,33 +171,39 @@ class BookingService
             throw new \RuntimeException('Le créneau n\'est plus disponible');
         }
 
-        // Créer le rendez-vous
-        return $this->scheduleService->create(ScheduleRecord::from([
-            'availability_id' => $this->getAvailabilityId($doctor, $slot->getStart()),
-            'schedulable_type' => Doctor::class,
-            'schedulable_id' => $doctor->id,
-            'title' => 'Consultation - ' . $patient->name,
-            'start_datetime' => $slot->getStart()->getValue(),
-            'end_datetime' => $slot->getEnd()->getValue(),
-            'status' => ScheduleStatus::BOOKED,
-        ]));
-    }
+        // Récupérer la disponibilité pour ce créneau
+        $availability = $this->availabilityService
+            ->for($doctor)
+            ->findActiveAtDate($doctor, $slot->getStart())
+            ->first();
 
-    private function getAvailabilityId(Doctor $doctor, DateTimeZuluVO $date): int
-    {
-        return $this->availabilityService->findActiveAtDate($doctor, $date)->first()->id;
+        // Créer le rendez-vous avec scoping
+        return $this->scheduleService
+            ->for($doctor)
+            ->create(ScheduleRecord::from([
+                'availability_id' => $availability->id,
+                'title' => 'Consultation - ' . $patient->name,
+                'start_datetime' => $slot->getStart()->getValue(),
+                'end_datetime' => $slot->getEnd()->getValue(),
+                'status' => ScheduleStatus::BOOKED,
+            ]));
     }
 }
 ```
 
-#### 1.3 Annuler un rendez-vous
+#### 1.3 Annuler un rendez-vous avec scoping
 
 ```php
+use AndyDefer\LaravelChronos\Contracts\Services\ScheduleServiceInterface;
+use AndyDefer\LaravelChronos\Models\Schedule;
+
 class AppointmentManager
 {
-    public function __construct(private ScheduleService $scheduleService) {}
+    public function __construct(
+        private ScheduleServiceInterface $scheduleService
+    ) {}
 
-    public function cancel(Schedule $schedule): void
+    public function cancel(Doctor $doctor, Schedule $schedule): void
     {
         // Vérifier si annulable
         if (!$this->scheduleService->canBeCancelled($schedule)) {
@@ -201,11 +212,13 @@ class AppointmentManager
             );
         }
 
-        // Annuler
-        $this->scheduleService->cancel($schedule->id);
+        // Annuler avec scoping (vérifie l'appartenance)
+        $this->scheduleService
+            ->for($doctor)
+            ->cancel($schedule->id);
     }
 
-    public function complete(Schedule $schedule): void
+    public function complete(Doctor $doctor, Schedule $schedule): void
     {
         // Vérifier si complétable
         if (!$this->scheduleService->canBeCompleted($schedule)) {
@@ -214,85 +227,119 @@ class AppointmentManager
             );
         }
 
-        $this->scheduleService->complete($schedule->id);
+        // Compléter avec scoping
+        $this->scheduleService
+            ->for($doctor)
+            ->complete($schedule->id);
     }
 }
 ```
 
-#### 1.4 Rechercher des rendez-vous
+#### 1.4 Rechercher des rendez-vous avec scoping
 
 ```php
+use AndyDefer\LaravelChronos\Contracts\Services\ScheduleServiceInterface;
+use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
+use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use Illuminate\Support\Collection;
+
 class ScheduleSearchService
 {
-    public function __construct(private ScheduleService $scheduleService) {}
+    public function __construct(
+        private ScheduleServiceInterface $scheduleService
+    ) {}
 
-    // Rendez-vous du jour
+    // Rendez-vous du jour avec scoping
     public function today(Doctor $doctor): Collection
     {
-        return $this->scheduleService->findByDate($doctor, DateTimeZuluVO::today());
+        return $this->scheduleService
+            ->for($doctor)
+            ->findByDate(DateTimeZuluVO::today());
     }
 
-    // Rendez-vous par statut
-    public function byStatus(Doctor $doctor, ScheduleStatus $status): Collection
+    // Rendez-vous par statut avec scoping
+    public function byStatus(Doctor $doctor, ScheduleStatus $status, int $limit = null): Collection
     {
-        return $this->scheduleService->findByStatus($status);
+        return $this->scheduleService
+            ->for($doctor)
+            ->findByStatus($status, null, $limit);
     }
 
-    // Rendez-vous par titre
-    public function search(Doctor $doctor, string $query): Collection
+    // Rendez-vous par titre avec scoping
+    public function search(Doctor $doctor, string $query, int $limit = null): Collection
     {
-        return $this->scheduleService->searchByTitle($query);
+        return $this->scheduleService
+            ->for($doctor)
+            ->searchByTitle($query, null, $limit);
     }
 
-    // Rendez-vous sur une période
-    public function inRange(Doctor $doctor, string $start, string $end): Collection
+    // Rendez-vous sur une période avec scoping
+    public function inRange(Doctor $doctor, string $start, string $end, int $limit = null): Collection
     {
-        return $this->scheduleService->findInDateRange(
-            DateTimeZuluVO::from($start),
-            DateTimeZuluVO::from($end)
-        );
+        return $this->scheduleService
+            ->for($doctor)
+            ->findInDateRange(
+                DateTimeZuluVO::from($start),
+                DateTimeZuluVO::from($end),
+                null,
+                $limit
+            );
     }
 }
 ```
 
 ---
 
-### Scénario 2 : Gestion des empêchements
+### Scénario 2 : Gestion des empêchements avec scoping
 
 #### 2.1 Bloquer une période pour formation
 
 ```php
-use AndyDefer\LaravelChronos\Services\ImpedimentService;
+use AndyDefer\LaravelChronos\Contracts\Services\ImpedimentServiceInterface;
+use AndyDefer\LaravelChronos\Contracts\Services\SlotServiceInterface;
+use AndyDefer\LaravelChronos\Contracts\Services\AvailabilityServiceInterface;
 use AndyDefer\LaravelChronos\Records\ImpedimentRecord;
+use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 
 class ImpedimentManager
 {
     public function __construct(
-        private ImpedimentService $impedimentService,
-        private SlotService $slotService
+        private ImpedimentServiceInterface $impedimentService,
+        private SlotServiceInterface $slotService,
+        private AvailabilityServiceInterface $availabilityService
     ) {}
 
     public function blockForTraining(Doctor $doctor, string $start, string $end): void
     {
+        $startDate = DateTimeZuluVO::from($start);
+        $endDate = DateTimeZuluVO::from($end);
+
         // Vérifier les conflits
         $conflicts = $this->slotService->getBlockedPeriods(
             $doctor,
-            DateTimeZuluVO::from($start),
-            DateTimeZuluVO::from($end)
+            $startDate,
+            $endDate
         );
 
         if ($conflicts->isNotEmpty()) {
             throw new \RuntimeException('Des rendez-vous existent déjà sur cette période');
         }
 
-        // Créer l'empêchement
-        $availability = $this->getAvailability($doctor, $start);
-        $this->impedimentService->create(ImpedimentRecord::from([
-            'availability_id' => $availability->id,
-            'reason' => 'Formation médicale obligatoire',
-            'start_datetime' => $start,
-            'end_datetime' => $end,
-        ]));
+        // Récupérer la disponibilité
+        $availability = $this->availabilityService
+            ->for($doctor)
+            ->findActiveAtDate($doctor, $startDate)
+            ->first();
+
+        // Créer l'empêchement avec scoping
+        $this->impedimentService
+            ->for($doctor)
+            ->create(ImpedimentRecord::from([
+                'availability_id' => $availability->id,
+                'reason' => 'Formation médicale obligatoire',
+                'start_datetime' => $start,
+                'end_datetime' => $end,
+            ]));
     }
 }
 ```
@@ -300,9 +347,14 @@ class ImpedimentManager
 #### 2.2 Analyser l'impact d'un empêchement
 
 ```php
+use AndyDefer\LaravelChronos\Contracts\Services\ImpedimentServiceInterface;
+use AndyDefer\LaravelChronos\Models\Impediment;
+
 class ImpactAnalyzer
 {
-    public function __construct(private ImpedimentService $impedimentService) {}
+    public function __construct(
+        private ImpedimentServiceInterface $impedimentService
+    ) {}
 
     public function analyze(Impediment $impediment): array
     {
@@ -328,52 +380,73 @@ class ImpactAnalyzer
 }
 ```
 
-#### 2.3 Rechercher des empêchements
+#### 2.3 Rechercher des empêchements avec scoping
 
 ```php
+use AndyDefer\LaravelChronos\Contracts\Services\ImpedimentServiceInterface;
+use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use Illuminate\Support\Collection;
+
 class ImpedimentSearchService
 {
-    public function __construct(private ImpedimentService $impedimentService) {}
+    public function __construct(
+        private ImpedimentServiceInterface $impedimentService
+    ) {}
 
-    // Empêchements actifs
-    public function active(Doctor $doctor): Collection
+    // Empêchements actifs avec scoping
+    public function active(Doctor $doctor, int $limit = null): Collection
     {
-        return $this->impedimentService->findActive();
+        return $this->impedimentService
+            ->for($doctor)
+            ->findActive(null, $limit);
     }
 
-    // Par motif
-    public function byReason(string $reason): Collection
+    // Par motif avec scoping
+    public function byReason(Doctor $doctor, string $reason, int $limit = null): Collection
     {
-        return $this->impedimentService->searchByReason($reason);
+        return $this->impedimentService
+            ->for($doctor)
+            ->searchByReason($reason, null, $limit);
     }
 
-    // Par date
-    public function byDate(Doctor $doctor, string $date): Collection
+    // Par date avec scoping
+    public function byDate(Doctor $doctor, string $date, int $limit = null): Collection
     {
-        return $this->impedimentService->findByDate(DateTimeZuluVO::from($date));
+        return $this->impedimentService
+            ->for($doctor)
+            ->findByDate(DateTimeZuluVO::from($date), null, $limit);
     }
 
-    // Par plage
-    public function inRange(Doctor $doctor, string $start, string $end): Collection
+    // Par plage avec scoping
+    public function inRange(Doctor $doctor, string $start, string $end, int $limit = null): Collection
     {
-        return $this->impedimentService->findInDateRange(
-            DateTimeZuluVO::from($start),
-            DateTimeZuluVO::from($end)
-        );
+        return $this->impedimentService
+            ->for($doctor)
+            ->findInDateRange(
+                DateTimeZuluVO::from($start),
+                DateTimeZuluVO::from($end),
+                null,
+                $limit
+            );
     }
 }
 ```
 
 ---
 
-### Scénario 3 : Recherche avancée de créneaux
-
-#### 3.1 Trouver les créneaux sur une semaine
+### Scénario 3 : Recherche avancée de créneaux avec scoping
 
 ```php
+use AndyDefer\LaravelChronos\Contracts\Services\SlotServiceInterface;
+use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\LaravelChronos\ValueObjects\SlotVO;
+use Illuminate\Support\Collection;
+
 class WeekScheduleService
 {
-    public function __construct(private SlotService $slotService) {}
+    public function __construct(
+        private SlotServiceInterface $slotService
+    ) {}
 
     public function findWeekSlots(Doctor $doctor, string $startDate): array
     {
@@ -397,14 +470,12 @@ class WeekScheduleService
         return $this->slotService->findNextSlot($doctor, DateTimeZuluVO::now(), $duration);
     }
 }
-```
 
-#### 3.2 Analyser les périodes bloquées
-
-```php
 class BlockedPeriodsService
 {
-    public function __construct(private SlotService $slotService) {}
+    public function __construct(
+        private SlotServiceInterface $slotService
+    ) {}
 
     public function getBusyPeriods(Doctor $doctor, string $start, string $end): array
     {
@@ -437,21 +508,18 @@ class BlockedPeriodsService
         )->getTotalDuration();
     }
 }
-```
 
-#### 3.3 Découper des créneaux
-
-```php
 class SlotSplitService
 {
-    public function __construct(private SlotService $slotService) {}
+    public function __construct(
+        private SlotServiceInterface $slotService
+    ) {}
 
-    public function splitIntoChunks(SlotVO $slot, int $chunkDuration): SlotVOCollection
+    public function splitIntoChunks(SlotVO $slot, int $chunkDuration, int $limit = null): SlotVOCollection
     {
-        return $this->slotService->generateSlotsFromSlot($slot, $chunkDuration);
+        return $this->slotService->generateSlotsFromSlot($slot, $chunkDuration, $limit);
     }
 
-    // Vérifier si un créneau est disponible
     public function isSlotFree(Doctor $doctor, string $start, string $end): bool
     {
         return $this->slotService->isSlotAvailable(
@@ -465,82 +533,115 @@ class SlotSplitService
 
 ---
 
-### Scénario 4 : Gestion des disponibilités
+### Scénario 4 : Gestion des disponibilités avec scoping
 
 #### 4.1 Mettre à jour une disponibilité
 
 ```php
+use AndyDefer\LaravelChronos\Contracts\Services\AvailabilityServiceInterface;
+use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
+use AndyDefer\LaravelChronos\Models\Availability;
+
 class AvailabilityUpdater
 {
-    public function __construct(private AvailabilityService $availabilityService) {}
+    public function __construct(
+        private AvailabilityServiceInterface $availabilityService
+    ) {}
 
-    public function extendHours(Availability $availability, string $newEnd): Availability
+    public function extendHours(Doctor $doctor, Availability $availability, string $newEnd): Availability
     {
-        return $this->availabilityService->update($availability->id, AvailabilityRecord::from([
-            'daily_end' => $newEnd,
-        ]));
+        return $this->availabilityService
+            ->for($doctor)
+            ->update($availability->id, AvailabilityRecord::from([
+                'daily_end' => $newEnd,
+            ]));
     }
 
-    public function addDays(Availability $availability, array $newDays): Availability
+    public function addDays(Doctor $doctor, Availability $availability, array $newDays): Availability
     {
-        return $this->availabilityService->update($availability->id, AvailabilityRecord::from([
-            'days' => $newDays,
-        ]));
+        return $this->availabilityService
+            ->for($doctor)
+            ->update($availability->id, AvailabilityRecord::from([
+                'days' => $newDays,
+            ]));
     }
 
-    public function extendValidity(Availability $availability, string $newEnd): Availability
+    public function extendValidity(Doctor $doctor, Availability $availability, string $newEnd): Availability
     {
-        return $this->availabilityService->update($availability->id, AvailabilityRecord::from([
-            'validity_end' => $newEnd,
-        ]));
+        return $this->availabilityService
+            ->for($doctor)
+            ->update($availability->id, AvailabilityRecord::from([
+                'validity_end' => $newEnd,
+            ]));
     }
 }
 ```
 
-#### 4.2 Supprimer une disponibilité
+#### 4.2 Supprimer une disponibilité avec scoping
 
 ```php
+use AndyDefer\LaravelChronos\Contracts\Services\AvailabilityServiceInterface;
+use AndyDefer\LaravelChronos\Models\Availability;
+
 class AvailabilityDeleter
 {
-    public function __construct(private AvailabilityService $availabilityService) {}
+    public function __construct(
+        private AvailabilityServiceInterface $availabilityService
+    ) {}
 
-    public function softDelete(Availability $availability): void
+    public function softDelete(Doctor $doctor, Availability $availability): void
     {
         // Suppression avec validation (empêche si rendez-vous futurs)
-        $this->availabilityService->delete($availability->id);
+        $this->availabilityService
+            ->for($doctor)
+            ->delete($availability->id);
     }
 
-    public function forceDelete(Availability $availability): void
+    public function forceDelete(Doctor $doctor, Availability $availability): void
     {
         // Suppression forcée (ignore la validation)
-        $this->availabilityService->delete($availability->id, true);
+        $this->availabilityService
+            ->for($doctor)
+            ->delete($availability->id, true);
     }
 }
 ```
 
-#### 4.3 Rechercher des disponibilités
+#### 4.3 Rechercher des disponibilités avec scoping
 
 ```php
+use AndyDefer\LaravelChronos\Contracts\Services\AvailabilityServiceInterface;
+use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use Illuminate\Support\Collection;
+
 class AvailabilitySearchService
 {
-    public function __construct(private AvailabilityService $availabilityService) {}
+    public function __construct(
+        private AvailabilityServiceInterface $availabilityService
+    ) {}
 
-    // Toutes les disponibilités d'un médecin
-    public function forDoctor(Doctor $doctor): Collection
+    // Toutes les disponibilités d'un médecin avec scoping
+    public function forDoctor(Doctor $doctor, int $limit = null): Collection
     {
-        return $this->availabilityService->findBySchedulable($doctor);
+        return $this->availabilityService
+            ->for($doctor)
+            ->findBySchedulable(null, $limit);
     }
 
-    // Disponibilités actives aujourd'hui
-    public function activeToday(Doctor $doctor): Collection
+    // Disponibilités actives aujourd'hui avec scoping
+    public function activeToday(Doctor $doctor, int $limit = null): Collection
     {
-        return $this->availabilityService->findActiveAtDate($doctor, DateTimeZuluVO::today());
+        return $this->availabilityService
+            ->for($doctor)
+            ->findActiveAtDate($doctor, DateTimeZuluVO::today(), $limit);
     }
 
-    // Par type
-    public function byType(Doctor $doctor, string $type): Collection
+    // Par type avec scoping
+    public function byType(Doctor $doctor, string $type, int $limit = null): Collection
     {
-        return $this->availabilityService->findByType($type);
+        return $this->availabilityService
+            ->for($doctor)
+            ->findByType($type, $limit);
     }
 
     // Vérifier si le médecin existe
@@ -553,39 +654,100 @@ class AvailabilitySearchService
 
 ---
 
-### Scénario 5 : Gestion des cross-day (permanence de nuit)
+### Scénario 5 : Gestion des cross-day (permanence de nuit) avec scoping
 
 ```php
+use AndyDefer\LaravelChronos\Contracts\Services\AvailabilityServiceInterface;
+use AndyDefer\LaravelChronos\Contracts\Services\SlotServiceInterface;
+use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
+use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+
 class NightShiftService
 {
     public function __construct(
-        private AvailabilityService $availabilityService,
-        private SlotService $slotService
+        private AvailabilityServiceInterface $availabilityService,
+        private SlotServiceInterface $slotService
     ) {}
 
-    // Créer une permanence de nuit (22h-2h)
+    // Créer une permanence de nuit (22h-2h) avec scoping
     public function createNightShift(Doctor $doctor): Availability
     {
-        return $this->availabilityService->create(AvailabilityRecord::from([
-            'name' => 'Permanence de nuit',
-            'days' => ['monday', 'tuesday'], // Jours consécutifs pour cross-day
-            'daily_start' => '22:00:00',
-            'daily_end' => '02:00:00', // Cross-day automatiquement détecté
-            'validity_start' => '2024-01-01T00:00:00Z',
-            'validity_end' => '2024-12-31T23:59:59Z',
-            'schedulable_type' => Doctor::class,
-            'schedulable_id' => $doctor->id,
-        ]));
+        return $this->availabilityService
+            ->for($doctor)
+            ->create(AvailabilityRecord::from([
+                'name' => 'Permanence de nuit',
+                'days' => ['monday', 'tuesday'], // Jours consécutifs pour cross-day
+                'daily_start' => '22:00:00',
+                'daily_end' => '02:00:00', // Cross-day automatiquement détecté
+                'validity_start' => '2024-01-01T00:00:00Z',
+                'validity_end' => '2024-12-31T23:59:59Z',
+            ]));
     }
 
     // Rechercher les créneaux de nuit
-    public function findNightSlots(Doctor $doctor, string $date): Collection
+    public function findNightSlots(Doctor $doctor, string $date, int $duration = 30): Collection
     {
         return $this->slotService->findSlotsForDay(
             $doctor,
             DateTimeZuluVO::from($date),
-            30
+            $duration
         );
+    }
+
+    // Vérifier si un créneau de nuit est disponible
+    public function isNightSlotAvailable(Doctor $doctor, string $start, string $end): bool
+    {
+        return $this->slotService->isSlotAvailable(
+            $doctor,
+            DateTimeZuluVO::from($start),
+            DateTimeZuluVO::from($end)
+        );
+    }
+}
+```
+
+---
+
+### Scénario 6 : Utilisation des limites pour les grandes collections
+
+```php
+use AndyDefer\LaravelChronos\Contracts\Services\ScheduleServiceInterface;
+use AndyDefer\LaravelChronos\Contracts\Services\SlotServiceInterface;
+use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
+
+class PaginatedScheduleService
+{
+    public function __construct(
+        private ScheduleServiceInterface $scheduleService,
+        private SlotServiceInterface $slotService
+    ) {}
+
+    // Récupérer les 10 premiers rendez-vous d'un médecin
+    public function getRecentSchedules(Doctor $doctor, int $limit = 10): Collection
+    {
+        return $this->scheduleService
+            ->for($doctor)
+            ->findBySchedulable(null, $limit);
+    }
+
+    // Récupérer les 5 premiers créneaux d'une journée
+    public function getFirstSlotsOfDay(Doctor $doctor, string $date, int $limit = 5): SlotVOCollection
+    {
+        return $this->slotService->findSlotsForDay(
+            $doctor,
+            DateTimeZuluVO::from($date),
+            30,
+            null,
+            $limit
+        );
+    }
+
+    // Récupérer les 20 derniers rendez-vous complétés
+    public function getCompletedSchedules(Doctor $doctor, int $limit = 20): Collection
+    {
+        return $this->scheduleService
+            ->for($doctor)
+            ->findByStatus(ScheduleStatus::COMPLETED, null, $limit);
     }
 }
 ```
@@ -639,54 +801,70 @@ $record = ScheduleRecord::from([
 
 ## 📚 API complète avec exemples de code
 
-### AvailabilityService - Toutes les méthodes avec exemples
+### AvailabilityService - Toutes les méthodes avec scoping
 
 ```php
 use AndyDefer\LaravelChronos\Contracts\Services\AvailabilityServiceInterface;
 use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
+use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 
 $availabilityService = app(AvailabilityServiceInterface::class);
 $doctor = Doctor::find(42);
 
-// 1. create() - Créer une disponibilité
-$availability = $availabilityService->create(AvailabilityRecord::from([
-    'name' => 'Consultations',
-    'days' => ['monday', 'wednesday', 'friday'],
-    'daily_start' => '09:00:00',
-    'daily_end' => '17:00:00',
-    'validity_start' => '2024-01-01T00:00:00Z',
-    'validity_end' => '2024-12-31T23:59:59Z',
-    'schedulable_type' => Doctor::class,
-    'schedulable_id' => $doctor->id,
-]));
+// 1. create() - Créer une disponibilité avec scoping
+$availability = $availabilityService
+    ->for($doctor)
+    ->create(AvailabilityRecord::from([
+        'name' => 'Consultations',
+        'days' => ['monday', 'wednesday', 'friday'],
+        'daily_start' => '09:00:00',
+        'daily_end' => '17:00:00',
+        'validity_start' => '2024-01-01T00:00:00Z',
+        'validity_end' => '2024-12-31T23:59:59Z',
+    ]));
 
-// 2. update() - Mettre à jour une disponibilité
-$updated = $availabilityService->update($availability->id, AvailabilityRecord::from([
-    'daily_end' => '18:00:00',
-]));
+// 2. update() - Mettre à jour une disponibilité avec scoping
+$updated = $availabilityService
+    ->for($doctor)
+    ->update($availability->id, AvailabilityRecord::from([
+        'daily_end' => '18:00:00',
+    ]));
 
-// 3. delete() - Supprimer une disponibilité
-$deleted = $availabilityService->delete($availability->id); // Avec validation
-$forceDeleted = $availabilityService->delete($availability->id, true); // Forcé
+// 3. delete() - Supprimer une disponibilité avec scoping
+$deleted = $availabilityService
+    ->for($doctor)
+    ->delete($availability->id); // Avec validation
+$forceDeleted = $availabilityService
+    ->for($doctor)
+    ->delete($availability->id, true); // Forcé
 
-// 4. find() - Trouver par ID
-$availability = $availabilityService->find(42);
+// 4. find() - Trouver par ID avec scoping
+$availability = $availabilityService
+    ->for($doctor)
+    ->find(42);
 
-// 5. findBySchedulable() - Toutes les disponibilités d'une entité
-$doctor = Doctor::find(42);
-$availabilities = $availabilityService->findBySchedulable($doctor);
+// 5. findBySchedulable() - Toutes les disponibilités d'une entité avec scoping
+$availabilities = $availabilityService
+    ->for($doctor)
+    ->findBySchedulable(null, 10); // Limit à 10
 
-// 6. findByType() - Par type
-$consultations = $availabilityService->findByType('consultation');
+// 6. findByType() - Par type avec scoping
+$consultations = $availabilityService
+    ->for($doctor)
+    ->findByType('consultation', 5);
 
 // 7. findActiveAtDate() - Disponibilités actives à une date
 $today = DateTimeZuluVO::today();
-$active = $availabilityService->findActiveAtDate($doctor, $today);
+$active = $availabilityService
+    ->for($doctor)
+    ->findActiveAtDate($doctor, $today, 3);
 
 // 8. findActiveInDateRange() - Disponibilités actives sur une période
 $start = DateTimeZuluVO::from('2024-01-01T00:00:00Z');
 $end = DateTimeZuluVO::from('2024-01-31T23:59:59Z');
-$activeInRange = $availabilityService->findActiveInDateRange($doctor, $start, $end);
+$activeInRange = $availabilityService
+    ->for($doctor)
+    ->findActiveInDateRange($doctor, $start, $end, 5);
 
 // 9. schedulableExists() - Vérifier si l'entité existe
 if ($availabilityService->schedulableExists($doctor)) {
@@ -697,128 +875,178 @@ if ($availabilityService->schedulableExists($doctor)) {
 $model = $availabilityService->getSchedulableModel($doctor);
 ```
 
-### ScheduleService - Toutes les méthodes avec exemples
+### ScheduleService - Toutes les méthodes avec scoping
 
 ```php
 use AndyDefer\LaravelChronos\Contracts\Services\ScheduleServiceInterface;
 use AndyDefer\LaravelChronos\Records\ScheduleRecord;
 use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
+use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 
 $scheduleService = app(ScheduleServiceInterface::class);
+$doctor = Doctor::find(42);
 
-// 1. create() - Créer un rendez-vous
-$schedule = $scheduleService->create(ScheduleRecord::from([
-    'availability_id' => $availability->id,
-    'schedulable_type' => Doctor::class,
-    'schedulable_id' => $doctor->id,
-    'title' => 'Consultation patient',
-    'start_datetime' => '2024-01-15T10:00:00Z',
-    'end_datetime' => '2024-01-15T10:30:00Z',
-    'status' => ScheduleStatus::BOOKED,
-]));
+// 1. create() - Créer un rendez-vous avec scoping
+$schedule = $scheduleService
+    ->for($doctor)
+    ->create(ScheduleRecord::from([
+        'availability_id' => $availability->id,
+        'title' => 'Consultation patient',
+        'start_datetime' => '2024-01-15T10:00:00Z',
+        'end_datetime' => '2024-01-15T10:30:00Z',
+        'status' => ScheduleStatus::BOOKED,
+    ]));
 
-// 2. update() - Mettre à jour un rendez-vous
-$updated = $scheduleService->update($schedule->id, ScheduleRecord::from([
-    'title' => 'Consultation urgente',
-    'status' => ScheduleStatus::BOOKED,
-]));
+// 2. update() - Mettre à jour un rendez-vous avec scoping
+$updated = $scheduleService
+    ->for($doctor)
+    ->update($schedule->id, ScheduleRecord::from([
+        'title' => 'Consultation urgente',
+        'status' => ScheduleStatus::BOOKED,
+    ]));
 
-// 3. delete() - Supprimer un rendez-vous
-$deleted = $scheduleService->delete($schedule->id);
+// 3. delete() - Supprimer un rendez-vous avec scoping
+$deleted = $scheduleService
+    ->for($doctor)
+    ->delete($schedule->id);
 
-// 4. find() - Trouver par ID
-$schedule = $scheduleService->find(42);
+// 4. find() - Trouver par ID avec scoping
+$schedule = $scheduleService
+    ->for($doctor)
+    ->find(42);
 
 // 5. findByAvailability() - Par disponibilité
-$schedules = $scheduleService->findByAvailability($availability->id);
+$schedules = $scheduleService
+    ->for($doctor)
+    ->findByAvailability($availability->id, 10);
 
-// 6. findBySchedulable() - Par entité
-$doctor = Doctor::find(42);
-$schedules = $scheduleService->findBySchedulable($doctor);
+// 6. findBySchedulable() - Par entité avec scoping
+$schedules = $scheduleService
+    ->for($doctor)
+    ->findBySchedulable(null, 10);
 
-// 7. findByStatus() - Par statut
-$booked = $scheduleService->findByStatus(ScheduleStatus::BOOKED);
-$completed = $scheduleService->findByStatus(ScheduleStatus::COMPLETED);
+// 7. findByStatus() - Par statut avec scoping
+$booked = $scheduleService
+    ->for($doctor)
+    ->findByStatus(ScheduleStatus::BOOKED, null, 5);
+$completed = $scheduleService
+    ->for($doctor)
+    ->findByStatus(ScheduleStatus::COMPLETED, null, 5);
 
-// 8. findByDate() - Par date
+// 8. findByDate() - Par date avec scoping
 $today = DateTimeZuluVO::today();
-$todaySchedules = $scheduleService->findByDate($today);
+$todaySchedules = $scheduleService
+    ->for($doctor)
+    ->findByDate($today, null, 10);
 
-// 9. findInDateRange() - Sur une période
+// 9. findInDateRange() - Sur une période avec scoping
 $start = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
 $end = DateTimeZuluVO::from('2024-01-20T23:59:59Z');
-$schedules = $scheduleService->findInDateRange($start, $end);
+$schedules = $scheduleService
+    ->for($doctor)
+    ->findInDateRange($start, $end, null, 20);
 
-// 10. searchByTitle() - Recherche par titre
-$results = $scheduleService->searchByTitle('Consultation');
+// 10. searchByTitle() - Recherche par titre avec scoping
+$results = $scheduleService
+    ->for($doctor)
+    ->searchByTitle('Consultation', null, 5);
 
-// 11. cancel() - Annuler un rendez-vous
-$cancelled = $scheduleService->cancel($schedule->id);
+// 11. cancel() - Annuler un rendez-vous avec scoping
+$cancelled = $scheduleService
+    ->for($doctor)
+    ->cancel($schedule->id);
 
-// 12. complete() - Compléter un rendez-vous
-$completed = $scheduleService->complete($schedule->id);
+// 12. complete() - Compléter un rendez-vous avec scoping
+$completed = $scheduleService
+    ->for($doctor)
+    ->complete($schedule->id);
 
 // 13. canBeCancelled() - Vérifier si annulable
 if ($scheduleService->canBeCancelled($schedule)) {
-    $scheduleService->cancel($schedule->id);
+    $scheduleService
+        ->for($doctor)
+        ->cancel($schedule->id);
 }
 
 // 14. canBeCompleted() - Vérifier si complétable
 if ($scheduleService->canBeCompleted($schedule)) {
-    $scheduleService->complete($schedule->id);
+    $scheduleService
+        ->for($doctor)
+        ->complete($schedule->id);
 }
 ```
 
-### ImpedimentService - Toutes les méthodes avec exemples
+### ImpedimentService - Toutes les méthodes avec scoping
 
 ```php
 use AndyDefer\LaravelChronos\Contracts\Services\ImpedimentServiceInterface;
 use AndyDefer\LaravelChronos\Records\ImpedimentRecord;
+use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 
 $impedimentService = app(ImpedimentServiceInterface::class);
+$doctor = Doctor::find(42);
 
-// 1. create() - Créer un empêchement
-$impediment = $impedimentService->create(ImpedimentRecord::from([
-    'availability_id' => $availability->id,
-    'reason' => 'Formation obligatoire',
-    'start_datetime' => '2024-01-15T14:00:00Z',
-    'end_datetime' => '2024-01-15T16:00:00Z',
-]));
+// 1. create() - Créer un empêchement avec scoping
+$impediment = $impedimentService
+    ->for($doctor)
+    ->create(ImpedimentRecord::from([
+        'availability_id' => $availability->id,
+        'reason' => 'Formation obligatoire',
+        'start_datetime' => '2024-01-15T14:00:00Z',
+        'end_datetime' => '2024-01-15T16:00:00Z',
+    ]));
 
-// 2. update() - Mettre à jour un empêchement
-$updated = $impedimentService->update($impediment->id, ImpedimentRecord::from([
-    'reason' => 'Formation reportée',
-    'start_datetime' => '2024-01-16T14:00:00Z',
-    'end_datetime' => '2024-01-16T16:00:00Z',
-]));
+// 2. update() - Mettre à jour un empêchement avec scoping
+$updated = $impedimentService
+    ->for($doctor)
+    ->update($impediment->id, ImpedimentRecord::from([
+        'reason' => 'Formation reportée',
+        'start_datetime' => '2024-01-16T14:00:00Z',
+        'end_datetime' => '2024-01-16T16:00:00Z',
+    ]));
 
-// 3. delete() - Supprimer un empêchement
-$deleted = $impedimentService->delete($impediment->id);
+// 3. delete() - Supprimer un empêchement avec scoping
+$deleted = $impedimentService
+    ->for($doctor)
+    ->delete($impediment->id);
 
-// 4. find() - Trouver par ID
-$impediment = $impedimentService->find(42);
+// 4. find() - Trouver par ID avec scoping
+$impediment = $impedimentService
+    ->for($doctor)
+    ->find(42);
 
 // 5. findByAvailability() - Par disponibilité
-$impediments = $impedimentService->findByAvailability($availability->id);
+$impediments = $impedimentService
+    ->for($doctor)
+    ->findByAvailability($availability->id, 10);
 
-// 6. findBySchedulable() - Par entité
-$doctor = Doctor::find(42);
-$impediments = $impedimentService->findBySchedulable($doctor);
+// 6. findBySchedulable() - Par entité avec scoping
+$impediments = $impedimentService
+    ->for($doctor)
+    ->findBySchedulable(null, 10);
 
-// 7. findByDate() - Par date
+// 7. findByDate() - Par date avec scoping
 $today = DateTimeZuluVO::today();
-$impediments = $impedimentService->findByDate($today);
+$impediments = $impedimentService
+    ->for($doctor)
+    ->findByDate($today, null, 5);
 
-// 8. findInDateRange() - Sur une période
+// 8. findInDateRange() - Sur une période avec scoping
 $start = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
 $end = DateTimeZuluVO::from('2024-01-20T23:59:59Z');
-$impediments = $impedimentService->findInDateRange($start, $end);
+$impediments = $impedimentService
+    ->for($doctor)
+    ->findInDateRange($start, $end, null, 10);
 
-// 9. findActive() - Empêchements actifs
-$active = $impedimentService->findActive();
+// 9. findActive() - Empêchements actifs avec scoping
+$active = $impedimentService
+    ->for($doctor)
+    ->findActive(null, 5);
 
-// 10. searchByReason() - Par motif
-$results = $impedimentService->searchByReason('formation');
+// 10. searchByReason() - Par motif avec scoping
+$results = $impedimentService
+    ->for($doctor)
+    ->searchByReason('formation', null, 3);
 
 // 11. isActive() - Vérifier si actif
 if ($impedimentService->isActive($impediment)) {
@@ -833,19 +1061,22 @@ if ($impedimentService->overlapsWith($impediment, $start, $end)) {
 }
 
 // 13. getBlockedSchedules() - Plannings bloqués
-$blocked = $impedimentService->getBlockedSchedules($impediment);
-foreach ($blocked as $schedule) {
-    echo $schedule->title . "\n";
-}
+$blocked = $impedimentService
+    ->for($doctor)
+    ->getBlockedSchedules($impediment, 10);
 
 // 14. getFullyBlockedSchedules() - Totalement bloqués
-$fullyBlocked = $impedimentService->getFullyBlockedSchedules($impediment);
+$fullyBlocked = $impedimentService
+    ->for($doctor)
+    ->getFullyBlockedSchedules($impediment, 10);
 
 // 15. getPartiallyBlockedSchedules() - Partiellement bloqués
-$partiallyBlocked = $impedimentService->getPartiallyBlockedSchedules($impediment);
+$partiallyBlocked = $impedimentService
+    ->for($doctor)
+    ->getPartiallyBlockedSchedules($impediment, 10);
 ```
 
-### SlotService - Toutes les méthodes avec exemples
+### SlotService - Toutes les méthodes
 
 ```php
 use AndyDefer\LaravelChronos\Contracts\Services\SlotServiceInterface;
@@ -864,17 +1095,17 @@ if ($slot) {
 // 2. findPreviousSlot() - Dernier créneau avant une date
 $slot = $slotService->findPreviousSlot($doctor, DateTimeZuluVO::now(), 30);
 
-// 3. findSlotsInRange() - Créneaux sur une période
+// 3. findSlotsInRange() - Créneaux sur une période avec limite
 $start = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
 $end = DateTimeZuluVO::from('2024-01-15T23:59:59Z');
-$slots = $slotService->findSlotsInRange($doctor, $start, $end, 30);
+$slots = $slotService->findSlotsInRange($doctor, $start, $end, 30, null, 10);
 foreach ($slots as $slot) {
     echo $slot->getStart() . " - " . $slot->getEnd() . "\n";
 }
 
-// 4. findSlotsForDay() - Créneaux du jour
+// 4. findSlotsForDay() - Créneaux du jour avec limite
 $today = DateTimeZuluVO::today();
-$slots = $slotService->findSlotsForDay($doctor, $today, 30);
+$slots = $slotService->findSlotsForDay($doctor, $today, 30, null, 5);
 echo "Total minutes disponibles: " . $slots->getTotalAvailableMinutes();
 
 // 5. isSlotAvailable() - Vérifier disponibilité d'un créneau
@@ -892,16 +1123,16 @@ if ($slotService->hasAvailabilityOnDate($doctor, $today)) {
     echo "Le médecin est disponible aujourd'hui";
 }
 
-// 8. getBlockedPeriods() - Périodes bloquées
-$blocked = $slotService->getBlockedPeriods($doctor, $start, $end);
+// 8. getBlockedPeriods() - Périodes bloquées avec limite
+$blocked = $slotService->getBlockedPeriods($doctor, $start, $end, null, 10);
 foreach ($blocked as $period) {
     echo "Bloqué par " . $period->getType() . " #" . $period->getId() . "\n";
     echo "De " . $period->getStart() . " à " . $period->getEnd() . "\n";
 }
 
-// 9. generateSlotsFromSlot() - Découper un créneau
+// 9. generateSlotsFromSlot() - Découper un créneau avec limite
 $slot = SlotVO::fromDuration(DateTimeZuluVO::from('2024-01-15T10:00:00Z'), 60);
-$chunks = $slotService->generateSlotsFromSlot($slot, 15);
+$chunks = $slotService->generateSlotsFromSlot($slot, 15, 3);
 foreach ($chunks as $chunk) {
     echo $chunk->getStart() . " - " . $chunk->getEnd() . "\n";
 }
@@ -934,28 +1165,47 @@ class BookingController
 }
 ```
 
-### ✅ Utilisation de from() avec strings
+### ✅ Utilisation du scoping
 
 ```php
-// BON - from() convertit automatiquement
-$record = AvailabilityRecord::from([
-    'daily_start' => '09:00:00', // Auto-converti en TimeZuluVO
-    'validity_start' => '2024-01-01T00:00:00Z', // Auto-converti en DateTimeZuluVO
-]);
+// BON - Utilisation du scoping
+$availability = $availabilityService
+    ->for($doctor)
+    ->create($record);
+// schedulable_type et schedulable_id sont automatiquement injectés
 
-// ÉVITER - Instanciation manuelle des Value Objects
-$record = AvailabilityRecord::from([
-    'daily_start' => TimeZuluVO::from('09:00:00'), // Inutile
-]);
+// ÉVITER - Spécification manuelle
+$availability = $availabilityService->create(AvailabilityRecord::from([
+    ...$record->toArray(),
+    'schedulable_type' => Doctor::class,
+    'schedulable_id' => $doctor->id,
+]));
+```
+
+### ✅ Utilisation des limites
+
+```php
+// BON - Utilisation des limites pour les grandes collections
+$schedules = $scheduleService
+    ->for($doctor)
+    ->findBySchedulable(null, 10);
+
+$slots = $slotService->findSlotsForDay($doctor, $today, 30, null, 5);
+
+// ÉVITER - Récupération sans limite
+$schedules = $scheduleService
+    ->for($doctor)
+    ->findBySchedulable(); // Peut être lourd
 ```
 
 ### ✅ Gestion des erreurs
 
 ```php
 try {
-    $schedule = $scheduleService->create($record);
+    $schedule = $scheduleService
+        ->for($doctor)
+        ->create($record);
 } catch (ValidationException $e) {
-    // Récupérer les erreurs détaillées
     $errors = $e->getErrors();
     foreach ($errors as $error) {
         Log::error('Validation échouée: ' . $error);
@@ -971,7 +1221,7 @@ try {
 ```php
 // Les collections typées offrent des helpers
 $slots = $slotService->findSlotsForDay($doctor, $today, 30);
-$totalMinutes = $slots->getTotalAvailableMinutes(); // Helpers disponibles
+$totalMinutes = $slots->getTotalAvailableMinutes();
 $firstSlot = $slots->firstSlot();
 $earliest = $slots->getEarliestStart();
 $latest = $slots->getLatestEnd();
