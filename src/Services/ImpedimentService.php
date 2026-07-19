@@ -66,8 +66,6 @@ final class ImpedimentService implements ImpedimentServiceInterface
      */
     public function create(ImpedimentRecord $record): Impediment
     {
-        $record = $this->injectScopedDataIntoRecord($record);
-
         return ServiceContext::within(
             ImpedimentService::class,
             function () use ($record): Impediment {
@@ -90,8 +88,6 @@ final class ImpedimentService implements ImpedimentServiceInterface
      */
     public function update(int $id, ImpedimentRecord $record): Impediment
     {
-        $record = $this->injectScopedDataIntoRecord($record);
-
         return ServiceContext::within(
             ImpedimentService::class,
             function () use ($id, $record): Impediment {
@@ -150,7 +146,6 @@ final class ImpedimentService implements ImpedimentServiceInterface
                 $impediment = $this->repository->find($id);
 
                 if ($impediment !== null && $schedulable !== null) {
-                    // Impediments don't have schedulable_type directly, but we verify via availability
                     $availability = $impediment->availability;
                     if ($availability === null ||
                         $availability->schedulable_type !== $schedulable->getMorphClass() ||
@@ -168,19 +163,23 @@ final class ImpedimentService implements ImpedimentServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findByAvailability(int $availabilityId): Collection
+    public function findByAvailability(int $availabilityId, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ImpedimentService::class,
-            fn (): Collection => $this->repository->findByAvailability($availabilityId),
-            ['operation' => 'findByAvailability', 'availability_id' => $availabilityId]
+            fn (): Collection => $this->repository->findByAvailability($availabilityId, $limit),
+            [
+                'operation' => 'findByAvailability',
+                'availability_id' => $availabilityId,
+                'limit' => $limit,
+            ]
         );
     }
 
     /**
      * {@inheritDoc}
      */
-    public function findBySchedulable(?Model $schedulable = null): Collection
+    public function findBySchedulable(?Model $schedulable = null, ?int $limit = null): Collection
     {
         $schedulable = $schedulable ?? $this->scope->getScopedSchedulable();
 
@@ -194,11 +193,12 @@ final class ImpedimentService implements ImpedimentServiceInterface
 
         return ServiceContext::within(
             ImpedimentService::class,
-            fn (): Collection => $this->repository->findBySchedulable($schedulable),
+            fn (): Collection => $this->repository->findBySchedulable($schedulable, $limit),
             [
                 'operation' => 'findBySchedulable',
                 'schedulable_type' => $schedulable->getMorphClass(),
                 'schedulable_id' => $schedulable->getKey(),
+                'limit' => $limit,
             ]
         );
     }
@@ -206,15 +206,16 @@ final class ImpedimentService implements ImpedimentServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null): Collection
+    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ImpedimentService::class,
-            fn (): Collection => $this->repository->findByDate($date, $availabilityId),
+            fn (): Collection => $this->repository->findByDate($date, $availabilityId, $limit),
             [
                 'operation' => 'findByDate',
                 'date' => $date->toDateTimeString(),
                 'availability_id' => $availabilityId,
+                'limit' => $limit,
             ]
         );
     }
@@ -225,16 +226,18 @@ final class ImpedimentService implements ImpedimentServiceInterface
     public function findInDateRange(
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $availabilityId = null
+        ?int $availabilityId = null,
+        ?int $limit = null
     ): Collection {
         return ServiceContext::within(
             ImpedimentService::class,
-            fn (): Collection => $this->repository->findInDateRange($start, $end, $availabilityId),
+            fn (): Collection => $this->repository->findInDateRange($start, $end, $availabilityId, $limit),
             [
                 'operation' => 'findInDateRange',
                 'start' => $start->toDateTimeString(),
                 'end' => $end->toDateTimeString(),
                 'availability_id' => $availabilityId,
+                'limit' => $limit,
             ]
         );
     }
@@ -242,14 +245,15 @@ final class ImpedimentService implements ImpedimentServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findActive(?int $availabilityId = null): Collection
+    public function findActive(?int $availabilityId = null, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ImpedimentService::class,
-            fn (): Collection => $this->repository->findActive($availabilityId),
+            fn (): Collection => $this->repository->findActive($availabilityId, $limit),
             [
                 'operation' => 'findActive',
                 'availability_id' => $availabilityId,
+                'limit' => $limit,
             ]
         );
     }
@@ -257,15 +261,16 @@ final class ImpedimentService implements ImpedimentServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function searchByReason(string $search, ?int $availabilityId = null): Collection
+    public function searchByReason(string $search, ?int $availabilityId = null, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ImpedimentService::class,
-            fn (): Collection => $this->repository->searchByReason($search, $availabilityId),
+            fn (): Collection => $this->repository->searchByReason($search, $availabilityId, $limit),
             [
                 'operation' => 'searchByReason',
                 'search' => $search,
                 'availability_id' => $availabilityId,
+                'limit' => $limit,
             ]
         );
     }
@@ -292,14 +297,15 @@ final class ImpedimentService implements ImpedimentServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function getBlockedSchedules(Impediment $impediment): Collection
+    public function getBlockedSchedules(Impediment $impediment, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ImpedimentService::class,
-            fn (): Collection => $this->repository->getBlockedSchedules($impediment),
+            fn (): Collection => $this->repository->getBlockedSchedules($impediment, $limit),
             [
                 'operation' => 'getBlockedSchedules',
                 'impediment_id' => $impediment->id,
+                'limit' => $limit,
             ]
         );
     }
@@ -307,14 +313,15 @@ final class ImpedimentService implements ImpedimentServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function getFullyBlockedSchedules(Impediment $impediment): Collection
+    public function getFullyBlockedSchedules(Impediment $impediment, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ImpedimentService::class,
-            fn (): Collection => $this->repository->getFullyBlockedSchedules($impediment),
+            fn (): Collection => $this->repository->getFullyBlockedSchedules($impediment, $limit),
             [
                 'operation' => 'getFullyBlockedSchedules',
                 'impediment_id' => $impediment->id,
+                'limit' => $limit,
             ]
         );
     }
@@ -322,30 +329,17 @@ final class ImpedimentService implements ImpedimentServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function getPartiallyBlockedSchedules(Impediment $impediment): Collection
+    public function getPartiallyBlockedSchedules(Impediment $impediment, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ImpedimentService::class,
-            fn (): Collection => $this->repository->getPartiallyBlockedSchedules($impediment),
+            fn (): Collection => $this->repository->getPartiallyBlockedSchedules($impediment, $limit),
             [
                 'operation' => 'getPartiallyBlockedSchedules',
                 'impediment_id' => $impediment->id,
+                'limit' => $limit,
             ]
         );
-    }
-
-    /**
-     * Injects scoped entity data into the record if scoped.
-     *
-     * @param  ImpedimentRecord  $record  The record to inject data into
-     * @return ImpedimentRecord The modified record
-     */
-    private function injectScopedDataIntoRecord(ImpedimentRecord $record): ImpedimentRecord
-    {
-        // Impediments don't have schedulable_type directly.
-        // They inherit from availability, so we don't inject here.
-        // The scope is used for findBySchedulable() and ownership checks.
-        return $record;
     }
 
     /**

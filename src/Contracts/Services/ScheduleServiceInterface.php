@@ -137,9 +137,10 @@ interface ScheduleServiceInterface
      * Finds all schedules associated with a specific availability.
      *
      * @param  int  $availabilityId  The availability ID to filter by
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Schedule> Collection of schedule models
      */
-    public function findByAvailability(int $availabilityId): Collection;
+    public function findByAvailability(int $availabilityId, ?int $limit = null): Collection;
 
     /**
      * Finds all schedules for a given schedulable entity.
@@ -147,6 +148,7 @@ interface ScheduleServiceInterface
      * If the service is scoped via for(), you can omit the parameter.
      *
      * @param  Model|null  $schedulable  The schedulable entity, or null to use the scoped entity
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Schedule> Collection of schedule models
      *
      * @throws \RuntimeException When no schedulable entity is provided and none is scoped
@@ -158,25 +160,27 @@ interface ScheduleServiceInterface
      * // Using explicit entity
      * $schedules = $service->findBySchedulable($doctor);
      */
-    public function findBySchedulable(?Model $schedulable = null): Collection;
+    public function findBySchedulable(?Model $schedulable = null, ?int $limit = null): Collection;
 
     /**
      * Finds schedules by their current status.
      *
      * @param  ScheduleStatus  $status  The status to filter by
      * @param  int|null  $availabilityId  Optional availability filter
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Schedule> Collection of schedule models
      */
-    public function findByStatus(ScheduleStatus $status, ?int $availabilityId = null): Collection;
+    public function findByStatus(ScheduleStatus $status, ?int $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Finds schedules that occur on a specific date.
      *
      * @param  DateTimeZuluVO  $date  The date to search for schedules
      * @param  int|null  $availabilityId  Optional availability filter
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Schedule> Collection of schedule models
      */
-    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null): Collection;
+    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Finds schedules that fall within a date range.
@@ -184,12 +188,14 @@ interface ScheduleServiceInterface
      * @param  DateTimeZuluVO  $start  The start of the date range
      * @param  DateTimeZuluVO  $end  The end of the date range
      * @param  int|null  $availabilityId  Optional availability filter
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Schedule> Collection of schedule models
      */
     public function findInDateRange(
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $availabilityId = null
+        ?int $availabilityId = null,
+        ?int $limit = null
     ): Collection;
 
     /**
@@ -199,9 +205,10 @@ interface ScheduleServiceInterface
      *
      * @param  string  $search  The search term to look for in the title
      * @param  int|null  $availabilityId  Optional availability filter
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Schedule> Collection of matching schedule models
      */
-    public function searchByTitle(string $search, ?int $availabilityId = null): Collection;
+    public function searchByTitle(string $search, ?int $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Cancels a schedule.

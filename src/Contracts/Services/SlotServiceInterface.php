@@ -68,6 +68,7 @@ interface SlotServiceInterface
      * @param  DateTimeZuluVO  $end  The end of the search range
      * @param  int  $durationInMinutes  The required duration of each slot in minutes
      * @param  int|null  $availabilityId  Optional specific availability to search within
+     * @param  int|null  $limit  Maximum number of slots to return
      * @return SlotVOCollection Collection of available slots sorted by start time
      */
     public function findSlotsInRange(
@@ -75,7 +76,8 @@ interface SlotServiceInterface
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
         int $durationInMinutes,
-        ?int $availabilityId = null
+        ?int $availabilityId = null,
+        ?int $limit = null
     ): SlotVOCollection;
 
     /**
@@ -85,13 +87,15 @@ interface SlotServiceInterface
      * @param  DateTimeZuluVO  $date  The date to search
      * @param  int  $durationInMinutes  The required duration of each slot in minutes
      * @param  int|null  $availabilityId  Optional specific availability to search within
+     * @param  int|null  $limit  Maximum number of slots to return
      * @return SlotVOCollection Collection of available slots for the day
      */
     public function findSlotsForDay(
         Model $schedulable,
         DateTimeZuluVO $date,
         int $durationInMinutes,
-        ?int $availabilityId = null
+        ?int $availabilityId = null,
+        ?int $limit = null
     ): SlotVOCollection;
 
     /**
@@ -145,13 +149,15 @@ interface SlotServiceInterface
      * @param  DateTimeZuluVO  $start  The start of the range
      * @param  DateTimeZuluVO  $end  The end of the range
      * @param  int|null  $availabilityId  Optional specific availability to analyze
+     * @param  int|null  $limit  Maximum number of blocked periods to return
      * @return BlockedPeriodCollection Collection of blocked periods
      */
     public function getBlockedPeriods(
         Model $schedulable,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $availabilityId = null
+        ?int $availabilityId = null,
+        ?int $limit = null
     ): BlockedPeriodCollection;
 
     /**
@@ -159,7 +165,8 @@ interface SlotServiceInterface
      *
      * @param  SlotVO  $slot  The slot to split
      * @param  int  $chunkDuration  The duration of each chunk in minutes
+     * @param  int|null  $limit  Maximum number of slots to return
      * @return SlotVOCollection Collection of smaller slots
      */
-    public function generateSlotsFromSlot(SlotVO $slot, int $chunkDuration): SlotVOCollection;
+    public function generateSlotsFromSlot(SlotVO $slot, int $chunkDuration, ?int $limit = null): SlotVOCollection;
 }

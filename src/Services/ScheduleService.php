@@ -168,19 +168,23 @@ final class ScheduleService implements ScheduleServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findByAvailability(int $availabilityId): Collection
+    public function findByAvailability(int $availabilityId, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ScheduleService::class,
-            fn (): Collection => $this->repository->findByAvailability($availabilityId),
-            ['operation' => 'findByAvailability', 'availability_id' => $availabilityId]
+            fn (): Collection => $this->repository->findByAvailability($availabilityId, $limit),
+            [
+                'operation' => 'findByAvailability',
+                'availability_id' => $availabilityId,
+                'limit' => $limit,
+            ]
         );
     }
 
     /**
      * {@inheritDoc}
      */
-    public function findBySchedulable(?Model $schedulable = null): Collection
+    public function findBySchedulable(?Model $schedulable = null, ?int $limit = null): Collection
     {
         $schedulable = $schedulable ?? $this->scope->getScopedSchedulable();
 
@@ -194,11 +198,12 @@ final class ScheduleService implements ScheduleServiceInterface
 
         return ServiceContext::within(
             ScheduleService::class,
-            fn (): Collection => $this->repository->findBySchedulable($schedulable),
+            fn (): Collection => $this->repository->findBySchedulable($schedulable, $limit),
             [
                 'operation' => 'findBySchedulable',
                 'schedulable_type' => $schedulable->getMorphClass(),
                 'schedulable_id' => $schedulable->getKey(),
+                'limit' => $limit,
             ]
         );
     }
@@ -206,15 +211,16 @@ final class ScheduleService implements ScheduleServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findByStatus(ScheduleStatus $status, ?int $availabilityId = null): Collection
+    public function findByStatus(ScheduleStatus $status, ?int $availabilityId = null, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ScheduleService::class,
-            fn (): Collection => $this->repository->findByStatus($status, $availabilityId),
+            fn (): Collection => $this->repository->findByStatus($status, $availabilityId, $limit),
             [
                 'operation' => 'findByStatus',
                 'status' => $status->value,
                 'availability_id' => $availabilityId,
+                'limit' => $limit,
             ]
         );
     }
@@ -222,15 +228,16 @@ final class ScheduleService implements ScheduleServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null): Collection
+    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ScheduleService::class,
-            fn (): Collection => $this->repository->findByDate($date, $availabilityId),
+            fn (): Collection => $this->repository->findByDate($date, $availabilityId, $limit),
             [
                 'operation' => 'findByDate',
                 'date' => $date->toDateTimeString(),
                 'availability_id' => $availabilityId,
+                'limit' => $limit,
             ]
         );
     }
@@ -241,16 +248,18 @@ final class ScheduleService implements ScheduleServiceInterface
     public function findInDateRange(
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $availabilityId = null
+        ?int $availabilityId = null,
+        ?int $limit = null
     ): Collection {
         return ServiceContext::within(
             ScheduleService::class,
-            fn (): Collection => $this->repository->findInDateRange($start, $end, $availabilityId),
+            fn (): Collection => $this->repository->findInDateRange($start, $end, $availabilityId, $limit),
             [
                 'operation' => 'findInDateRange',
                 'start' => $start->toDateTimeString(),
                 'end' => $end->toDateTimeString(),
                 'availability_id' => $availabilityId,
+                'limit' => $limit,
             ]
         );
     }
@@ -258,15 +267,16 @@ final class ScheduleService implements ScheduleServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function searchByTitle(string $search, ?int $availabilityId = null): Collection
+    public function searchByTitle(string $search, ?int $availabilityId = null, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ScheduleService::class,
-            fn (): Collection => $this->repository->searchByTitle($search, $availabilityId),
+            fn (): Collection => $this->repository->searchByTitle($search, $availabilityId, $limit),
             [
                 'operation' => 'searchByTitle',
                 'search' => $search,
                 'availability_id' => $availabilityId,
+                'limit' => $limit,
             ]
         );
     }

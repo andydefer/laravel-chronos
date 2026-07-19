@@ -37,7 +37,6 @@ final class SlotServiceTest extends IntegrationTestCase
     {
         parent::setUp();
 
-        // Configuration for testing
         config()->set('chronos.min_durations.slot_search', 5);
 
         $this->testCar = ChronosMutationContext::withAllowed(function () {
@@ -55,20 +54,21 @@ final class SlotServiceTest extends IntegrationTestCase
         $this->impedimentService = $this->app->make(ImpedimentServiceInterface::class);
     }
 
+    // ============================================================
+    // TESTS ORIGINAUX
+    // ============================================================
+
     public function test_find_next_slot_returns_available_slot(): void
     {
-        // Arrange
         $this->createAvailability();
         $after = DateTimeZuluVO::from('2024-01-15T08:00:00Z');
 
-        // Act
         $slot = $this->slotService->findNextSlot(
             $this->testCar,
             $after,
             30
         );
 
-        // Assert
         $this->assertNotNull($slot);
         $this->assertSame('2024-01-15T09:00:00Z', $slot->getStart()->getValue());
         $this->assertSame('2024-01-15T09:30:00Z', $slot->getEnd()->getValue());
@@ -76,45 +76,38 @@ final class SlotServiceTest extends IntegrationTestCase
 
     public function test_find_next_slot_throws_exception_when_duration_too_short(): void
     {
-        // Arrange
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Duration (1 minutes) is too short. Minimum allowed duration for slot search is 5 minutes.');
         $after = DateTimeZuluVO::from('2024-01-15T08:00:00Z');
 
-        // Act
         $this->slotService->findNextSlot(
             $this->testCar,
             $after,
-            1 // Duration too short
+            1
         );
     }
 
     public function test_find_next_slot_returns_null_when_no_availability(): void
     {
-        // Arrange
         $after = DateTimeZuluVO::from('2024-01-15T08:00:00Z');
         $unknownCar = new TestCar;
         $unknownCar->id = 99999;
 
-        // Act
         $slot = $this->slotService->findNextSlot(
             $unknownCar,
             $after,
             30
         );
 
-        // Assert
         $this->assertNull($slot);
     }
 
     public function test_find_slots_in_range_returns_all_available_slots(): void
     {
-        // Arrange
         $this->createAvailability();
         $start = DateTimeZuluVO::from('2024-01-15T08:00:00Z');
         $end = DateTimeZuluVO::from('2024-01-15T12:00:00Z');
 
-        // Act
         $slots = $this->slotService->findSlotsInRange(
             $this->testCar,
             $start,
@@ -122,68 +115,99 @@ final class SlotServiceTest extends IntegrationTestCase
             30
         );
 
-        // Assert
         $this->assertInstanceOf(SlotVOCollection::class, $slots);
         $this->assertCount(4, $slots);
         $this->assertSame('2024-01-15T09:00:00Z', $slots->first()->getStart()->getValue());
         $this->assertSame('2024-01-15T10:30:00Z', $slots->last()->getStart()->getValue());
     }
 
+    public function test_find_slots_in_range_with_limit(): void
+    {
+        $this->createAvailability();
+        $start = DateTimeZuluVO::from('2024-01-15T08:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T12:00:00Z');
+
+        $slots = $this->slotService->findSlotsInRange(
+            $this->testCar,
+            $start,
+            $end,
+            30,
+            null,
+            2
+        );
+
+        $this->assertInstanceOf(SlotVOCollection::class, $slots);
+        $this->assertCount(2, $slots);
+        $this->assertSame('2024-01-15T09:00:00Z', $slots->first()->getStart()->getValue());
+        $this->assertSame('2024-01-15T09:30:00Z', $slots->last()->getStart()->getValue());
+    }
+
     public function test_find_slots_in_range_throws_exception_when_duration_too_short(): void
     {
-        // Arrange
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Duration (1 minutes) is too short. Minimum allowed duration for slot search is 5 minutes.');
         $start = DateTimeZuluVO::from('2024-01-15T08:00:00Z');
         $end = DateTimeZuluVO::from('2024-01-15T12:00:00Z');
 
-        // Act
         $this->slotService->findSlotsInRange(
             $this->testCar,
             $start,
             $end,
-            1 // Duration too short
+            1
         );
     }
 
     public function test_find_slots_for_day_returns_slots_for_specific_day(): void
     {
-        // Arrange
         $this->createAvailability();
         $date = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
 
-        // Act
         $slots = $this->slotService->findSlotsForDay(
             $this->testCar,
             $date,
             30
         );
 
-        // Assert
         $this->assertInstanceOf(SlotVOCollection::class, $slots);
         $this->assertCount(4, $slots);
         $this->assertSame('2024-01-15T09:00:00Z', $slots->first()->getStart()->getValue());
         $this->assertSame('2024-01-15T10:30:00Z', $slots->last()->getStart()->getValue());
     }
 
+    public function test_find_slots_for_day_with_limit(): void
+    {
+        $this->createAvailability();
+        $date = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
+
+        $slots = $this->slotService->findSlotsForDay(
+            $this->testCar,
+            $date,
+            30,
+            null,
+            2
+        );
+
+        $this->assertInstanceOf(SlotVOCollection::class, $slots);
+        $this->assertCount(2, $slots);
+        $this->assertSame('2024-01-15T09:00:00Z', $slots->first()->getStart()->getValue());
+        $this->assertSame('2024-01-15T09:30:00Z', $slots->last()->getStart()->getValue());
+    }
+
     public function test_find_slots_for_day_throws_exception_when_duration_too_short(): void
     {
-        // Arrange
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Duration (1 minutes) is too short. Minimum allowed duration for slot search is 5 minutes.');
         $date = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
 
-        // Act
         $this->slotService->findSlotsForDay(
             $this->testCar,
             $date,
-            1 // Duration too short
+            1
         );
     }
 
     public function test_find_slots_for_day_excludes_blocked_slots(): void
     {
-        // Arrange
         $availability = $this->createAvailability();
 
         ChronosMutationContext::withAllowed(function () use ($availability) {
@@ -199,14 +223,12 @@ final class SlotServiceTest extends IntegrationTestCase
 
         $date = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
 
-        // Act
         $slots = $this->slotService->findSlotsForDay(
             $this->testCar,
             $date,
             30
         );
 
-        // Assert
         $this->assertInstanceOf(SlotVOCollection::class, $slots);
         $this->assertCount(3, $slots);
         $this->assertSame('2024-01-15T09:00:00Z', $slots->first()->getStart()->getValue());
@@ -215,31 +237,26 @@ final class SlotServiceTest extends IntegrationTestCase
 
     public function test_is_slot_available_returns_true_for_available_slot(): void
     {
-        // Arrange
         $this->createAvailability();
         $start = DateTimeZuluVO::from('2024-01-15T09:00:00Z');
         $end = DateTimeZuluVO::from('2024-01-15T09:30:00Z');
 
-        // Act
         $isAvailable = $this->slotService->isSlotAvailable(
             $this->testCar,
             $start,
             $end
         );
 
-        // Assert
         $this->assertTrue($isAvailable);
     }
 
     public function test_is_slot_available_throws_exception_when_duration_too_short(): void
     {
-        // Arrange
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Duration (1 minutes) is too short. Minimum allowed duration for slot search is 5 minutes.');
         $start = DateTimeZuluVO::from('2024-01-15T09:00:00Z');
         $end = DateTimeZuluVO::from('2024-01-15T09:01:00Z');
 
-        // Act
         $this->slotService->isSlotAvailable(
             $this->testCar,
             $start,
@@ -249,91 +266,76 @@ final class SlotServiceTest extends IntegrationTestCase
 
     public function test_is_slot_available_returns_false_for_unavailable_slot(): void
     {
-        // Arrange
         $this->createAvailability();
         $start = DateTimeZuluVO::from('2024-01-15T08:00:00Z');
         $end = DateTimeZuluVO::from('2024-01-15T08:30:00Z');
 
-        // Act
         $isAvailable = $this->slotService->isSlotAvailable(
             $this->testCar,
             $start,
             $end
         );
 
-        // Assert
         $this->assertFalse($isAvailable);
     }
 
     public function test_get_next_available_start_returns_correct_time(): void
     {
-        // Arrange
         $this->createAvailability();
         $after = DateTimeZuluVO::from('2024-01-15T08:00:00Z');
 
-        // Act
         $start = $this->slotService->getNextAvailableStart(
             $this->testCar,
             $after,
             30
         );
 
-        // Assert
         $this->assertNotNull($start);
         $this->assertSame('2024-01-15T09:00:00Z', $start->getValue());
     }
 
     public function test_get_next_available_start_throws_exception_when_duration_too_short(): void
     {
-        // Arrange
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Duration (1 minutes) is too short. Minimum allowed duration for slot search is 5 minutes.');
         $after = DateTimeZuluVO::from('2024-01-15T08:00:00Z');
 
-        // Act
         $this->slotService->getNextAvailableStart(
             $this->testCar,
             $after,
-            1 // Duration too short
+            1
         );
     }
 
     public function test_has_availability_on_date_returns_true_when_available(): void
     {
-        // Arrange
         $this->createAvailability();
         $date = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
 
-        // Act
         $hasAvailability = $this->slotService->hasAvailabilityOnDate(
             $this->testCar,
             $date
         );
 
-        // Assert
         $this->assertTrue($hasAvailability);
     }
 
     public function test_has_availability_on_date_returns_false_when_not_available(): void
     {
-        // Arrange
         $date = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
         $unknownCar = new TestCar;
         $unknownCar->id = 99999;
 
-        // Act
         $hasAvailability = $this->slotService->hasAvailabilityOnDate(
             $unknownCar,
             $date
         );
 
-        // Assert
         $this->assertFalse($hasAvailability);
     }
 
     public function test_get_blocked_periods_returns_blocked_period_collection(): void
     {
-        // Arrange
         $availability = $this->createAvailability();
 
         ChronosMutationContext::withAllowed(function () use ($availability) {
@@ -350,14 +352,12 @@ final class SlotServiceTest extends IntegrationTestCase
         $start = DateTimeZuluVO::from('2024-01-15T09:00:00Z');
         $end = DateTimeZuluVO::from('2024-01-15T11:00:00Z');
 
-        // Act
         $blocked = $this->slotService->getBlockedPeriods(
             $this->testCar,
             $start,
             $end
         );
 
-        // Assert
         $this->assertInstanceOf(BlockedPeriodCollection::class, $blocked);
         $this->assertCount(1, $blocked);
 
@@ -367,16 +367,65 @@ final class SlotServiceTest extends IntegrationTestCase
         $this->assertSame(30, $first->getDurationInMinutes());
     }
 
+    public function test_get_blocked_periods_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $hour = str_pad((string) $i, 2, '0', STR_PAD_LEFT);
+            ChronosMutationContext::withAllowed(function () use ($availability, $i, $hour) {
+                Schedule::create([
+                    'availability_id' => $availability->id,
+                    'schedulable_type' => TestCar::class,
+                    'schedulable_id' => $this->testCar->id,
+                    'title' => "Blocked Period $i",
+                    'start_datetime' => "2024-01-15 $hour:30:00",
+                    'end_datetime' => '2024-01-15 '.str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT).':00:00',
+                ]);
+            });
+        }
+
+        $start = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T12:00:00Z');
+
+        $blocked = $this->slotService->getBlockedPeriods(
+            $this->testCar,
+            $start,
+            $end,
+            null,
+            3
+        );
+
+        $this->assertInstanceOf(BlockedPeriodCollection::class, $blocked);
+        $this->assertCount(3, $blocked);
+
+        // Vérifie que les 3 premiers sont retournés (par start time croissant)
+        $titles = $blocked->map(fn ($p) => $p->getId())->toArray();
+        $this->assertCount(3, $titles);
+    }
+
     public function test_generate_slots_from_slot_splits_correctly(): void
     {
-        // Arrange
         $start = DateTimeZuluVO::from('2024-01-15T09:00:00Z');
         $slot = SlotVO::fromDuration($start, 60);
 
-        // Act
         $slots = $this->slotService->generateSlotsFromSlot($slot, 30);
 
-        // Assert
+        $this->assertInstanceOf(SlotVOCollection::class, $slots);
+        $this->assertCount(2, $slots);
+        $this->assertSame('2024-01-15T09:00:00Z', $slots->first()->getStart()->getValue());
+        $this->assertSame('2024-01-15T09:30:00Z', $slots->first()->getEnd()->getValue());
+        $this->assertSame('2024-01-15T09:30:00Z', $slots->last()->getStart()->getValue());
+        $this->assertSame('2024-01-15T10:00:00Z', $slots->last()->getEnd()->getValue());
+    }
+
+    public function test_generate_slots_from_slot_with_limit(): void
+    {
+        $start = DateTimeZuluVO::from('2024-01-15T09:00:00Z');
+        $slot = SlotVO::fromDuration($start, 120);
+
+        $slots = $this->slotService->generateSlotsFromSlot($slot, 30, 2);
+
         $this->assertInstanceOf(SlotVOCollection::class, $slots);
         $this->assertCount(2, $slots);
         $this->assertSame('2024-01-15T09:00:00Z', $slots->first()->getStart()->getValue());
@@ -387,19 +436,16 @@ final class SlotServiceTest extends IntegrationTestCase
 
     public function test_generate_slots_from_slot_throws_exception_when_duration_too_short(): void
     {
-        // Arrange
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Duration (1 minutes) is too short. Minimum allowed duration for slot search is 5 minutes.');
         $start = DateTimeZuluVO::from('2024-01-15T09:00:00Z');
         $slot = SlotVO::fromDuration($start, 60);
 
-        // Act
         $this->slotService->generateSlotsFromSlot($slot, 1);
     }
 
     public function test_get_blocked_periods_returns_schedule_and_impediment_blockers(): void
     {
-        // Arrange
         $availability = $this->createAvailability();
 
         ChronosMutationContext::withAllowed(function () use ($availability) {
@@ -425,14 +471,12 @@ final class SlotServiceTest extends IntegrationTestCase
         $start = DateTimeZuluVO::from('2024-01-15T09:00:00Z');
         $end = DateTimeZuluVO::from('2024-01-15T12:00:00Z');
 
-        // Act
         $blocked = $this->slotService->getBlockedPeriods(
             $this->testCar,
             $start,
             $end
         );
 
-        // Assert
         $this->assertInstanceOf(BlockedPeriodCollection::class, $blocked);
         $this->assertCount(2, $blocked);
         $this->assertEquals('schedule', $blocked->first()->getType());
@@ -442,7 +486,6 @@ final class SlotServiceTest extends IntegrationTestCase
 
     public function test_blocked_period_collection_helpers(): void
     {
-        // Arrange
         $availability = $this->createAvailability();
 
         ChronosMutationContext::withAllowed(function () use ($availability) {
@@ -468,14 +511,12 @@ final class SlotServiceTest extends IntegrationTestCase
         $start = DateTimeZuluVO::from('2024-01-15T09:00:00Z');
         $end = DateTimeZuluVO::from('2024-01-15T12:00:00Z');
 
-        // Act
         $blocked = $this->slotService->getBlockedPeriods(
             $this->testCar,
             $start,
             $end
         );
 
-        // Assert
         $this->assertInstanceOf(BlockedPeriodCollection::class, $blocked);
         $this->assertCount(2, $blocked);
 

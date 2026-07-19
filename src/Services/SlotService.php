@@ -22,30 +22,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
-/**
- * Service for finding and generating available time slots.
- *
- * This service implements the core scheduling logic, finding available
- * time slots within availability windows while considering schedules
- * and impediments as blockers. It performs complex date calculations
- * and handles time zone conversions.
- *
- * @example
- * $service = new SlotService($availabilityService, $scheduleService, $impedimentService, $config);
- * $slots = $service->findSlotsForDay($user, today(), 30);
- *
- * @see SlotServiceInterface
- */
 final class SlotService implements SlotServiceInterface
 {
     private const DEFAULT_SEARCH_DAYS = 30;
 
-    /**
-     * @param  AvailabilityServiceInterface  $availabilityService  Service for availability data
-     * @param  ScheduleServiceInterface  $scheduleService  Service for schedule data
-     * @param  ImpedimentServiceInterface  $impedimentService  Service for impediment data
-     * @param  ChronosConfigInterface  $config  Configuration for validation
-     */
     public function __construct(
         private readonly AvailabilityServiceInterface $availabilityService,
         private readonly ScheduleServiceInterface $scheduleService,
@@ -74,7 +54,8 @@ final class SlotService implements SlotServiceInterface
                     $after,
                     $searchEnd,
                     $durationInMinutes,
-                    $availabilityId
+                    $availabilityId,
+                    1  // Limit to 1 slot
                 );
 
                 return $slots->firstSlot();
@@ -111,7 +92,8 @@ final class SlotService implements SlotServiceInterface
                     $searchStart,
                     $before,
                     $durationInMinutes,
-                    $availabilityId
+                    $availabilityId,
+                    1  // Limit to 1 slot
                 );
 
                 return $slots->lastSlot();
@@ -135,13 +117,14 @@ final class SlotService implements SlotServiceInterface
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
         int $durationInMinutes,
-        ?int $availabilityId = null
+        ?int $availabilityId = null,
+        ?int $limit = null
     ): SlotVOCollection {
         $this->validateDuration($durationInMinutes);
 
         return ServiceContext::within(
             SlotService::class,
-            function () use ($schedulable, $start, $end, $durationInMinutes, $availabilityId): SlotVOCollection {
+            function () use ($schedulable, $start, $end, $durationInMinutes, $availabilityId, $limit): SlotVOCollection {
                 $availabilities = $this->fetchAvailabilitiesInRange(
                     $schedulable,
                     $start,
@@ -172,7 +155,24 @@ final class SlotService implements SlotServiceInterface
                     }
                 }
 
-                return $slots->sortByStart();
+                $sortedSlots = $slots->sortByStart();
+
+                // Apply limit if specified
+                if ($limit !== null && $limit > 0) {
+                    $limitedSlots = new SlotVOCollection;
+                    $count = 0;
+                    foreach ($sortedSlots as $slot) {
+                        if ($count >= $limit) {
+                            break;
+                        }
+                        $limitedSlots->add($slot);
+                        $count++;
+                    }
+
+                    return $limitedSlots;
+                }
+
+                return $sortedSlots;
             },
             [
                 'operation' => 'findSlotsInRange',
@@ -182,6 +182,7 @@ final class SlotService implements SlotServiceInterface
                 'end' => $end->toDateTimeString(),
                 'duration' => $durationInMinutes,
                 'availability_id' => $availabilityId,
+                'limit' => $limit,
             ]
         );
     }
@@ -193,13 +194,14 @@ final class SlotService implements SlotServiceInterface
         Model $schedulable,
         DateTimeZuluVO $date,
         int $durationInMinutes,
-        ?int $availabilityId = null
+        ?int $availabilityId = null,
+        ?int $limit = null
     ): SlotVOCollection {
         $this->validateDuration($durationInMinutes);
 
         return ServiceContext::within(
             SlotService::class,
-            function () use ($schedulable, $date, $durationInMinutes, $availabilityId): SlotVOCollection {
+            function () use ($schedulable, $date, $durationInMinutes, $availabilityId, $limit): SlotVOCollection {
                 $start = $date->startOfDay();
                 $end = $date->endOfDay();
 
@@ -208,7 +210,8 @@ final class SlotService implements SlotServiceInterface
                     $start,
                     $end,
                     $durationInMinutes,
-                    $availabilityId
+                    $availabilityId,
+                    $limit
                 );
             },
             [
@@ -218,6 +221,7 @@ final class SlotService implements SlotServiceInterface
                 'date' => $date->toDateTimeString(),
                 'duration' => $durationInMinutes,
                 'availability_id' => $availabilityId,
+                'limit' => $limit,
             ]
         );
     }
@@ -330,11 +334,12 @@ final class SlotService implements SlotServiceInterface
         Model $schedulable,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $availabilityId = null
+        ?int $availabilityId = null,
+        ?int $limit = null
     ): BlockedPeriodCollection {
         return ServiceContext::within(
             SlotService::class,
-            function () use ($schedulable, $start, $end, $availabilityId): BlockedPeriodCollection {
+            function () use ($schedulable, $start, $end, $availabilityId, $limit): BlockedPeriodCollection {
                 $collection = new BlockedPeriodCollection;
 
                 $scheduleBlockers = $this->fetchScheduleBlockers(
@@ -359,7 +364,24 @@ final class SlotService implements SlotServiceInterface
                     $collection->add($blocker);
                 }
 
-                return $collection->sortByStart();
+                $sortedCollection = $collection->sortByStart();
+
+                // Apply limit if specified
+                if ($limit !== null && $limit > 0) {
+                    $limitedCollection = new BlockedPeriodCollection;
+                    $count = 0;
+                    foreach ($sortedCollection as $period) {
+                        if ($count >= $limit) {
+                            break;
+                        }
+                        $limitedCollection->add($period);
+                        $count++;
+                    }
+
+                    return $limitedCollection;
+                }
+
+                return $sortedCollection;
             },
             [
                 'operation' => 'getBlockedPeriods',
@@ -368,6 +390,7 @@ final class SlotService implements SlotServiceInterface
                 'start' => $start->toDateTimeString(),
                 'end' => $end->toDateTimeString(),
                 'availability_id' => $availabilityId,
+                'limit' => $limit,
             ]
         );
     }
@@ -375,18 +398,23 @@ final class SlotService implements SlotServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function generateSlotsFromSlot(SlotVO $slot, int $chunkDuration): SlotVOCollection
+    public function generateSlotsFromSlot(SlotVO $slot, int $chunkDuration, ?int $limit = null): SlotVOCollection
     {
         $this->validateDuration($chunkDuration);
 
         return ServiceContext::within(
             SlotService::class,
-            function () use ($slot, $chunkDuration): SlotVOCollection {
+            function () use ($slot, $chunkDuration, $limit): SlotVOCollection {
                 $chunks = $slot->split($chunkDuration);
 
                 $collection = new SlotVOCollection;
+                $count = 0;
                 foreach ($chunks as $chunk) {
+                    if ($limit !== null && $count >= $limit) {
+                        break;
+                    }
                     $collection->add($chunk);
+                    $count++;
                 }
 
                 return $collection;
@@ -396,6 +424,7 @@ final class SlotService implements SlotServiceInterface
                 'slot_start' => $slot->getStart()->toDateTimeString(),
                 'slot_end' => $slot->getEnd()->toDateTimeString(),
                 'chunk_duration' => $chunkDuration,
+                'limit' => $limit,
             ]
         );
     }
@@ -424,12 +453,6 @@ final class SlotService implements SlotServiceInterface
 
     /**
      * Fetches availabilities within the specified range.
-     *
-     * @param  Model  $schedulable  The schedulable entity
-     * @param  DateTimeZuluVO  $start  The start of the range
-     * @param  DateTimeZuluVO  $end  The end of the range
-     * @param  int|null  $availabilityId  Optional specific availability
-     * @return Collection<int, Availability> Collection of availabilities
      */
     private function fetchAvailabilitiesInRange(
         Model $schedulable,
@@ -454,12 +477,6 @@ final class SlotService implements SlotServiceInterface
 
     /**
      * Fetches schedule blockers within the range.
-     *
-     * @param  Model  $schedulable  The schedulable entity
-     * @param  int|null  $availabilityId  Optional availability filter
-     * @param  DateTimeZuluVO  $rangeStart  The start of the range
-     * @param  DateTimeZuluVO  $rangeEnd  The end of the range
-     * @return BlockedPeriodCollection Collection of schedule blockers
      */
     private function fetchScheduleBlockers(
         Model $schedulable,
@@ -494,12 +511,6 @@ final class SlotService implements SlotServiceInterface
 
     /**
      * Fetches impediment blockers within the range.
-     *
-     * @param  Model  $schedulable  The schedulable entity
-     * @param  int|null  $availabilityId  Optional availability filter
-     * @param  DateTimeZuluVO  $rangeStart  The start of the range
-     * @param  DateTimeZuluVO  $rangeEnd  The end of the range
-     * @return BlockedPeriodCollection Collection of impediment blockers
      */
     private function fetchImpedimentBlockers(
         Model $schedulable,
@@ -533,24 +544,7 @@ final class SlotService implements SlotServiceInterface
     }
 
     /**
-     * Sorts blocked periods by start time.
-     *
-     * @param  BlockedPeriodCollection  $blockedPeriods  The blocked periods to sort
-     * @return BlockedPeriodCollection Sorted collection
-     */
-    private function sortBlockedPeriods(BlockedPeriodCollection $blockedPeriods): BlockedPeriodCollection
-    {
-        return $blockedPeriods->sortByStart();
-    }
-
-    /**
      * Checks if two time ranges overlap.
-     *
-     * @param  DateTimeZuluVO  $start1  Start of first range
-     * @param  DateTimeZuluVO  $end1  End of first range
-     * @param  DateTimeZuluVO  $start2  Start of second range
-     * @param  DateTimeZuluVO  $end2  End of second range
-     * @return bool True if the ranges overlap
      */
     private function doTimeRangesOverlap(
         DateTimeZuluVO $start1,
@@ -563,13 +557,6 @@ final class SlotService implements SlotServiceInterface
 
     /**
      * Generates all slots for a single availability within the range.
-     *
-     * @param  Availability  $availability  The availability to process
-     * @param  DateTimeZuluVO  $rangeStart  The start of the search range
-     * @param  DateTimeZuluVO  $rangeEnd  The end of the search range
-     * @param  int  $durationInMinutes  The required duration in minutes
-     * @param  BlockedPeriodCollection  $blockedPeriods  All blocked periods in the range
-     * @return SlotVOCollection Collection of generated slots
      */
     private function generateSlotsForAvailability(
         Availability $availability,
@@ -621,10 +608,6 @@ final class SlotService implements SlotServiceInterface
 
     /**
      * Checks if a day is allowed by the availability configuration.
-     *
-     * @param  string  $dayName  The day name (e.g., 'monday')
-     * @param  WeekDayCollection  $days  The allowed days collection
-     * @return bool True if the day is allowed
      */
     private function isDayAllowed(string $dayName, WeekDayCollection $days): bool
     {
@@ -639,11 +622,6 @@ final class SlotService implements SlotServiceInterface
 
     /**
      * Checks if a date is within the validity period.
-     *
-     * @param  DateTimeZuluVO  $date  The date to check
-     * @param  DateTimeZuluVO|null  $validityStart  The start of the validity period
-     * @param  DateTimeZuluVO|null  $validityEnd  The end of the validity period
-     * @return bool True if the date is within the validity period
      */
     private function isWithinValidityPeriod(
         DateTimeZuluVO $date,
@@ -663,15 +641,6 @@ final class SlotService implements SlotServiceInterface
 
     /**
      * Generates slots for a single day within the search range.
-     *
-     * @param  DateTimeZuluVO  $date  The day to process
-     * @param  TimeZuluVO  $dailyStart  The daily start time
-     * @param  TimeZuluVO  $dailyEnd  The daily end time
-     * @param  int  $durationInMinutes  The required duration in minutes
-     * @param  BlockedPeriodCollection  $blockedPeriods  All blocked periods in the range
-     * @param  DateTimeZuluVO  $rangeStart  The start of the search range
-     * @param  DateTimeZuluVO  $rangeEnd  The end of the search range
-     * @return SlotVOCollection Collection of generated slots
      */
     private function generateSlotsForDay(
         DateTimeZuluVO $date,
@@ -694,7 +663,6 @@ final class SlotService implements SlotServiceInterface
             $dayEnd = $dayEnd->addDays(1);
         }
 
-        // Clip to search range
         $dayStart = $dayStart->isBefore($rangeStart) ? $rangeStart : $dayStart;
         $dayEnd = $dayEnd->isAfter($rangeEnd) ? $rangeEnd : $dayEnd;
 
@@ -714,12 +682,6 @@ final class SlotService implements SlotServiceInterface
 
     /**
      * Generates slots in the gaps between blocked periods.
-     *
-     * @param  DateTimeZuluVO  $dayStart  The start of the day
-     * @param  DateTimeZuluVO  $dayEnd  The end of the day
-     * @param  BlockedPeriodCollection  $blockedPeriods  Blocked periods sorted by start time
-     * @param  int  $durationInMinutes  The required duration in minutes
-     * @return SlotVOCollection Collection of generated slots
      */
     private function generateSlotsAroundBlockedPeriods(
         DateTimeZuluVO $dayStart,
@@ -739,7 +701,6 @@ final class SlotService implements SlotServiceInterface
                 ? $dayEnd
                 : $blocked->getEnd();
 
-            // Generate slots before this blocked period
             if ($currentStart->isBefore($blockStart)) {
                 $intervalSlots = $this->generateSlotsInInterval(
                     $currentStart,
@@ -752,13 +713,11 @@ final class SlotService implements SlotServiceInterface
                 }
             }
 
-            // Move past the blocked period
             if ($blockEnd->isAfter($currentStart)) {
                 $currentStart = $blockEnd;
             }
         }
 
-        // Generate slots after the last blocked period
         if ($currentStart->isBefore($dayEnd)) {
             $intervalSlots = $this->generateSlotsInInterval(
                 $currentStart,
@@ -776,11 +735,6 @@ final class SlotService implements SlotServiceInterface
 
     /**
      * Generates slots of fixed duration within an interval.
-     *
-     * @param  DateTimeZuluVO  $start  The start of the interval
-     * @param  DateTimeZuluVO  $end  The end of the interval
-     * @param  int  $durationInMinutes  The duration of each slot in minutes
-     * @return SlotVOCollection Collection of generated slots
      */
     private function generateSlotsInInterval(
         DateTimeZuluVO $start,

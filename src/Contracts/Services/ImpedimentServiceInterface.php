@@ -132,9 +132,10 @@ interface ImpedimentServiceInterface
      * Finds all impediments associated with a specific availability.
      *
      * @param  int  $availabilityId  The availability ID to filter by
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Impediment> Collection of impediment models
      */
-    public function findByAvailability(int $availabilityId): Collection;
+    public function findByAvailability(int $availabilityId, ?int $limit = null): Collection;
 
     /**
      * Finds all impediments for a given schedulable entity.
@@ -142,6 +143,7 @@ interface ImpedimentServiceInterface
      * If the service is scoped via for(), you can omit the parameter.
      *
      * @param  Model|null  $schedulable  The schedulable entity, or null to use the scoped entity
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Impediment> Collection of impediment models
      *
      * @throws \RuntimeException When no schedulable entity is provided and none is scoped
@@ -153,16 +155,17 @@ interface ImpedimentServiceInterface
      * // Using explicit entity
      * $impediments = $service->findBySchedulable($doctor);
      */
-    public function findBySchedulable(?Model $schedulable = null): Collection;
+    public function findBySchedulable(?Model $schedulable = null, ?int $limit = null): Collection;
 
     /**
      * Finds impediments that occur on a specific date.
      *
      * @param  DateTimeZuluVO  $date  The date to search for impediments
      * @param  int|null  $availabilityId  Optional availability filter
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Impediment> Collection of impediment models
      */
-    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null): Collection;
+    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Finds impediments that fall within a date range.
@@ -170,12 +173,14 @@ interface ImpedimentServiceInterface
      * @param  DateTimeZuluVO  $start  The start of the date range
      * @param  DateTimeZuluVO  $end  The end of the date range
      * @param  int|null  $availabilityId  Optional availability filter
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Impediment> Collection of impediment models
      */
     public function findInDateRange(
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $availabilityId = null
+        ?int $availabilityId = null,
+        ?int $limit = null
     ): Collection;
 
     /**
@@ -185,9 +190,10 @@ interface ImpedimentServiceInterface
      * the current system time.
      *
      * @param  int|null  $availabilityId  Optional availability filter
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Impediment> Collection of active impediment models
      */
-    public function findActive(?int $availabilityId = null): Collection;
+    public function findActive(?int $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Searches for impediments by reason text.
@@ -196,9 +202,10 @@ interface ImpedimentServiceInterface
      *
      * @param  string  $search  The search term to look for in the reason
      * @param  int|null  $availabilityId  Optional availability filter
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Impediment> Collection of matching impediment models
      */
-    public function searchByReason(string $search, ?int $availabilityId = null): Collection;
+    public function searchByReason(string $search, ?int $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Checks if an impediment is currently active.
@@ -234,9 +241,10 @@ interface ImpedimentServiceInterface
      * in any way (fully or partially).
      *
      * @param  Impediment  $impediment  The impediment to analyze
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Schedule> Collection of blocked schedule models
      */
-    public function getBlockedSchedules(Impediment $impediment): Collection;
+    public function getBlockedSchedules(Impediment $impediment, ?int $limit = null): Collection;
 
     /**
      * Retrieves schedules fully blocked by an impediment.
@@ -245,9 +253,10 @@ interface ImpedimentServiceInterface
      * time range, meaning they are completely unavailable.
      *
      * @param  Impediment  $impediment  The impediment to analyze
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Schedule> Collection of fully blocked schedule models
      */
-    public function getFullyBlockedSchedules(Impediment $impediment): Collection;
+    public function getFullyBlockedSchedules(Impediment $impediment, ?int $limit = null): Collection;
 
     /**
      * Retrieves schedules partially blocked by an impediment.
@@ -256,7 +265,8 @@ interface ImpedimentServiceInterface
      * only a portion of their time range is blocked.
      *
      * @param  Impediment  $impediment  The impediment to analyze
+     * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Schedule> Collection of partially blocked schedule models
      */
-    public function getPartiallyBlockedSchedules(Impediment $impediment): Collection;
+    public function getPartiallyBlockedSchedules(Impediment $impediment, ?int $limit = null): Collection;
 }

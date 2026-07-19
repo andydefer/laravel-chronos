@@ -322,6 +322,230 @@ final class ImpedimentServiceTest extends IntegrationTestCase
         $this->assertEquals($impediment2->id, $results[1]->id);
     }
 
+    public function test_find_by_availability_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Impediment::create([
+                    'availability_id' => $availability->id,
+                    'reason' => "Impediment $i",
+                    'start_datetime' => '2024-01-15 10:00:00',
+                    'end_datetime' => '2024-01-15 11:00:00',
+                ]);
+            });
+        }
+
+        $results = $this->impedimentService->findByAvailability($availability->id, 3);
+
+        $this->assertCount(3, $results);
+        $this->assertEquals('Impediment 1', $results->first()->reason);
+        $this->assertEquals('Impediment 3', $results->last()->reason);
+    }
+
+    public function test_find_by_schedulable_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Impediment::create([
+                    'availability_id' => $availability->id,
+                    'reason' => "Impediment $i",
+                    'start_datetime' => '2024-01-15 10:00:00',
+                    'end_datetime' => '2024-01-15 11:00:00',
+                ]);
+            });
+        }
+
+        $results = $this->impedimentService->findBySchedulable($this->testCar, 3);
+
+        $this->assertCount(3, $results);
+    }
+
+    public function test_find_by_date_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+        $date = DateTimeZuluVO::from('2024-01-15T12:00:00Z');
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Impediment::create([
+                    'availability_id' => $availability->id,
+                    'reason' => "Impediment $i",
+                    'start_datetime' => '2024-01-15 10:00:00',
+                    'end_datetime' => '2024-01-15 11:00:00',
+                ]);
+            });
+        }
+
+        $results = $this->impedimentService->findByDate($date, null, 3);
+
+        $this->assertCount(3, $results);
+    }
+
+    public function test_find_in_date_range_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+        $start = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T23:59:59Z');
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Impediment::create([
+                    'availability_id' => $availability->id,
+                    'reason' => "Impediment $i",
+                    'start_datetime' => '2024-01-15 10:00:00',
+                    'end_datetime' => '2024-01-15 11:00:00',
+                ]);
+            });
+        }
+
+        $results = $this->impedimentService->findInDateRange($start, $end, null, 3);
+
+        $this->assertCount(3, $results);
+    }
+
+    public function test_find_active_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Impediment::create([
+                    'availability_id' => $availability->id,
+                    'reason' => "Active Impediment $i",
+                    'start_datetime' => now()->subHour(),
+                    'end_datetime' => now()->addHour(),
+                ]);
+            });
+        }
+
+        $results = $this->impedimentService->findActive(null, 3);
+
+        $this->assertCount(3, $results);
+        $this->assertEquals('Active Impediment 1', $results->first()->reason);
+        $this->assertEquals('Active Impediment 3', $results->last()->reason);
+    }
+
+    public function test_search_by_reason_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Impediment::create([
+                    'availability_id' => $availability->id,
+                    'reason' => "Test Impediment $i",
+                    'start_datetime' => '2024-01-15 10:00:00',
+                    'end_datetime' => '2024-01-15 11:00:00',
+                ]);
+            });
+        }
+
+        $results = $this->impedimentService->searchByReason('Test', null, 3);
+
+        $this->assertCount(3, $results);
+    }
+
+    public function test_get_blocked_schedules_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        $impediment = ChronosMutationContext::withAllowed(function () use ($availability) {
+            return Impediment::create([
+                'availability_id' => $availability->id,
+                'reason' => 'Test Impediment',
+                'start_datetime' => '2024-01-15 10:00:00',
+                'end_datetime' => '2024-01-15 12:00:00',
+            ]);
+        });
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Schedule::create([
+                    'availability_id' => $availability->id,
+                    'schedulable_type' => TestCar::class,
+                    'schedulable_id' => $this->testCar->id,
+                    'title' => "Blocked Schedule $i",
+                    'start_datetime' => '2024-01-15 10:30:00',
+                    'end_datetime' => '2024-01-15 11:00:00',
+                ]);
+            });
+        }
+
+        $blocked = $this->impedimentService->getBlockedSchedules($impediment, 3);
+
+        $this->assertCount(3, $blocked);
+        $this->assertEquals('Blocked Schedule 1', $blocked->first()->title);
+        $this->assertEquals('Blocked Schedule 3', $blocked->last()->title);
+    }
+
+    public function test_get_fully_blocked_schedules_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        $impediment = ChronosMutationContext::withAllowed(function () use ($availability) {
+            return Impediment::create([
+                'availability_id' => $availability->id,
+                'reason' => 'Test Impediment',
+                'start_datetime' => '2024-01-15 10:00:00',
+                'end_datetime' => '2024-01-15 12:00:00',
+            ]);
+        });
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Schedule::create([
+                    'availability_id' => $availability->id,
+                    'schedulable_type' => TestCar::class,
+                    'schedulable_id' => $this->testCar->id,
+                    'title' => "Fully Blocked $i",
+                    'start_datetime' => '2024-01-15 10:30:00',
+                    'end_datetime' => '2024-01-15 11:00:00',
+                ]);
+            });
+        }
+
+        $fullyBlocked = $this->impedimentService->getFullyBlockedSchedules($impediment, 3);
+
+        $this->assertCount(3, $fullyBlocked);
+        $this->assertEquals('Fully Blocked 1', $fullyBlocked->first()->title);
+        $this->assertEquals('Fully Blocked 3', $fullyBlocked->last()->title);
+    }
+
+    public function test_get_partially_blocked_schedules_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        $impediment = ChronosMutationContext::withAllowed(function () use ($availability) {
+            return Impediment::create([
+                'availability_id' => $availability->id,
+                'reason' => 'Test Impediment',
+                'start_datetime' => '2024-01-15 10:00:00',
+                'end_datetime' => '2024-01-15 12:00:00',
+            ]);
+        });
+
+        for ($i = 1; $i <= 3; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Schedule::create([
+                    'availability_id' => $availability->id,
+                    'schedulable_type' => TestCar::class,
+                    'schedulable_id' => $this->testCar->id,
+                    'title' => "Partially Blocked $i",
+                    'start_datetime' => '2024-01-15 09:30:00',
+                    'end_datetime' => '2024-01-15 10:30:00',
+                ]);
+            });
+        }
+
+        $partiallyBlocked = $this->impedimentService->getPartiallyBlockedSchedules($impediment, 2);
+
+        $this->assertCount(2, $partiallyBlocked);
+    }
+
     public function test_find_by_schedulable_returns_impediments(): void
     {
         $availability = $this->createAvailability();

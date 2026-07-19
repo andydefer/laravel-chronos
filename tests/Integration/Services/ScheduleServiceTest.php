@@ -397,6 +397,144 @@ final class ScheduleServiceTest extends IntegrationTestCase
         $this->assertEquals($schedule2->id, $results[1]->id);
     }
 
+    public function test_find_by_availability_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Schedule::create([
+                    'availability_id' => $availability->id,
+                    'schedulable_type' => TestCar::class,
+                    'schedulable_id' => $this->testCar->id,
+                    'title' => "Schedule $i",
+                    'start_datetime' => '2024-01-15 10:00:00',
+                    'end_datetime' => '2024-01-15 11:00:00',
+                ]);
+            });
+        }
+
+        $results = $this->scheduleService->findByAvailability($availability->id, 3);
+
+        $this->assertCount(3, $results);
+        $this->assertEquals('Schedule 1', $results->first()->title);
+        $this->assertEquals('Schedule 3', $results->last()->title);
+    }
+
+    public function test_find_by_schedulable_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Schedule::create([
+                    'availability_id' => $availability->id,
+                    'schedulable_type' => TestCar::class,
+                    'schedulable_id' => $this->testCar->id,
+                    'title' => "Schedule $i",
+                    'start_datetime' => '2024-01-15 10:00:00',
+                    'end_datetime' => '2024-01-15 11:00:00',
+                ]);
+            });
+        }
+
+        $results = $this->scheduleService->findBySchedulable($this->testCar, 3);
+
+        $this->assertCount(3, $results);
+    }
+
+    public function test_find_by_status_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Schedule::create([
+                    'availability_id' => $availability->id,
+                    'schedulable_type' => TestCar::class,
+                    'schedulable_id' => $this->testCar->id,
+                    'title' => "Schedule $i",
+                    'status' => ScheduleStatus::AVAILABLE,
+                    'start_datetime' => '2024-01-15 10:00:00',
+                    'end_datetime' => '2024-01-15 11:00:00',
+                ]);
+            });
+        }
+
+        $results = $this->scheduleService->findByStatus(ScheduleStatus::AVAILABLE, null, 3);
+
+        $this->assertCount(3, $results);
+    }
+
+    public function test_find_by_date_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+        $date = DateTimeZuluVO::from('2024-01-15T12:00:00Z');
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Schedule::create([
+                    'availability_id' => $availability->id,
+                    'schedulable_type' => TestCar::class,
+                    'schedulable_id' => $this->testCar->id,
+                    'title' => "Schedule $i",
+                    'start_datetime' => '2024-01-15 10:00:00',
+                    'end_datetime' => '2024-01-15 11:00:00',
+                ]);
+            });
+        }
+
+        $results = $this->scheduleService->findByDate($date, null, 3);
+
+        $this->assertCount(3, $results);
+    }
+
+    public function test_find_in_date_range_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+        $start = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T23:59:59Z');
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Schedule::create([
+                    'availability_id' => $availability->id,
+                    'schedulable_type' => TestCar::class,
+                    'schedulable_id' => $this->testCar->id,
+                    'title' => "Schedule $i",
+                    'start_datetime' => '2024-01-15 10:00:00',
+                    'end_datetime' => '2024-01-15 11:00:00',
+                ]);
+            });
+        }
+
+        $results = $this->scheduleService->findInDateRange($start, $end, null, 3);
+
+        $this->assertCount(3, $results);
+    }
+
+    public function test_search_by_title_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Schedule::create([
+                    'availability_id' => $availability->id,
+                    'schedulable_type' => TestCar::class,
+                    'schedulable_id' => $this->testCar->id,
+                    'title' => "Test Schedule $i",
+                    'start_datetime' => '2024-01-15 10:00:00',
+                    'end_datetime' => '2024-01-15 11:00:00',
+                ]);
+            });
+        }
+
+        $results = $this->scheduleService->searchByTitle('Test', null, 3);
+
+        $this->assertCount(3, $results);
+    }
+
     public function test_find_by_status_returns_schedules(): void
     {
         $availability = $this->createAvailability();
