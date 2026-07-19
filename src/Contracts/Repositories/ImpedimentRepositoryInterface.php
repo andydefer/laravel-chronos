@@ -21,13 +21,18 @@ interface ImpedimentRepositoryInterface extends AbstractRepositoryInterface
     /**
      * Find impediments for a specific availability.
      */
-    public function findByAvailability(int $availabilityId): Collection;
+    public function findByAvailability(int $availabilityId, ?int $limit = null): Collection;
 
     /**
      * Find impediments in a date range.
      * Utilisé par: TimeSlotWithinAvailabilityRule
      */
-    public function findInDateRange(DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $availabilityId = null): Collection;
+    public function findInDateRange(
+        DateTimeZuluVO $start,
+        DateTimeZuluVO $end,
+        ?int $availabilityId = null,
+        ?int $limit = null
+    ): Collection;
 
     /**
      * Find impediments that overlap with a given time slot.
@@ -38,6 +43,7 @@ interface ImpedimentRepositoryInterface extends AbstractRepositoryInterface
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
         ?int $excludeId = null,
+        ?int $limit = null,
     ): Collection;
 
     /**
@@ -47,18 +53,18 @@ interface ImpedimentRepositoryInterface extends AbstractRepositoryInterface
      * @param  Model  $schedulable  The schedulable entity
      * @return Collection<int, Impediment> Collection of impediments
      */
-    public function findBySchedulable(Model $schedulable): Collection;
+    public function findBySchedulable(Model $schedulable, ?int $limit = null): Collection;
 
     /**
      * Find impediments by reason.
      */
-    public function searchByReason(string $search, ?int $availabilityId = null): Collection;
+    public function searchByReason(string $search, ?int $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Find impediments by date.
      * Utilisé par: TimeSlotWithinAvailabilityRule
      */
-    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null): Collection;
+    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Find impediments for a specific availability in a date range.
@@ -67,12 +73,13 @@ interface ImpedimentRepositoryInterface extends AbstractRepositoryInterface
         int $availabilityId,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
+        ?int $limit = null,
     ): Collection;
 
     /**
      * Find active impediments.
      */
-    public function findActive(?int $availabilityId = null): Collection;
+    public function findActive(?int $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Find impediments that conflict with a time slot.
@@ -83,25 +90,26 @@ interface ImpedimentRepositoryInterface extends AbstractRepositoryInterface
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
         ?int $excludeId = null,
+        ?int $limit = null,
     ): Collection;
 
     /**
      * Find impediments with invalid chronology.
      * Utilisé par: TimeSlotChronologyRule
      */
-    public function findWithInvalidChronology(): Collection;
+    public function findWithInvalidChronology(?int $limit = null): Collection;
 
     /**
      * Find impediments with duration exceeding max.
      * Utilisé par: MaxDurationRule
      */
-    public function findWithExceedingDuration(int $availabilityId, int $maxDurationMinutes): Collection;
+    public function findWithExceedingDuration(int $availabilityId, int $maxDurationMinutes, ?int $limit = null): Collection;
 
     /**
      * Find impediments violating buffer time.
      * Utilisé par: BufferTimeRule
      */
-    public function findViolatingBufferTime(int $availabilityId, int $bufferMinutes): Collection;
+    public function findViolatingBufferTime(int $availabilityId, int $bufferMinutes, ?int $limit = null): Collection;
 
     /**
      * Get schedules that are blocked by this impediment.
@@ -109,7 +117,7 @@ interface ImpedimentRepositoryInterface extends AbstractRepositoryInterface
      * @param  Impediment  $impediment  The impediment
      * @return Collection<int, Schedule> Collection of blocked schedules
      */
-    public function getBlockedSchedules(Impediment $impediment): Collection;
+    public function getBlockedSchedules(Impediment $impediment, ?int $limit = null): Collection;
 
     /**
      * Get schedules that are completely within this impediment.
@@ -117,7 +125,7 @@ interface ImpedimentRepositoryInterface extends AbstractRepositoryInterface
      * @param  Impediment  $impediment  The impediment
      * @return Collection<int, Schedule> Collection of fully blocked schedules
      */
-    public function getFullyBlockedSchedules(Impediment $impediment): Collection;
+    public function getFullyBlockedSchedules(Impediment $impediment, ?int $limit = null): Collection;
 
     /**
      * Get schedules that partially overlap with this impediment.
@@ -125,5 +133,5 @@ interface ImpedimentRepositoryInterface extends AbstractRepositoryInterface
      * @param  Impediment  $impediment  The impediment
      * @return Collection<int, Schedule> Collection of partially blocked schedules
      */
-    public function getPartiallyBlockedSchedules(Impediment $impediment): Collection;
+    public function getPartiallyBlockedSchedules(Impediment $impediment, ?int $limit = null): Collection;
 }

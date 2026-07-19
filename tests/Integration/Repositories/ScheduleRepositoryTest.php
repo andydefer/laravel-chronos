@@ -143,6 +143,29 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $this->assertEquals($schedule1->id, $results[0]->id);
     }
 
+    public function test_can_find_by_availability_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ScheduleRecord::from([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+                'title' => "Schedule $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T11:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $results = $this->repository->findByAvailability($availability->id, 3);
+
+        $this->assertCount(3, $results);
+        $this->assertEquals('Schedule 1', $results->first()->title);
+        $this->assertEquals('Schedule 3', $results->last()->title);
+    }
+
     public function test_can_find_by_schedulable(): void
     {
         $schedule1 = $this->createSchedule();
@@ -154,6 +177,26 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $this->assertEquals($schedule1->id, $results[0]->id);
     }
 
+    public function test_can_find_by_schedulable_with_limit(): void
+    {
+        for ($i = 1; $i <= 5; $i++) {
+            $availability = $this->createAvailability();
+            $record = ScheduleRecord::from([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+                'title' => "Schedule $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T11:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $results = $this->repository->findBySchedulable($this->testCar, 3);
+
+        $this->assertCount(3, $results);
+    }
+
     public function test_can_find_by_status(): void
     {
         $schedule = $this->createSchedule();
@@ -162,6 +205,27 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
 
         $this->assertCount(1, $results);
         $this->assertEquals($schedule->id, $results[0]->id);
+    }
+
+    public function test_can_find_by_status_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ScheduleRecord::from([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+                'title' => "Schedule $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T11:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $results = $this->repository->findByStatus(ScheduleStatus::AVAILABLE, null, 3);
+
+        $this->assertCount(3, $results);
     }
 
     public function test_can_find_by_status_with_availability_filter(): void
@@ -186,6 +250,27 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
 
         $this->assertCount(1, $results);
         $this->assertEquals($schedule->id, $results[0]->id);
+    }
+
+    public function test_can_search_by_title_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ScheduleRecord::from([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+                'title' => "Test Schedule $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T11:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $results = $this->repository->searchByTitle('Test', null, 3);
+
+        $this->assertCount(3, $results);
     }
 
     public function test_can_search_by_title_with_availability_filter(): void
@@ -213,6 +298,28 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $this->assertEquals($schedule->id, $results[0]->id);
     }
 
+    public function test_can_find_by_date_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ScheduleRecord::from([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+                'title' => "Schedule $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T11:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $date = DateTimeZuluVO::from('2024-01-15T12:00:00Z');
+        $results = $this->repository->findByDate($date, null, 3);
+
+        $this->assertCount(3, $results);
+    }
+
     public function test_can_find_in_date_range(): void
     {
         $schedule = $this->createSchedule();
@@ -223,6 +330,29 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
 
         $this->assertCount(1, $results);
         $this->assertEquals($schedule->id, $results[0]->id);
+    }
+
+    public function test_can_find_in_date_range_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ScheduleRecord::from([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+                'title' => "Schedule $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T11:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $start = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T23:59:59Z');
+        $results = $this->repository->findInDateRange($start, $end, null, 3);
+
+        $this->assertCount(3, $results);
     }
 
     public function test_can_find_by_availability_in_date_range(): void
@@ -238,6 +368,29 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $this->assertEquals($schedule->id, $results[0]->id);
     }
 
+    public function test_can_find_by_availability_in_date_range_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ScheduleRecord::from([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+                'title' => "Schedule $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T11:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $start = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T23:59:59Z');
+        $results = $this->repository->findByAvailabilityInDateRange($availability->id, $start, $end, 3);
+
+        $this->assertCount(3, $results);
+    }
+
     public function test_can_find_by_day_of_week(): void
     {
         $schedule = $this->createSchedule();
@@ -246,6 +399,27 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
 
         $this->assertCount(1, $results);
         $this->assertEquals($schedule->id, $results[0]->id);
+    }
+
+    public function test_can_find_by_day_of_week_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ScheduleRecord::from([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+                'title' => "Schedule $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T11:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $results = $this->repository->findByDayOfWeek(1, null, 3);
+
+        $this->assertCount(3, $results);
     }
 
     public function test_can_find_overlapping(): void
@@ -260,6 +434,29 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
 
         $this->assertCount(1, $results);
         $this->assertEquals($schedule->id, $results[0]->id);
+    }
+
+    public function test_can_find_overlapping_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ScheduleRecord::from([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+                'title' => "Schedule $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T11:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $start = DateTimeZuluVO::from('2024-01-15T09:30:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T11:30:00Z');
+        $results = $this->repository->findOverlapping($availability->id, $start, $end, null, 3);
+
+        $this->assertCount(3, $results);
     }
 
     public function test_find_overlapping_excludes_given_id(): void
@@ -289,6 +486,29 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $this->assertEquals($schedule->id, $results[0]->id);
     }
 
+    public function test_can_find_conflicting_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ScheduleRecord::from([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+                'title' => "Schedule $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T11:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $start = DateTimeZuluVO::from('2024-01-15T09:30:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T11:30:00Z');
+        $results = $this->repository->findConflicting($availability->id, $start, $end, null, 3);
+
+        $this->assertCount(3, $results);
+    }
+
     public function test_can_find_with_invalid_chronology(): void
     {
         $availability = $this->createAvailability();
@@ -308,6 +528,28 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
 
         $this->assertCount(1, $results);
         $this->assertEquals('Invalid Chronology', $results[0]->title);
+    }
+
+    public function test_can_find_with_invalid_chronology_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            DB::table('schedules')->insert([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+                'title' => "Invalid Chronology $i",
+                'start_datetime' => '2024-01-15 11:00:00',
+                'end_datetime' => '2024-01-15 10:00:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $results = $this->repository->findWithInvalidChronology(3);
+
+        $this->assertCount(3, $results);
     }
 
     public function test_can_find_with_exceeding_duration(): void
@@ -342,6 +584,28 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $this->assertEquals('Long Schedule', $results[0]->title);
     }
 
+    public function test_can_find_with_exceeding_duration_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            DB::table('schedules')->insert([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+                'title' => "Long Schedule $i",
+                'start_datetime' => '2024-01-15 10:00:00',
+                'end_datetime' => '2024-01-15 12:30:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $results = $this->repository->findWithExceedingDuration($availability->id, 60, 3);
+
+        $this->assertCount(3, $results);
+    }
+
     public function test_can_find_violating_buffer_time(): void
     {
         $availability = $this->createAvailability();
@@ -372,6 +636,39 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
 
         $this->assertCount(1, $results);
         $this->assertEquals('Schedule 1', $results[0]->title);
+    }
+
+    public function test_can_find_violating_buffer_time_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 3; $i++) {
+            DB::table('schedules')->insert([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+                'title' => "Schedule A$i",
+                'start_datetime' => '2024-01-15 10:00:00',
+                'end_datetime' => '2024-01-15 10:30:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::table('schedules')->insert([
+                'availability_id' => $availability->id,
+                'schedulable_type' => TestCar::class,
+                'schedulable_id' => $this->testCar->id,
+                'title' => "Schedule B$i",
+                'start_datetime' => '2024-01-15 10:35:00',
+                'end_datetime' => '2024-01-15 11:00:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $results = $this->repository->findViolatingBufferTime($availability->id, 30, 2);
+
+        $this->assertCount(2, $results);
     }
 
     public function test_has_cross_day_schedule_returns_true(): void

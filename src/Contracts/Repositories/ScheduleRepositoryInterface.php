@@ -21,7 +21,7 @@ interface ScheduleRepositoryInterface extends AbstractRepositoryInterface
     /**
      * Find schedules for a specific availability.
      */
-    public function findByAvailability(int $availabilityId): Collection;
+    public function findByAvailability(int $availabilityId, ?int $limit = null): Collection;
 
     /**
      * Find schedules that overlap with a given time slot.
@@ -32,35 +32,41 @@ interface ScheduleRepositoryInterface extends AbstractRepositoryInterface
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
         ?int $excludeId = null,
+        ?int $limit = null,
     ): Collection;
 
     /**
      * Find schedules with a specific status.
      */
-    public function findByStatus(ScheduleStatus $status, ?int $availabilityId = null): Collection;
+    public function findByStatus(ScheduleStatus $status, ?int $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Find schedules by title.
      */
-    public function searchByTitle(string $search, ?int $availabilityId = null): Collection;
+    public function searchByTitle(string $search, ?int $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Find schedules for a specific date.
      * Utilisé par: TimeSlotWithinAvailabilityRule
      */
-    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null): Collection;
+    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Find schedules in a date range.
      * Utilisé par: TimeSlotWithinAvailabilityRule
      */
-    public function findInDateRange(DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $availabilityId = null): Collection;
+    public function findInDateRange(
+        DateTimeZuluVO $start,
+        DateTimeZuluVO $end,
+        ?int $availabilityId = null,
+        ?int $limit = null
+    ): Collection;
 
     /**
      * Find schedules by day of week.
      * Utilisé par: TimeSlotWithinAvailabilityRule
      */
-    public function findByDayOfWeek(int $dayOfWeek, ?int $availabilityId = null): Collection;
+    public function findByDayOfWeek(int $dayOfWeek, ?int $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Find schedules for a specific schedulable entity.
@@ -69,25 +75,25 @@ interface ScheduleRepositoryInterface extends AbstractRepositoryInterface
      * @param  Model  $schedulable  The schedulable entity
      * @return Collection<int, Schedule> Collection of schedules
      */
-    public function findBySchedulable(Model $schedulable): Collection;
+    public function findBySchedulable(Model $schedulable, ?int $limit = null): Collection;
 
     /**
      * Find schedules with invalid chronology.
      * Utilisé par: TimeSlotChronologyRule
      */
-    public function findWithInvalidChronology(): Collection;
+    public function findWithInvalidChronology(?int $limit = null): Collection;
 
     /**
      * Find schedules with duration exceeding max.
      * Utilisé par: MaxDurationRule
      */
-    public function findWithExceedingDuration(int $availabilityId, int $maxDurationMinutes): Collection;
+    public function findWithExceedingDuration(int $availabilityId, int $maxDurationMinutes, ?int $limit = null): Collection;
 
     /**
      * Find schedules violating buffer time.
      * Utilisé par: BufferTimeRule
      */
-    public function findViolatingBufferTime(int $availabilityId, int $bufferMinutes): Collection;
+    public function findViolatingBufferTime(int $availabilityId, int $bufferMinutes, ?int $limit = null): Collection;
 
     /**
      * Find schedules for a specific availability with a date range.
@@ -96,6 +102,7 @@ interface ScheduleRepositoryInterface extends AbstractRepositoryInterface
         int $availabilityId,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
+        ?int $limit = null,
     ): Collection;
 
     /**
@@ -107,6 +114,7 @@ interface ScheduleRepositoryInterface extends AbstractRepositoryInterface
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
         ?int $excludeId = null,
+        ?int $limit = null,
     ): Collection;
 
     /**

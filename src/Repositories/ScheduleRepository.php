@@ -65,11 +65,24 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
         }
     }
 
-    public function findByAvailability(int $availabilityId): Collection
+    /**
+     * Applique une limite à la requête.
+     */
+    private function applyLimit(Builder $query, ?int $limit): Builder
     {
-        return $this->model->newQuery()
-            ->where('availability_id', $availabilityId)
-            ->get();
+        if ($limit !== null && $limit > 0) {
+            $query->limit($limit);
+        }
+
+        return $query;
+    }
+
+    public function findByAvailability(int $availabilityId, ?int $limit = null): Collection
+    {
+        $query = $this->model->newQuery()
+            ->where('availability_id', $availabilityId);
+
+        return $this->applyLimit($query, $limit)->get();
     }
 
     public function findOverlapping(
@@ -77,6 +90,7 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
         ?int $excludeId = null,
+        ?int $limit = null,
     ): Collection {
         $query = $this->model->newQuery()
             ->where('availability_id', $availabilityId)
@@ -89,10 +103,10 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
             $query->where('id', '!=', $excludeId);
         }
 
-        return $query->get();
+        return $this->applyLimit($query, $limit)->get();
     }
 
-    public function findByStatus(ScheduleStatus $status, ?int $availabilityId = null): Collection
+    public function findByStatus(ScheduleStatus $status, ?int $availabilityId = null, ?int $limit = null): Collection
     {
         $query = $this->model->newQuery()
             ->where('status', $status->value);
@@ -101,10 +115,10 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
             $query->where('availability_id', $availabilityId);
         }
 
-        return $query->get();
+        return $this->applyLimit($query, $limit)->get();
     }
 
-    public function searchByTitle(string $search, ?int $availabilityId = null): Collection
+    public function searchByTitle(string $search, ?int $availabilityId = null, ?int $limit = null): Collection
     {
         $query = $this->model->newQuery()
             ->where('title', 'like', '%'.$search.'%');
@@ -113,10 +127,10 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
             $query->where('availability_id', $availabilityId);
         }
 
-        return $query->get();
+        return $this->applyLimit($query, $limit)->get();
     }
 
-    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null): Collection
+    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null, ?int $limit = null): Collection
     {
         $start = $date->startOfDay();
         $end = $date->endOfDay();
@@ -129,11 +143,15 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
             $query->where('availability_id', $availabilityId);
         }
 
-        return $query->get();
+        return $this->applyLimit($query, $limit)->get();
     }
 
-    public function findInDateRange(DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $availabilityId = null): Collection
-    {
+    public function findInDateRange(
+        DateTimeZuluVO $start,
+        DateTimeZuluVO $end,
+        ?int $availabilityId = null,
+        ?int $limit = null
+    ): Collection {
         $query = $this->model->newQuery()
             ->where('start_datetime', '>=', $start->toDateTimeString())
             ->where('start_datetime', '<=', $end->toDateTimeString());
@@ -142,10 +160,10 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
             $query->where('availability_id', $availabilityId);
         }
 
-        return $query->get();
+        return $this->applyLimit($query, $limit)->get();
     }
 
-    public function findByDayOfWeek(int $dayOfWeek, ?int $availabilityId = null): Collection
+    public function findByDayOfWeek(int $dayOfWeek, ?int $availabilityId = null, ?int $limit = null): Collection
     {
         $query = $this->model->newQuery()
             ->whereRaw('strftime("%w", start_datetime) = ?', [(string) ($dayOfWeek % 7)]);
@@ -154,51 +172,41 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
             $query->where('availability_id', $availabilityId);
         }
 
-        return $query->get();
+        return $this->applyLimit($query, $limit)->get();
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function findBySchedulable(Model $schedulable): Collection
+    public function findBySchedulable(Model $schedulable, ?int $limit = null): Collection
     {
         $schedulableType = $schedulable->getMorphClass();
         $schedulableId = (int) $schedulable->getKey();
 
-        return $this->model->newQuery()
+        $query = $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
-            ->where('schedulable_id', $schedulableId)
-            ->get();
+            ->where('schedulable_id', $schedulableId);
+
+        return $this->applyLimit($query, $limit)->get();
     }
 
-    public function findWithInvalidChronology(): Collection
+    public function findWithInvalidChronology(?int $limit = null): Collection
     {
-        return $this->model->newQuery()
-            ->whereRaw('start_datetime >= end_datetime')
-            ->get();
+        $query = $this->model->newQuery()
+            ->whereRaw('start_datetime >= end_datetime');
+
+        return $this->applyLimit($query, $limit)->get();
     }
 
-    public function findWithExceedingDuration(int $availabilityId, int $maxDurationMinutes): Collection
+    public function findWithExceedingDuration(int $availabilityId, int $maxDurationMinutes, ?int $limit = null): Collection
     {
         $maxSeconds = $maxDurationMinutes * 60;
 
-        return $this->model->newQuery()
+        $query = $this->model->newQuery()
             ->where('availability_id', $availabilityId)
-            ->whereRaw('(strftime("%s", end_datetime) - strftime("%s", start_datetime)) > ?', [$maxSeconds])
-            ->get();
+            ->whereRaw('(strftime("%s", end_datetime) - strftime("%s", start_datetime)) > ?', [$maxSeconds]);
+
+        return $this->applyLimit($query, $limit)->get();
     }
 
-    /**
-     * Find schedules that violate buffer time between consecutive schedules.
-     *
-     * A violation occurs when the time between the end of one schedule and the
-     * start of the next schedule is less than the configured buffer time.
-     *
-     * @param  int  $availabilityId  The availability ID to check
-     * @param  int  $bufferMinutes  Minimum allowed buffer time in minutes
-     * @return Collection<int, Schedule> Schedules that violate the buffer time
-     */
-    public function findViolatingBufferTime(int $availabilityId, int $bufferMinutes): Collection
+    public function findViolatingBufferTime(int $availabilityId, int $bufferMinutes, ?int $limit = null): Collection
     {
         $bufferSeconds = $bufferMinutes * 60;
 
@@ -226,28 +234,36 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
                 [$bufferSeconds]
             )
             ->select('s1.*')
-            ->distinct()
-            ->get();
+            ->distinct();
+
+        if ($limit !== null && $limit > 0) {
+            $results->limit($limit);
+        }
+
+        $results = $results->get();
 
         if ($results->isEmpty()) {
             return new Collection;
         }
 
-        return $this->model->newQuery()
-            ->whereIn('id', $results->pluck('id')->all())
-            ->get();
+        $query = $this->model->newQuery()
+            ->whereIn('id', $results->pluck('id')->all());
+
+        return $this->applyLimit($query, $limit)->get();
     }
 
     public function findByAvailabilityInDateRange(
         int $availabilityId,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
+        ?int $limit = null,
     ): Collection {
-        return $this->model->newQuery()
+        $query = $this->model->newQuery()
             ->where('availability_id', $availabilityId)
             ->where('start_datetime', '>=', $start->toDateTimeString())
-            ->where('start_datetime', '<=', $end->toDateTimeString())
-            ->get();
+            ->where('start_datetime', '<=', $end->toDateTimeString());
+
+        return $this->applyLimit($query, $limit)->get();
     }
 
     public function findConflicting(
@@ -255,8 +271,9 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
         ?int $excludeId = null,
+        ?int $limit = null,
     ): Collection {
-        return $this->findOverlapping($availabilityId, $start, $end, $excludeId);
+        return $this->findOverlapping($availabilityId, $start, $end, $excludeId, $limit);
     }
 
     public function hasCrossDaySchedule(int $availabilityId): bool

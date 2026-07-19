@@ -110,6 +110,27 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         $this->assertEquals($impediment1->id, $results[0]->id);
     }
 
+    public function test_can_find_by_availability_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ImpedimentRecord::from([
+                'availability_id' => $availability->id,
+                'reason' => "Impediment $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T12:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $results = $this->repository->findByAvailability($availability->id, 3);
+
+        $this->assertCount(3, $results);
+        $this->assertEquals('Impediment 1', $results->first()->reason);
+        $this->assertEquals('Impediment 3', $results->last()->reason);
+    }
+
     public function test_can_search_by_reason(): void
     {
         $impediment = $this->createImpediment();
@@ -118,6 +139,25 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
 
         $this->assertCount(1, $results);
         $this->assertEquals($impediment->id, $results[0]->id);
+    }
+
+    public function test_can_search_by_reason_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ImpedimentRecord::from([
+                'availability_id' => $availability->id,
+                'reason' => "Test Impediment $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T12:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $results = $this->repository->searchByReason('Test', null, 3);
+
+        $this->assertCount(3, $results);
     }
 
     public function test_can_search_by_reason_with_availability_filter(): void
@@ -145,6 +185,26 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         $this->assertEquals($impediment->id, $results[0]->id);
     }
 
+    public function test_can_find_by_date_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ImpedimentRecord::from([
+                'availability_id' => $availability->id,
+                'reason' => "Impediment $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T12:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $date = DateTimeZuluVO::from('2024-01-15T12:00:00Z');
+        $results = $this->repository->findByDate($date, null, 3);
+
+        $this->assertCount(3, $results);
+    }
+
     public function test_can_find_in_date_range(): void
     {
         $impediment = $this->createImpediment();
@@ -155,6 +215,27 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
 
         $this->assertCount(1, $results);
         $this->assertEquals($impediment->id, $results[0]->id);
+    }
+
+    public function test_can_find_in_date_range_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ImpedimentRecord::from([
+                'availability_id' => $availability->id,
+                'reason' => "Impediment $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T12:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $start = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T23:59:59Z');
+        $results = $this->repository->findInDateRange($start, $end, null, 3);
+
+        $this->assertCount(3, $results);
     }
 
     public function test_can_find_by_availability_in_date_range(): void
@@ -168,6 +249,27 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
 
         $this->assertCount(1, $results);
         $this->assertEquals($impediment->id, $results[0]->id);
+    }
+
+    public function test_can_find_by_availability_in_date_range_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ImpedimentRecord::from([
+                'availability_id' => $availability->id,
+                'reason' => "Impediment $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T12:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $start = DateTimeZuluVO::from('2024-01-15T00:00:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T23:59:59Z');
+        $results = $this->repository->findByAvailabilityInDateRange($availability->id, $start, $end, 3);
+
+        $this->assertCount(3, $results);
     }
 
     public function test_can_find_active(): void
@@ -207,6 +309,29 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
 
         $this->assertCount(1, $results);
         $this->assertEquals('Active', $results[0]->reason);
+    }
+
+    public function test_can_find_active_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+        $now = Carbon::now('UTC');
+
+        for ($i = 1; $i <= 5; $i++) {
+            DB::table('impediments')->insert([
+                'availability_id' => $availability->id,
+                'reason' => "Active $i",
+                'start_datetime' => $now->copy()->subHour()->format('Y-m-d H:i:s'),
+                'end_datetime' => $now->copy()->addHour()->format('Y-m-d H:i:s'),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $results = $this->repository->findActive(null, 3);
+
+        $this->assertCount(3, $results);
+        $this->assertEquals('Active 1', $results->first()->reason);
+        $this->assertEquals('Active 3', $results->last()->reason);
     }
 
     public function test_can_find_active_with_availability_filter(): void
@@ -263,6 +388,27 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         $this->assertEquals($impediment->id, $results[0]->id);
     }
 
+    public function test_can_find_overlapping_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ImpedimentRecord::from([
+                'availability_id' => $availability->id,
+                'reason' => "Impediment $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T12:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $start = DateTimeZuluVO::from('2024-01-15T09:30:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T12:30:00Z');
+        $results = $this->repository->findOverlapping($availability->id, $start, $end, null, 3);
+
+        $this->assertCount(3, $results);
+    }
+
     public function test_find_overlapping_excludes_given_id(): void
     {
         $availability = $this->createAvailability();
@@ -290,19 +436,54 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         $this->assertEquals($impediment->id, $results[0]->id);
     }
 
-    public function test_can_find_by_schedulable(): void
+    public function test_can_find_conflicting_with_limit(): void
     {
-        // Create availability for TestCar
         $availability = $this->createAvailability();
 
-        // Create impediment linked to this availability
+        for ($i = 1; $i <= 5; $i++) {
+            $record = ImpedimentRecord::from([
+                'availability_id' => $availability->id,
+                'reason' => "Impediment $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T12:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $start = DateTimeZuluVO::from('2024-01-15T09:30:00Z');
+        $end = DateTimeZuluVO::from('2024-01-15T12:30:00Z');
+        $results = $this->repository->findConflicting($availability->id, $start, $end, null, 3);
+
+        $this->assertCount(3, $results);
+    }
+
+    public function test_can_find_by_schedulable(): void
+    {
+        $availability = $this->createAvailability();
         $impediment = $this->createImpediment($availability);
 
-        // Find impediments by schedulable (TestCar)
         $results = $this->repository->findBySchedulable($this->testCar);
 
         $this->assertCount(1, $results);
         $this->assertEquals($impediment->id, $results[0]->id);
+    }
+
+    public function test_can_find_by_schedulable_with_limit(): void
+    {
+        for ($i = 1; $i <= 5; $i++) {
+            $availability = $this->createAvailability();
+            $record = ImpedimentRecord::from([
+                'availability_id' => $availability->id,
+                'reason' => "Impediment $i",
+                'start_datetime' => '2024-01-15T10:00:00Z',
+                'end_datetime' => '2024-01-15T12:00:00Z',
+            ]);
+            $this->repository->create($record);
+        }
+
+        $results = $this->repository->findBySchedulable($this->testCar, 3);
+
+        $this->assertCount(3, $results);
     }
 
     public function test_can_find_with_invalid_chronology(): void
@@ -322,6 +503,26 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
 
         $this->assertCount(1, $results);
         $this->assertEquals('Invalid Chronology', $results[0]->reason);
+    }
+
+    public function test_can_find_with_invalid_chronology_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            DB::table('impediments')->insert([
+                'availability_id' => $availability->id,
+                'reason' => "Invalid Chronology $i",
+                'start_datetime' => '2024-01-15 11:00:00',
+                'end_datetime' => '2024-01-15 10:00:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $results = $this->repository->findWithInvalidChronology(3);
+
+        $this->assertCount(3, $results);
     }
 
     public function test_can_find_with_exceeding_duration(): void
@@ -350,6 +551,83 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
 
         $this->assertCount(1, $results);
         $this->assertEquals('Long Impediment', $results[0]->reason);
+    }
+
+    public function test_can_find_with_exceeding_duration_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 5; $i++) {
+            DB::table('impediments')->insert([
+                'availability_id' => $availability->id,
+                'reason' => "Long Impediment $i",
+                'start_datetime' => '2024-01-15 10:00:00',
+                'end_datetime' => '2024-01-15 12:30:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $results = $this->repository->findWithExceedingDuration($availability->id, 60, 3);
+
+        $this->assertCount(3, $results);
+    }
+
+    public function test_can_find_violating_buffer_time(): void
+    {
+        $availability = $this->createAvailability();
+
+        DB::table('impediments')->insert([
+            'availability_id' => $availability->id,
+            'reason' => 'Impediment 1',
+            'start_datetime' => '2024-01-15 10:00:00',
+            'end_datetime' => '2024-01-15 11:00:00',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('impediments')->insert([
+            'availability_id' => $availability->id,
+            'reason' => 'Impediment 2',
+            'start_datetime' => '2024-01-15 11:15:00',
+            'end_datetime' => '2024-01-15 12:00:00',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $results = $this->repository->findViolatingBufferTime($availability->id, 30);
+
+        $this->assertCount(1, $results);
+        $this->assertEquals('Impediment 1', $results[0]->reason);
+    }
+
+    public function test_can_find_violating_buffer_time_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        for ($i = 1; $i <= 3; $i++) {
+            DB::table('impediments')->insert([
+                'availability_id' => $availability->id,
+                'reason' => "Impediment A$i",
+                'start_datetime' => '2024-01-15 10:00:00',
+                'end_datetime' => '2024-01-15 10:30:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::table('impediments')->insert([
+                'availability_id' => $availability->id,
+                'reason' => "Impediment B$i",
+                'start_datetime' => '2024-01-15 10:35:00',
+                'end_datetime' => '2024-01-15 11:00:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $results = $this->repository->findViolatingBufferTime($availability->id, 30, 2);
+
+        $this->assertCount(2, $results);
     }
 
     // ============================================================
@@ -478,7 +756,6 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             ]);
         });
 
-        // Create schedule that overlaps with impediment
         ChronosMutationContext::withAllowed(function () use ($availability) {
             Schedule::create([
                 'availability_id' => $availability->id,
@@ -490,7 +767,6 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             ]);
         });
 
-        // Create schedule that does not overlap
         ChronosMutationContext::withAllowed(function () use ($availability) {
             Schedule::create([
                 'availability_id' => $availability->id,
@@ -508,6 +784,37 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         $this->assertEquals('Overlapping Schedule', $blocked[0]->title);
     }
 
+    public function test_get_blocked_schedules_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        $impediment = ChronosMutationContext::withAllowed(function () use ($availability) {
+            return Impediment::create([
+                'availability_id' => $availability->id,
+                'reason' => 'Test Impediment',
+                'start_datetime' => '2024-01-15 10:00:00',
+                'end_datetime' => '2024-01-15 12:00:00',
+            ]);
+        });
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Schedule::create([
+                    'availability_id' => $availability->id,
+                    'schedulable_type' => TestCar::class,
+                    'schedulable_id' => $this->testCar->id,
+                    'title' => "Overlapping Schedule $i",
+                    'start_datetime' => '2024-01-15 10:30:00',
+                    'end_datetime' => '2024-01-15 11:00:00',
+                ]);
+            });
+        }
+
+        $blocked = $this->repository->getBlockedSchedules($impediment, 3);
+
+        $this->assertCount(3, $blocked);
+    }
+
     public function test_get_fully_blocked_schedules_returns_completely_contained_schedules(): void
     {
         $availability = $this->createAvailability();
@@ -521,7 +828,6 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             ]);
         });
 
-        // Create schedule fully inside impediment
         ChronosMutationContext::withAllowed(function () use ($availability) {
             Schedule::create([
                 'availability_id' => $availability->id,
@@ -533,7 +839,6 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             ]);
         });
 
-        // Create schedule partially overlapping
         ChronosMutationContext::withAllowed(function () use ($availability) {
             Schedule::create([
                 'availability_id' => $availability->id,
@@ -551,6 +856,37 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         $this->assertEquals('Fully Blocked', $fullyBlocked[0]->title);
     }
 
+    public function test_get_fully_blocked_schedules_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        $impediment = ChronosMutationContext::withAllowed(function () use ($availability) {
+            return Impediment::create([
+                'availability_id' => $availability->id,
+                'reason' => 'Test Impediment',
+                'start_datetime' => '2024-01-15 10:00:00',
+                'end_datetime' => '2024-01-15 12:00:00',
+            ]);
+        });
+
+        for ($i = 1; $i <= 5; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Schedule::create([
+                    'availability_id' => $availability->id,
+                    'schedulable_type' => TestCar::class,
+                    'schedulable_id' => $this->testCar->id,
+                    'title' => "Fully Blocked $i",
+                    'start_datetime' => '2024-01-15 10:30:00',
+                    'end_datetime' => '2024-01-15 11:00:00',
+                ]);
+            });
+        }
+
+        $fullyBlocked = $this->repository->getFullyBlockedSchedules($impediment, 3);
+
+        $this->assertCount(3, $fullyBlocked);
+    }
+
     public function test_get_partially_blocked_schedules_returns_partially_overlapping_schedules(): void
     {
         $availability = $this->createAvailability();
@@ -564,7 +900,6 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             ]);
         });
 
-        // Create schedule starting before, ending inside
         ChronosMutationContext::withAllowed(function () use ($availability) {
             Schedule::create([
                 'availability_id' => $availability->id,
@@ -576,7 +911,6 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             ]);
         });
 
-        // Create schedule starting inside, ending after
         ChronosMutationContext::withAllowed(function () use ($availability) {
             Schedule::create([
                 'availability_id' => $availability->id,
@@ -588,7 +922,6 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             ]);
         });
 
-        // Create schedule fully inside (should not be included)
         ChronosMutationContext::withAllowed(function () use ($availability) {
             Schedule::create([
                 'availability_id' => $availability->id,
@@ -608,6 +941,37 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         $this->assertContains('Ends After', $titles);
     }
 
+    public function test_get_partially_blocked_schedules_with_limit(): void
+    {
+        $availability = $this->createAvailability();
+
+        $impediment = ChronosMutationContext::withAllowed(function () use ($availability) {
+            return Impediment::create([
+                'availability_id' => $availability->id,
+                'reason' => 'Test Impediment',
+                'start_datetime' => '2024-01-15 10:00:00',
+                'end_datetime' => '2024-01-15 12:00:00',
+            ]);
+        });
+
+        for ($i = 1; $i <= 3; $i++) {
+            ChronosMutationContext::withAllowed(function () use ($availability, $i) {
+                Schedule::create([
+                    'availability_id' => $availability->id,
+                    'schedulable_type' => TestCar::class,
+                    'schedulable_id' => $this->testCar->id,
+                    'title' => "Starts Before $i",
+                    'start_datetime' => '2024-01-15 09:30:00',
+                    'end_datetime' => '2024-01-15 10:30:00',
+                ]);
+            });
+        }
+
+        $partiallyBlocked = $this->repository->getPartiallyBlockedSchedules($impediment, 2);
+
+        $this->assertCount(2, $partiallyBlocked);
+    }
+
     public function test_get_blocked_schedules_returns_empty_collection_when_no_overlap(): void
     {
         $availability = $this->createAvailability();
@@ -621,7 +985,6 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             ]);
         });
 
-        // Create schedule before impediment
         ChronosMutationContext::withAllowed(function () use ($availability) {
             Schedule::create([
                 'availability_id' => $availability->id,
@@ -633,7 +996,6 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             ]);
         });
 
-        // Create schedule after impediment
         ChronosMutationContext::withAllowed(function () use ($availability) {
             Schedule::create([
                 'availability_id' => $availability->id,
@@ -663,7 +1025,6 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             ]);
         });
 
-        // Aucun schedule créé
         $blocked = $this->repository->getBlockedSchedules($impediment);
         $fullyBlocked = $this->repository->getFullyBlockedSchedules($impediment);
         $partiallyBlocked = $this->repository->getPartiallyBlockedSchedules($impediment);
