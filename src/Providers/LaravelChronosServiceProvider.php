@@ -252,12 +252,12 @@ final class LaravelChronosServiceProvider extends ServiceProvider
             ], 'chronos-config');
 
             $this->publishes([
-                __DIR__.'/../../database/Migrations' => database_path('migrations'),
+                __DIR__.'/../../database/migrations' => database_path('migrations'),
             ], 'chronos-migrations');
 
             $this->publishes([
                 __DIR__.'/../../config/chronos.php' => config_path('chronos.php'),
-                __DIR__.'/../../database/Migrations' => database_path('migrations'),
+                __DIR__.'/../../database/migrations' => database_path('migrations'),
             ], 'chronos-all');
         }
     }
