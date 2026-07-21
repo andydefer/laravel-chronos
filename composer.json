@@ -31,7 +31,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "AndyDefer\\LaravelHermes\\Providers\\LaravelChronosServiceProvider"
+                "AndyDefer\\LaravelChronos\\Providers\\LaravelChronosServiceProvider"
             ]
         }
     },
