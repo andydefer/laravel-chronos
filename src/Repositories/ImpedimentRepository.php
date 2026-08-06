@@ -48,8 +48,12 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
 
     /**
      * Apply a limit to the query.
+     *
+     * @param  Builder  $query  The query builder
+     * @param  int|null  $limit  The maximum number of records to return
+     * @return Builder The query builder with limit applied
      */
-    private function applyLimit(Builder $query, ?int $limit): Builder
+    private function applyLimitToQuery(Builder $query, ?int $limit): Builder
     {
         if ($limit !== null && $limit > 0) {
             $query->limit($limit);
@@ -63,7 +67,7 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
         $query = $this->model->newQuery()
             ->where('availability_id', $availabilityId);
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findInDateRange(DateTimeZuluVO $start, DateTimeZuluVO $end, ?int $availabilityId = null, ?int $limit = null): Collection
@@ -76,7 +80,7 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
             $query->where('availability_id', $availabilityId);
         }
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findOverlapping(
@@ -97,7 +101,7 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
             $query->where('id', '!=', $excludeId);
         }
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     /**
@@ -114,7 +118,7 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
                     ->where('schedulable_id', $schedulableId);
             });
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function searchByReason(string $search, ?int $availabilityId = null, ?int $limit = null): Collection
@@ -126,7 +130,7 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
             $query->where('availability_id', $availabilityId);
         }
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null, ?int $limit = null): Collection
@@ -142,7 +146,7 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
             $query->where('availability_id', $availabilityId);
         }
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findByAvailabilityInDateRange(
@@ -156,7 +160,7 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
             ->where('start_datetime', '>=', $start->toDateTimeString())
             ->where('start_datetime', '<=', $end->toDateTimeString());
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findActive(?int $availabilityId = null, ?int $limit = null): Collection
@@ -171,7 +175,7 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
             $query->where('availability_id', $availabilityId);
         }
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findConflicting(
@@ -189,7 +193,7 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
         $query = $this->model->newQuery()
             ->whereRaw('start_datetime >= end_datetime');
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findWithExceedingDuration(int $availabilityId, int $maxDurationMinutes, ?int $limit = null): Collection
@@ -200,7 +204,7 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
             ->where('availability_id', $availabilityId)
             ->whereRaw('(strftime("%s", end_datetime) - strftime("%s", start_datetime)) > ?', [$maxSeconds]);
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findViolatingBufferTime(int $availabilityId, int $bufferMinutes, ?int $limit = null): Collection
@@ -263,7 +267,7 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
                     ->where('end_datetime', '>', $start);
             });
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function getFullyBlockedSchedules(Impediment $impediment, ?int $limit = null): Collection
@@ -279,7 +283,7 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
             ->where('start_datetime', '>=', $start)
             ->where('end_datetime', '<=', $end);
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function getPartiallyBlockedSchedules(Impediment $impediment, ?int $limit = null): Collection
@@ -304,6 +308,6 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
                 });
             });
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 }

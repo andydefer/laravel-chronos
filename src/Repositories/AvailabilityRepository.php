@@ -54,9 +54,16 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
         }
     }
 
-    private function applyLimit(Builder $query, ?int $limit): Builder
+    /**
+     * Apply limit to a query builder.
+     *
+     * @param  Builder  $query  The query builder
+     * @param  int|null  $limit  The maximum number of records to return
+     * @return Builder The query builder with limit applied
+     */
+    private function applyLimitToQuery(Builder $query, ?int $limit): Builder
     {
-        if ($limit !== null && $limit > 0) {
+        if ($limit !== null) {
             $query->limit($limit);
         }
 
@@ -72,7 +79,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
             ->where('schedulable_type', $schedulableType)
             ->where('schedulable_id', $schedulableId);
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findByDay(Model $schedulable, WeekDay $day, ?int $limit = null): Collection
@@ -85,7 +92,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
             ->where('schedulable_id', $schedulableId)
             ->whereJsonContains('days', $day->value);
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findOverlapping(
@@ -122,7 +129,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
             $query->where('id', '!=', $excludeId);
         }
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findActiveAtDate(Model $schedulable, DateTimeZuluVO $date, ?int $limit = null): Collection
@@ -142,7 +149,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
                     ->orWhereNull('validity_end');
             });
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findActiveInDateRange(
@@ -169,7 +176,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
             $query->where('id', '!=', $excludeId);
         }
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findCrossDayAvailabilities(Model $schedulable, ?int $limit = null): Collection
@@ -182,7 +189,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
             ->where('schedulable_id', $schedulableId)
             ->whereRaw('daily_start > daily_end');
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findShortDurations(Model $schedulable, int $minMinutes, ?int $limit = null): Collection
@@ -196,7 +203,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
             ->where('schedulable_id', $schedulableId)
             ->whereRaw('(strftime("%s", daily_end) - strftime("%s", daily_start)) < ?', [$minSeconds]);
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findInvalidDateRanges(Model $schedulable, ?int $limit = null): Collection
@@ -214,7 +221,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
                     ->orWhereNull('validity_end');
             });
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function findWithFutureSchedules(int $availabilityId, DateTimeZuluVO $now): bool
@@ -232,7 +239,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
         $query = $this->model->newQuery()
             ->where('type', $type);
 
-        return $this->applyLimit($query, $limit)->get();
+        return $this->applyLimitToQuery($query, $limit)->get();
     }
 
     public function schedulableExists(Model $schedulable): bool
