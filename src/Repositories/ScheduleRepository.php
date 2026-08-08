@@ -15,24 +15,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Repository for Schedule model operations.
- *
- * @extends AbstractChronosRepository<Schedule, ScheduleRecord>
- */
 final class ScheduleRepository extends AbstractChronosRepository implements ScheduleRepositoryInterface
 {
-    /**
-     * Initialize repository with Schedule model.
-     */
     public function __construct()
     {
         parent::__construct(Schedule::class, ScheduleRecord::class);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     protected function applyFilters(Builder $query, AbstractRecord $filters): void
     {
         if (! $filters instanceof ScheduleRecord) {
@@ -65,13 +54,6 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
         }
     }
 
-    /**
-     * Applique une limite à la requête.
-     *
-     * @param  Builder  $query  La requête
-     * @param  int|null  $limit  La limite
-     * @return Builder La requête avec la limite appliquée
-     */
     private function applyLimitToQuery(Builder $query, ?int $limit): Builder
     {
         if ($limit !== null && $limit > 0) {
@@ -169,8 +151,14 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
 
     public function findByDayOfWeek(int $dayOfWeek, ?int $availabilityId = null, ?int $limit = null): Collection
     {
-        $query = $this->model->newQuery()
-            ->whereRaw('strftime("%w", start_datetime) = ?', [(string) ($dayOfWeek % 7)]);
+        $query = $this->model->newQuery();
+
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            $query->whereRaw('strftime("%w", start_datetime) = ?', [(string) ($dayOfWeek % 7)]);
+        } else {
+            $mysqlDay = ($dayOfWeek + 6) % 7;
+            $query->whereRaw('WEEKDAY(start_datetime) = ?', [$mysqlDay]);
+        }
 
         if ($availabilityId !== null) {
             $query->where('availability_id', $availabilityId);
@@ -204,8 +192,13 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
         $maxSeconds = $maxDurationMinutes * 60;
 
         $query = $this->model->newQuery()
-            ->where('availability_id', $availabilityId)
-            ->whereRaw('(strftime("%s", end_datetime) - strftime("%s", start_datetime)) > ?', [$maxSeconds]);
+            ->where('availability_id', $availabilityId);
+
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            $query->whereRaw('(strftime("%s", end_datetime) - strftime("%s", start_datetime)) > ?', [$maxSeconds]);
+        } else {
+            $query->whereRaw('(UNIX_TIMESTAMP(end_datetime) - UNIX_TIMESTAMP(start_datetime)) > ?', [$maxSeconds]);
+        }
 
         return $this->applyLimitToQuery($query, $limit)->get();
     }
@@ -214,7 +207,7 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
     {
         $bufferSeconds = $bufferMinutes * 60;
 
-        $results = DB::table('schedules as s1')
+        $query = DB::table('schedules as s1')
             ->join('schedules as s2', function ($join) {
                 $join->on('s1.availability_id', '=', 's2.availability_id')
                     ->whereColumn('s1.id', '!=', 's2.id')
@@ -232,28 +225,29 @@ final class ScheduleRepository extends AbstractChronosRepository implements Sche
             })
             ->where('s1.availability_id', $availabilityId)
             ->whereNull('s1.deleted_at')
-            ->whereNull('s2.deleted_at')
-            ->whereRaw(
-                '(strftime("%s", s2.start_datetime) - strftime("%s", s1.end_datetime)) < ?',
-                [$bufferSeconds]
-            )
-            ->select('s1.*')
-            ->distinct();
+            ->whereNull('s2.deleted_at');
 
-        if ($limit !== null && $limit > 0) {
-            $results->limit($limit);
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            $query->whereRaw('(strftime("%s", s2.start_datetime) - strftime("%s", s1.end_datetime)) < ?', [$bufferSeconds]);
+        } else {
+            $query->whereRaw('(UNIX_TIMESTAMP(s2.start_datetime) - UNIX_TIMESTAMP(s1.end_datetime)) < ?', [$bufferSeconds]);
         }
 
-        $results = $results->get();
+        $query->select('s1.*')->distinct();
+
+        if ($limit !== null && $limit > 0) {
+            $query->limit($limit);
+        }
+
+        $results = $query->get();
 
         if ($results->isEmpty()) {
             return new Collection;
         }
 
-        $query = $this->model->newQuery()
-            ->whereIn('id', $results->pluck('id')->all());
-
-        return $this->applyLimitToQuery($query, $limit)->get();
+        return $this->model->newQuery()
+            ->whereIn('id', $results->pluck('id')->all())
+            ->get();
     }
 
     public function findByAvailabilityInDateRange(

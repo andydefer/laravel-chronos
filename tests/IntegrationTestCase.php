@@ -205,6 +205,28 @@ abstract class IntegrationTestCase extends Orchestra
         return null;
     }
 
+    /*
+        protected function getEnvironmentSetUp($app): void
+        {
+
+            $app['config']->set('database.default', 'mysql');
+            $app['config']->set('database.connections.mysql', [
+                'driver' => 'mysql',
+                'host' => '127.0.0.1',
+                'port' => '3306',
+                'database' => 'laravel_chronos_test',
+                'username' => 'test',
+                'password' => 'Test@2026#Secure',
+                'charset' => 'utf8mb4',
+                'collation' => 'utf8mb4_unicode_ci',
+                'prefix' => '',
+                'strict' => true,
+                'engine' => null,
+            ]);
+            $app['config']->set('context.default', 'array');
+
+        }
+     */
     protected function defineEnvironment($app): void
     {
         $app['config']->set('database.default', 'testbench');

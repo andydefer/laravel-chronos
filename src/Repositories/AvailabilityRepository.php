@@ -14,6 +14,7 @@ use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 final class AvailabilityRepository extends AbstractChronosRepository implements AvailabilityRepositoryInterface
 {
@@ -200,8 +201,13 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
 
         $query = $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
-            ->where('schedulable_id', $schedulableId)
-            ->whereRaw('(strftime("%s", daily_end) - strftime("%s", daily_start)) < ?', [$minSeconds]);
+            ->where('schedulable_id', $schedulableId);
+
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            $query->whereRaw('(strftime("%s", daily_end) - strftime("%s", daily_start)) < ?', [$minSeconds]);
+        } else {
+            $query->whereRaw('(UNIX_TIMESTAMP(daily_end) - UNIX_TIMESTAMP(daily_start)) < ?', [$minSeconds]);
+        }
 
         return $this->applyLimitToQuery($query, $limit)->get();
     }

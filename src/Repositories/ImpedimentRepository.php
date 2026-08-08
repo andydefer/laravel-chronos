@@ -46,13 +46,6 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
         }
     }
 
-    /**
-     * Apply a limit to the query.
-     *
-     * @param  Builder  $query  The query builder
-     * @param  int|null  $limit  The maximum number of records to return
-     * @return Builder The query builder with limit applied
-     */
     private function applyLimitToQuery(Builder $query, ?int $limit): Builder
     {
         if ($limit !== null && $limit > 0) {
@@ -104,9 +97,6 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
         return $this->applyLimitToQuery($query, $limit)->get();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function findBySchedulable(Model $schedulable, ?int $limit = null): Collection
     {
         $schedulableType = $schedulable->getMorphClass();
@@ -201,8 +191,13 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
         $maxSeconds = $maxDurationMinutes * 60;
 
         $query = $this->model->newQuery()
-            ->where('availability_id', $availabilityId)
-            ->whereRaw('(strftime("%s", end_datetime) - strftime("%s", start_datetime)) > ?', [$maxSeconds]);
+            ->where('availability_id', $availabilityId);
+
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            $query->whereRaw('(strftime("%s", end_datetime) - strftime("%s", start_datetime)) > ?', [$maxSeconds]);
+        } else {
+            $query->whereRaw('(UNIX_TIMESTAMP(end_datetime) - UNIX_TIMESTAMP(start_datetime)) > ?', [$maxSeconds]);
+        }
 
         return $this->applyLimitToQuery($query, $limit)->get();
     }
@@ -211,7 +206,7 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
     {
         $bufferSeconds = $bufferMinutes * 60;
 
-        $results = DB::table('impediments as i1')
+        $query = DB::table('impediments as i1')
             ->join('impediments as i2', function ($join) {
                 $join->on('i1.availability_id', '=', 'i2.availability_id')
                     ->whereColumn('i1.id', '!=', 'i2.id')
@@ -229,19 +224,21 @@ final class ImpedimentRepository extends AbstractChronosRepository implements Im
             })
             ->where('i1.availability_id', $availabilityId)
             ->whereNull('i1.deleted_at')
-            ->whereNull('i2.deleted_at')
-            ->whereRaw(
-                '(strftime("%s", i2.start_datetime) - strftime("%s", i1.end_datetime)) < ?',
-                [$bufferSeconds]
-            )
-            ->select('i1.*')
-            ->distinct();
+            ->whereNull('i2.deleted_at');
 
-        if ($limit !== null && $limit > 0) {
-            $results->limit($limit);
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            $query->whereRaw('(strftime("%s", i2.start_datetime) - strftime("%s", i1.end_datetime)) < ?', [$bufferSeconds]);
+        } else {
+            $query->whereRaw('(UNIX_TIMESTAMP(i2.start_datetime) - UNIX_TIMESTAMP(i1.end_datetime)) < ?', [$bufferSeconds]);
         }
 
-        $results = $results->get();
+        $query->select('i1.*')->distinct();
+
+        if ($limit !== null && $limit > 0) {
+            $query->limit($limit);
+        }
+
+        $results = $query->get();
 
         if ($results->isEmpty()) {
             return new Collection;
