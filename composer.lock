@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ccdf8fecbcb72c34e810c9049f7db7a2",
+    "content-hash": "865db8c1224883e08a451632f8cb3431",
     "packages": [
         {
             "name": "andydefer/algo-kit",
@@ -407,16 +407,16 @@
         },
         {
             "name": "andydefer/laravel-repository",
-            "version": "v2.14.21",
+            "version": "v2.15.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andydefer/laravel-repository.git",
-                "reference": "d296c7ae84edb13fd8986d6aa9b26249ea18716d"
+                "reference": "4b482c5def0bf7c77c51e9a41f05ade8bb033d71"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/laravel-repository/zipball/d296c7ae84edb13fd8986d6aa9b26249ea18716d",
-                "reference": "d296c7ae84edb13fd8986d6aa9b26249ea18716d",
+                "url": "https://api.github.com/repos/andydefer/laravel-repository/zipball/4b482c5def0bf7c77c51e9a41f05ade8bb033d71",
+                "reference": "4b482c5def0bf7c77c51e9a41f05ade8bb033d71",
                 "shasum": ""
             },
             "require": {
@@ -456,28 +456,28 @@
             "description": "A lightweight, type-safe repository pattern implementation for Laravel",
             "support": {
                 "issues": "https://github.com/andydefer/laravel-repository/issues",
-                "source": "https://github.com/andydefer/laravel-repository/tree/v2.14.21"
+                "source": "https://github.com/andydefer/laravel-repository/tree/v2.15.0"
             },
-            "time": "2026-08-18T09:36:44+00:00"
+            "time": "2026-08-24T12:18:22+00:00"
         },
         {
             "name": "andydefer/laravel-task",
-            "version": "v4.13.2",
+            "version": "v4.13.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andydefer/laravel-task.git",
-                "reference": "c7f7d11441388626590c9108d2ecf636ed065114"
+                "reference": "fc613e019944fda95458ac7d67afb8360d5ea5d6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/laravel-task/zipball/c7f7d11441388626590c9108d2ecf636ed065114",
-                "reference": "c7f7d11441388626590c9108d2ecf636ed065114",
+                "url": "https://api.github.com/repos/andydefer/laravel-task/zipball/fc613e019944fda95458ac7d67afb8360d5ea5d6",
+                "reference": "fc613e019944fda95458ac7d67afb8360d5ea5d6",
                 "shasum": ""
             },
             "require": {
                 "andydefer/laravel-directive": "^3.65.6",
                 "andydefer/laravel-logger": "^3.9.17",
-                "andydefer/laravel-repository": "^2.14.21",
+                "andydefer/laravel-repository": "^2.15.0",
                 "laravel/framework": "^12.0|^13.0|^14.0|^15.0",
                 "php": ">=8.1",
                 "ramsey/uuid": "^4.7",
@@ -516,9 +516,9 @@
             "description": "A lightweight, file-based task system for Laravel with async execution, recurring tasks, and JSONL storage",
             "support": {
                 "issues": "https://github.com/andydefer/laravel-task/issues",
-                "source": "https://github.com/andydefer/laravel-task/tree/v4.13.2"
+                "source": "https://github.com/andydefer/laravel-task/tree/v4.13.3"
             },
-            "time": "2026-08-22T13:10:01+00:00"
+            "time": "2026-08-24T12:21:09+00:00"
         },
         {
             "name": "andydefer/php-client",
