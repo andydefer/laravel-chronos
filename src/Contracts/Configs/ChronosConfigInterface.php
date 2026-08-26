@@ -45,4 +45,14 @@ interface ChronosConfigInterface
      * @return int The buffer time in minutes
      */
     public function getBufferTime(): int;
+
+    /**
+     * Gets the default number of days to search when looking for slots.
+     *
+     * This limits how far into the future the search will go when finding
+     * the next available slot.
+     *
+     * @return int The default number of days to search
+     */
+    public function getDefaultSearchDays(): int;
 }

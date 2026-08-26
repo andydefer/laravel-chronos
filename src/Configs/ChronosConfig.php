@@ -26,6 +26,8 @@ final class ChronosConfig implements ChronosConfigInterface
 
     private const DEFAULT_BUFFER_TIME = 0;
 
+    private const DEFAULT_SEARCH_DAYS = 30;
+
     public function __construct(
         private readonly ConfigRepository $config,
     ) {}
@@ -77,6 +79,17 @@ final class ChronosConfig implements ChronosConfigInterface
         return (int) $this->config->get(
             self::CONFIG_KEY.'.buffer_time',
             self::DEFAULT_BUFFER_TIME
+        );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getDefaultSearchDays(): int
+    {
+        return (int) $this->config->get(
+            self::CONFIG_KEY.'.default_search_days',
+            self::DEFAULT_SEARCH_DAYS
         );
     }
 }

@@ -24,8 +24,6 @@ use InvalidArgumentException;
 
 final class SlotService implements SlotServiceInterface
 {
-    private const DEFAULT_SEARCH_DAYS = 30;
-
     public function __construct(
         private readonly AvailabilityServiceInterface $availabilityService,
         private readonly ScheduleServiceInterface $scheduleService,
@@ -47,7 +45,7 @@ final class SlotService implements SlotServiceInterface
         return ServiceContext::within(
             SlotService::class,
             function () use ($schedulable, $after, $durationInMinutes, $availabilityId): ?SlotVO {
-                $searchEnd = $after->addDays(self::DEFAULT_SEARCH_DAYS);
+                $searchEnd = $after->addDays($this->config->getDefaultSearchDays());
 
                 $slots = $this->findSlotsInRange(
                     $schedulable,
@@ -85,7 +83,7 @@ final class SlotService implements SlotServiceInterface
         return ServiceContext::within(
             SlotService::class,
             function () use ($schedulable, $before, $durationInMinutes, $availabilityId): ?SlotVO {
-                $searchStart = $before->subDays(self::DEFAULT_SEARCH_DAYS);
+                $searchStart = $before->subDays($this->config->getDefaultSearchDays());
 
                 $slots = $this->findSlotsInRange(
                     $schedulable,

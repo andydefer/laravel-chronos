@@ -53,4 +53,18 @@ return [
     |
     */
     'buffer_time' => env('CHRONOS_BUFFER_TIME', 0),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Search Days
+    |--------------------------------------------------------------------------
+    |
+    | The default number of days to search when looking for available slots.
+    | This limits how far into the future the search will go when finding
+    | the next available slot.
+    |
+    | Default: 30 days
+    |
+    */
+    'default_search_days' => env('CHRONOS_DEFAULT_SEARCH_DAYS', 30),
 ];
