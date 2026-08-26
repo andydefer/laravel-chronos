@@ -22,8 +22,5 @@ final class AvailabilityData extends AbstractData
         public readonly ?WeekDayCollection $days,
         public readonly ?DateTimeZuluVO $validityStart,
         public readonly ?DateTimeZuluVO $validityEnd,
-        public readonly ?DateTimeZuluVO $createdAt,
-        public readonly ?DateTimeZuluVO $updatedAt,
-        public readonly ?DateTimeZuluVO $deletedAt,
     ) {}
 }
