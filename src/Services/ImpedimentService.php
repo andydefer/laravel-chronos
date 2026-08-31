@@ -280,7 +280,7 @@ final class ImpedimentService implements ImpedimentServiceInterface
      */
     public function isActive(Impediment $impediment): bool
     {
-        return $impediment->isActive();
+        return $impediment->is_active;
     }
 
     /**

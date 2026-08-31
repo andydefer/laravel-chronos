@@ -22,5 +22,11 @@ final class AvailabilityData extends AbstractData
         public readonly ?WeekDayCollection $days,
         public readonly ?DateTimeZuluVO $validityStart,
         public readonly ?DateTimeZuluVO $validityEnd,
+        public readonly ?bool $hasSchedules = null,
+        public readonly ?bool $hasImpediments = null,
+        public readonly ?bool $isCrossDay = null,
+        public readonly ?bool $isSameDay = null,
+        public readonly ?bool $isSameHour = null,
+        public readonly ?int $durationInMinutes = null,
     ) {}
 }

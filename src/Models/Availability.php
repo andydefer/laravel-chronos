@@ -9,11 +9,46 @@ use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
 use AndyDefer\LaravelChronos\Enums\WeekDay;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Availability model representing time slots and scheduling availability.
+ *
+ * @property int $id
+ * @property string|null $type
+ * @property string|null $name
+ * @property Carbon|null $daily_start Start time of the availability
+ * @property Carbon|null $daily_end End time of the availability
+ * @property array $days Days of the week this availability applies to
+ * @property Carbon|null $validity_start Start date of validity period
+ * @property Carbon|null $validity_end End date of validity period
+ * @property string $schedulable_type
+ * @property string $schedulable_id
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
+ *
+ * // Computed attributes
+ * @property-read bool $has_schedules Whether this availability has any schedules
+ * @property-read bool $has_impediments Whether this availability has any impediments
+ * @property-read bool $is_cross_day Whether the availability spans across midnight
+ * @property-read bool $is_same_day Whether the availability is within the same day
+ * @property-read bool $is_same_hour Whether start and end are at the same hour
+ * @property-read int|null $duration_in_minutes Duration in minutes
+ *
+ * // Relations
+ * @property-read Model|null $schedulable
+ * @property-read HasMany<Schedule> $schedules
+ * @property-read HasMany<Impediment> $impediments
+ * @property-read HasMany<Schedule> $activeSchedules
+ * @property-read HasMany<Schedule> $upcomingSchedules
+ * @property-read HasMany<Impediment> $activeImpediments
+ */
 final class Availability extends Model
 {
     use SoftDeletes;
@@ -41,6 +76,20 @@ final class Availability extends Model
         'deleted_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+    ];
+
+    protected $appends = [
+        'has_schedules',
+        'has_impediments',
+        'is_cross_day',
+        'is_same_day',
+        'is_same_hour',
+        'duration_in_minutes',
+    ];
+
+    protected $with = [
+        'schedules',
+        'impediments',
     ];
 
     // ============================================================
@@ -252,70 +301,98 @@ final class Availability extends Model
 
     /**
      * Check if the availability has any impediments.
+     *
+     * @return Attribute<bool, never>
      */
-    public function hasImpediments(): bool
+    protected function hasImpediments(): Attribute
     {
-        return $this->impediments()->exists();
+        return Attribute::make(
+            get: fn (): bool => $this->impediments()->exists()
+        );
     }
 
     /**
      * Check if the availability is cross-day (daily_start > daily_end).
      * Uses TimeZuluVO comparison.
+     *
+     * @return Attribute<bool, never>
      */
-    public function isCrossDay(): bool
+    protected function isCrossDay(): Attribute
     {
-        $start = $this->getDailyStart();
-        $end = $this->getDailyEnd();
+        return Attribute::make(
+            get: function (): bool {
+                $start = $this->getDailyStart();
+                $end = $this->getDailyEnd();
 
-        if ($start === null || $end === null) {
-            return false;
-        }
+                if ($start === null || $end === null) {
+                    return false;
+                }
 
-        return $start->isAfter($end);
+                return $start->isAfter($end);
+            }
+        );
     }
 
     /**
      * Check if the availability is on the same day (daily_start <= daily_end).
+     *
+     * @return Attribute<bool, never>
      */
-    public function isSameDay(): bool
+    protected function isSameDay(): Attribute
     {
-        $start = $this->getDailyStart();
-        $end = $this->getDailyEnd();
+        return Attribute::make(
+            get: function (): bool {
+                $start = $this->getDailyStart();
+                $end = $this->getDailyEnd();
 
-        if ($start === null || $end === null) {
-            return true;
-        }
+                if ($start === null || $end === null) {
+                    return true;
+                }
 
-        return $start->isBefore($end) || $start->isEqual($end);
+                return $start->isBefore($end) || $start->isEqual($end);
+            }
+        );
     }
 
     /**
      * Check if the availability has the same start hour as end hour.
+     *
+     * @return Attribute<bool, never>
      */
-    public function isSameHour(): bool
+    protected function isSameHour(): Attribute
     {
-        $start = $this->getDailyStart();
-        $end = $this->getDailyEnd();
+        return Attribute::make(
+            get: function (): bool {
+                $start = $this->getDailyStart();
+                $end = $this->getDailyEnd();
 
-        if ($start === null || $end === null) {
-            return false;
-        }
+                if ($start === null || $end === null) {
+                    return false;
+                }
 
-        return $start->isSameHour($end);
+                return $start->isSameHour($end);
+            }
+        );
     }
 
     /**
      * Get the duration in minutes.
+     *
+     * @return Attribute<int|null, never>
      */
-    public function getDurationInMinutes(): ?int
+    protected function durationInMinutes(): Attribute
     {
-        $start = $this->getDailyStart();
-        $end = $this->getDailyEnd();
+        return Attribute::make(
+            get: function (): ?int {
+                $start = $this->getDailyStart();
+                $end = $this->getDailyEnd();
 
-        if ($start === null || $end === null) {
-            return null;
-        }
+                if ($start === null || $end === null) {
+                    return null;
+                }
 
-        return $start->diffInMinutes($end);
+                return $start->diffInMinutes($end);
+            }
+        );
     }
 }

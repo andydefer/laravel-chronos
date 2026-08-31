@@ -354,7 +354,7 @@ final class ScheduleService implements ScheduleServiceInterface
      */
     public function canBeCancelled(Schedule $schedule): bool
     {
-        return $schedule->canBeCancelled();
+        return $schedule->can_be_cancelled;
     }
 
     /**
@@ -362,7 +362,7 @@ final class ScheduleService implements ScheduleServiceInterface
      */
     public function canBeCompleted(Schedule $schedule): bool
     {
-        return $schedule->canBeCompleted();
+        return $schedule->can_be_completed;
     }
 
     /**

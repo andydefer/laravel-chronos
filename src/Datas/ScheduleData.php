@@ -22,5 +22,14 @@ final class ScheduleData extends AbstractData
         public readonly DateTimeZuluVO $endDatetime,
         public readonly ScheduleStatus $status,
         public readonly ?StrictAssociative $metadata,
+        public readonly ?bool $isActive = null,
+        public readonly ?bool $isUpcoming = null,
+        public readonly ?bool $isPast = null,
+        public readonly ?bool $isCrossDay = null,
+        public readonly ?bool $isSameDay = null,
+        public readonly ?bool $isSameHour = null,
+        public readonly ?int $durationInMinutes = null,
+        public readonly ?bool $canBeCancelled = null,
+        public readonly ?bool $canBeCompleted = null,
     ) {}
 }

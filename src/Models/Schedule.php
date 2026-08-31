@@ -6,11 +6,45 @@ namespace AndyDefer\LaravelChronos\Models;
 
 use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Schedule model representing scheduled time slots.
+ *
+ * @property string $id
+ * @property string $availability_id
+ * @property string $schedulable_type
+ * @property string $schedulable_id
+ * @property string|null $title
+ * @property string|null $description
+ * @property Carbon $start_datetime Start of the schedule
+ * @property Carbon $end_datetime End of the schedule
+ * @property ScheduleStatus $status Current status of the schedule
+ * @property array|null $metadata
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
+ *
+ * // Computed attributes
+ * @property-read bool $is_active Whether the schedule is currently active
+ * @property-read bool $is_upcoming Whether the schedule is in the future
+ * @property-read bool $is_past Whether the schedule is in the past
+ * @property-read bool $is_cross_day Whether the schedule spans across midnight
+ * @property-read bool $is_same_day Whether the schedule is within the same day
+ * @property-read bool $is_same_hour Whether start and end are at the same hour
+ * @property-read int|null $duration_in_minutes Duration in minutes
+ * @property-read bool $can_be_cancelled Whether the schedule can be cancelled
+ * @property-read bool $can_be_completed Whether the schedule can be completed
+ *
+ * // Relations
+ * @property-read Availability $availability
+ * @property-read Model|null $schedulable
+ */
 final class Schedule extends Model
 {
     use SoftDeletes;
@@ -37,6 +71,18 @@ final class Schedule extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'status' => ScheduleStatus::class,
+    ];
+
+    protected $appends = [
+        'is_active',
+        'is_upcoming',
+        'is_past',
+        'is_cross_day',
+        'is_same_day',
+        'is_same_hour',
+        'duration_in_minutes',
+        'can_be_cancelled',
+        'can_be_completed',
     ];
 
     // ============================================================
@@ -154,128 +200,182 @@ final class Schedule extends Model
 
     /**
      * Check if the schedule is currently active.
+     *
+     * @return Attribute<bool, never>
      */
-    public function isActive(): bool
+    protected function isActive(): Attribute
     {
-        $now = DateTimeZuluVO::now();
-        $start = $this->getStartDatetime();
-        $end = $this->getEndDatetime();
+        return Attribute::make(
+            get: function (): bool {
+                $now = DateTimeZuluVO::now();
+                $start = $this->getStartDatetime();
+                $end = $this->getEndDatetime();
 
-        if ($start === null || $end === null) {
-            return false;
-        }
+                if ($start === null || $end === null) {
+                    return false;
+                }
 
-        return $now->isBetween($start, $end);
+                return $now->isBetween($start, $end);
+            }
+        );
     }
 
     /**
      * Check if the schedule is upcoming.
+     *
+     * @return Attribute<bool, never>
      */
-    public function isUpcoming(): bool
+    protected function isUpcoming(): Attribute
     {
-        $now = DateTimeZuluVO::now();
-        $start = $this->getStartDatetime();
+        return Attribute::make(
+            get: function (): bool {
+                $now = DateTimeZuluVO::now();
+                $start = $this->getStartDatetime();
 
-        if ($start === null) {
-            return false;
-        }
+                if ($start === null) {
+                    return false;
+                }
 
-        return $now->isBefore($start);
+                return $now->isBefore($start);
+            }
+        );
     }
 
     /**
      * Check if the schedule is past.
+     *
+     * @return Attribute<bool, never>
      */
-    public function isPast(): bool
+    protected function isPast(): Attribute
     {
-        $now = DateTimeZuluVO::now();
-        $end = $this->getEndDatetime();
+        return Attribute::make(
+            get: function (): bool {
+                $now = DateTimeZuluVO::now();
+                $end = $this->getEndDatetime();
 
-        if ($end === null) {
-            return false;
-        }
+                if ($end === null) {
+                    return false;
+                }
 
-        return $now->isAfter($end);
+                return $now->isAfter($end);
+            }
+        );
     }
 
     /**
      * Check if the schedule is cross-day (start_date != end_date).
      * Uses DateTimeZuluVO comparison.
+     *
+     * @return Attribute<bool, never>
      */
-    public function isCrossDay(): bool
+    protected function isCrossDay(): Attribute
     {
-        $start = $this->getStartDatetime();
-        $end = $this->getEndDatetime();
+        return Attribute::make(
+            get: function (): bool {
+                $start = $this->getStartDatetime();
+                $end = $this->getEndDatetime();
 
-        if ($start === null || $end === null) {
-            return false;
-        }
+                if ($start === null || $end === null) {
+                    return false;
+                }
 
-        return $start->isCrossDay($end);
+                return $start->isCrossDay($end);
+            }
+        );
     }
 
     /**
      * Check if the schedule is on the same day (start_date == end_date).
+     *
+     * @return Attribute<bool, never>
      */
-    public function isSameDay(): bool
+    protected function isSameDay(): Attribute
     {
-        $start = $this->getStartDatetime();
-        $end = $this->getEndDatetime();
+        return Attribute::make(
+            get: function (): bool {
+                $start = $this->getStartDatetime();
+                $end = $this->getEndDatetime();
 
-        if ($start === null || $end === null) {
-            return true;
-        }
+                if ($start === null || $end === null) {
+                    return true;
+                }
 
-        return $start->isSameDay($end);
+                return $start->isSameDay($end);
+            }
+        );
     }
 
     /**
      * Check if the schedule has the same hour (start_hour == end_hour).
+     *
+     * @return Attribute<bool, never>
      */
-    public function isSameHour(): bool
+    protected function isSameHour(): Attribute
     {
-        $start = $this->getStartDatetime();
-        $end = $this->getEndDatetime();
+        return Attribute::make(
+            get: function (): bool {
+                $start = $this->getStartDatetime();
+                $end = $this->getEndDatetime();
 
-        if ($start === null || $end === null) {
-            return false;
-        }
+                if ($start === null || $end === null) {
+                    return false;
+                }
 
-        return $start->isSameHour($end);
+                return $start->isSameHour($end);
+            }
+        );
     }
 
     /**
      * Get the duration in minutes.
+     *
+     * @return Attribute<int|null, never>
      */
-    public function getDurationInMinutes(): ?int
+    protected function durationInMinutes(): Attribute
     {
-        $start = $this->getStartDatetime();
-        $end = $this->getEndDatetime();
+        return Attribute::make(
+            get: function (): ?int {
+                $start = $this->getStartDatetime();
+                $end = $this->getEndDatetime();
 
-        if ($start === null || $end === null) {
-            return null;
-        }
+                if ($start === null || $end === null) {
+                    return null;
+                }
 
-        return (int) $start->diffInMinutes($end);
+                return (int) $start->diffInMinutes($end);
+            }
+        );
     }
 
     /**
      * Check if the schedule can be cancelled.
+     *
+     * @return Attribute<bool, never>
      */
-    public function canBeCancelled(): bool
+    protected function canBeCancelled(): Attribute
     {
-        return ! in_array($this->status, [
-            ScheduleStatus::CANCELLED,
-            ScheduleStatus::COMPLETED,
-        ]);
+        return Attribute::make(
+            get: function (): bool {
+                return ! in_array($this->status, [
+                    ScheduleStatus::CANCELLED,
+                    ScheduleStatus::COMPLETED,
+                ]);
+            }
+        );
     }
 
     /**
      * Check if the schedule can be completed.
+     *
+     * @return Attribute<bool, never>
      */
-    public function canBeCompleted(): bool
+    protected function canBeCompleted(): Attribute
     {
-        return $this->status === ScheduleStatus::BOOKED
-            && $this->isPast();
+        return Attribute::make(
+            get: function (): bool {
+                return $this->status === ScheduleStatus::BOOKED
+                    && $this->isPast;
+            }
+        );
     }
 }

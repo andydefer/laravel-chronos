@@ -17,5 +17,12 @@ final class ImpedimentData extends AbstractData
         public readonly DateTimeZuluVO $startDatetime,
         public readonly DateTimeZuluVO $endDatetime,
         public readonly ?StrictAssociative $metadata,
+        public readonly ?bool $isActive = null,
+        public readonly ?bool $isUpcoming = null,
+        public readonly ?bool $isPast = null,
+        public readonly ?bool $isCrossDay = null,
+        public readonly ?bool $isSameDay = null,
+        public readonly ?bool $isSameHour = null,
+        public readonly ?int $durationInMinutes = null,
     ) {}
 }

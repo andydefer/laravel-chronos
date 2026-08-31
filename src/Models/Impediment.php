@@ -5,10 +5,37 @@ declare(strict_types=1);
 namespace AndyDefer\LaravelChronos\Models;
 
 use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Impediment model representing periods when availability is blocked.
+ *
+ * @property int $id
+ * @property int $availability_id
+ * @property string|null $reason
+ * @property Carbon $start_datetime Start of the impediment
+ * @property Carbon $end_datetime End of the impediment
+ * @property array|null $metadata
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
+ *
+ * // Computed attributes
+ * @property-read bool $is_active Whether the impediment is currently active
+ * @property-read bool $is_upcoming Whether the impediment is in the future
+ * @property-read bool $is_past Whether the impediment is in the past
+ * @property-read bool $is_cross_day Whether the impediment spans across midnight
+ * @property-read bool $is_same_day Whether the impediment is within the same day
+ * @property-read bool $is_same_hour Whether start and end are at the same hour
+ * @property-read int|null $duration_in_minutes Duration in minutes
+ *
+ * // Relations
+ * @property-read Availability $availability
+ */
 final class Impediment extends Model
 {
     use SoftDeletes;
@@ -30,6 +57,16 @@ final class Impediment extends Model
         'deleted_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+    ];
+
+    protected $appends = [
+        'is_active',
+        'is_upcoming',
+        'is_past',
+        'is_cross_day',
+        'is_same_day',
+        'is_same_hour',
+        'duration_in_minutes',
     ];
 
     // ============================================================
@@ -111,111 +148,152 @@ final class Impediment extends Model
     // ============================================================
     // HELPERS
     // ============================================================
-
     /**
      * Check if the impediment is currently active.
+     *
+     * @return Attribute<bool, never>
      */
-    public function isActive(): bool
+    protected function isActive(): Attribute
     {
-        $now = DateTimeZuluVO::now();
-        $start = $this->getStartDatetime();
-        $end = $this->getEndDatetime();
+        return Attribute::make(
+            get: function (): bool {
+                $now = DateTimeZuluVO::now();
+                $start = $this->getStartDatetime();
+                $end = $this->getEndDatetime();
 
-        if ($start === null || $end === null) {
-            return false;
-        }
+                if ($start === null || $end === null) {
+                    return false;
+                }
 
-        return $now->isBetween($start, $end);
+                return $now->isBetween($start, $end);
+            }
+        );
     }
 
     /**
      * Check if the impediment is upcoming.
+     *
+     * @return Attribute<bool, never>
      */
-    public function isUpcoming(): bool
+    protected function isUpcoming(): Attribute
     {
-        $now = DateTimeZuluVO::now();
-        $start = $this->getStartDatetime();
+        return Attribute::make(
+            get: function (): bool {
+                $now = DateTimeZuluVO::now();
+                $start = $this->getStartDatetime();
 
-        if ($start === null) {
-            return false;
-        }
+                if ($start === null) {
+                    return false;
+                }
 
-        return $now->isBefore($start);
+                return $now->isBefore($start);
+            }
+        );
     }
 
     /**
      * Check if the impediment is past.
+     *
+     * @return Attribute<bool, never>
      */
-    public function isPast(): bool
+    protected function isPast(): Attribute
     {
-        $now = DateTimeZuluVO::now();
-        $end = $this->getEndDatetime();
+        return Attribute::make(
+            get: function (): bool {
+                $now = DateTimeZuluVO::now();
+                $end = $this->getEndDatetime();
 
-        if ($end === null) {
-            return false;
-        }
+                if ($end === null) {
+                    return false;
+                }
 
-        return $now->isAfter($end);
+                return $now->isAfter($end);
+            }
+        );
     }
 
     /**
      * Check if the impediment is cross-day (start_date != end_date).
+     *
+     * @return Attribute<bool, never>
      */
-    public function isCrossDay(): bool
+    protected function isCrossDay(): Attribute
     {
-        $start = $this->getStartDatetime();
-        $end = $this->getEndDatetime();
+        return Attribute::make(
+            get: function (): bool {
+                $start = $this->getStartDatetime();
+                $end = $this->getEndDatetime();
 
-        if ($start === null || $end === null) {
-            return false;
-        }
+                if ($start === null || $end === null) {
+                    return false;
+                }
 
-        return $start->isCrossDay($end);
+                return $start->isCrossDay($end);
+            }
+        );
     }
 
     /**
      * Check if the impediment is on the same day (start_date == end_date).
+     *
+     * @return Attribute<bool, never>
      */
-    public function isSameDay(): bool
+    protected function isSameDay(): Attribute
     {
-        $start = $this->getStartDatetime();
-        $end = $this->getEndDatetime();
+        return Attribute::make(
+            get: function (): bool {
+                $start = $this->getStartDatetime();
+                $end = $this->getEndDatetime();
 
-        if ($start === null || $end === null) {
-            return true;
-        }
+                if ($start === null || $end === null) {
+                    return true;
+                }
 
-        return $start->isSameDay($end);
+                return $start->isSameDay($end);
+            }
+        );
     }
 
     /**
      * Check if the impediment has the same hour (start_hour == end_hour).
+     *
+     * @return Attribute<bool, never>
      */
-    public function isSameHour(): bool
+    protected function isSameHour(): Attribute
     {
-        $start = $this->getStartDatetime();
-        $end = $this->getEndDatetime();
+        return Attribute::make(
+            get: function (): bool {
+                $start = $this->getStartDatetime();
+                $end = $this->getEndDatetime();
 
-        if ($start === null || $end === null) {
-            return false;
-        }
+                if ($start === null || $end === null) {
+                    return false;
+                }
 
-        return $start->isSameHour($end);
+                return $start->isSameHour($end);
+            }
+        );
     }
 
     /**
      * Get the duration in minutes.
+     *
+     * @return Attribute<int|null, never>
      */
-    public function getDurationInMinutes(): ?int
+    protected function durationInMinutes(): Attribute
     {
-        $start = $this->getStartDatetime();
-        $end = $this->getEndDatetime();
+        return Attribute::make(
+            get: function (): ?int {
+                $start = $this->getStartDatetime();
+                $end = $this->getEndDatetime();
 
-        if ($start === null || $end === null) {
-            return null;
-        }
+                if ($start === null || $end === null) {
+                    return null;
+                }
 
-        return (int) $start->diffInMinutes($end);
+                return (int) $start->diffInMinutes($end);
+            }
+        );
     }
 
     /**
