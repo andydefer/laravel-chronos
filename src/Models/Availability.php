@@ -292,11 +292,15 @@ final class Availability extends Model
     }
 
     /**
-     * Check if the availability has any schedules.
+     * Check if the availability has any impediments.
+     *
+     * @return Attribute<bool, never>
      */
-    public function hasSchedules(): bool
+    protected function hasSchedules(): Attribute
     {
-        return $this->schedules()->exists();
+        return Attribute::make(
+            get: fn (): bool => $this->schedules()->exists()
+        );
     }
 
     /**
