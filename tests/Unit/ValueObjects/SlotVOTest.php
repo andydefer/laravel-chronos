@@ -229,11 +229,11 @@ final class SlotVOTest extends TestCase
         $this->assertIsArray($array);
         $this->assertArrayHasKey('start', $array);
         $this->assertArrayHasKey('end', $array);
-        $this->assertArrayHasKey('duration', $array);
+        $this->assertArrayHasKey('duration_in_minutes', $array);
         $this->assertArrayHasKey('duration_formatted', $array);
         $this->assertSame('2024-01-15T10:00:00Z', $array['start']);
         $this->assertSame('2024-01-15T10:30:00Z', $array['end']);
-        $this->assertSame(30, $array['duration']);
+        $this->assertSame(30, $array['duration_in_minutes']);
         $this->assertSame('30m', $array['duration_formatted']);
     }
 
@@ -246,7 +246,7 @@ final class SlotVOTest extends TestCase
         $this->assertInstanceOf(Associative::class, $value);
         $this->assertSame('2024-01-15T10:00:00Z', $value->get('start'));
         $this->assertSame('2024-01-15T10:30:00Z', $value->get('end'));
-        $this->assertSame(30, $value->get('duration'));
+        $this->assertSame(30, $value->get('duration_in_minutes'));
     }
 
     public function test_to_string_returns_human_readable_format(): void

@@ -35,7 +35,7 @@ final class SlotVO extends AbstractValueObject
     public function __construct(
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        int $durationInMinutes
+        int $durationInMinutes,
     ) {
         if (! $start->isBefore($end)) {
             throw new InvalidArgumentException('Slot start must be before end.');
@@ -212,7 +212,7 @@ final class SlotVO extends AbstractValueObject
         return [
             'start' => $this->start->getValue(),
             'end' => $this->end->getValue(),
-            'duration' => $this->durationInMinutes,
+            'duration_in_minutes' => $this->durationInMinutes,
             'duration_formatted' => $this->getDurationFormatted(),
         ];
     }
