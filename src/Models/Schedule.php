@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /**
  * Schedule model representing scheduled time slots.
  *
- * @property string $id
+ * @property int $id
  * @property string $availability_id
  * @property string $schedulable_type
  * @property string $schedulable_id
