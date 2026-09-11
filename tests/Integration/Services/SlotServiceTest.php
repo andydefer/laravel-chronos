@@ -17,8 +17,8 @@ use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
 use AndyDefer\LaravelChronos\Tests\Fixtures\Models\TestCar;
 use AndyDefer\LaravelChronos\Tests\IntegrationTestCase;
 use AndyDefer\LaravelChronos\ValueObjects\BlockedPeriodVO;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use AndyDefer\LaravelChronos\ValueObjects\SlotVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use InvalidArgumentException;
 
 final class SlotServiceTest extends IntegrationTestCase

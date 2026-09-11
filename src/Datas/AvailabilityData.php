@@ -6,8 +6,8 @@ namespace AndyDefer\LaravelChronos\Datas;
 
 use AndyDefer\DomainStructures\Abstracts\AbstractData;
 use AndyDefer\LaravelChronos\Collections\WeekDayCollection;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
-use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\TimeZuluVO;
 
 final class AvailabilityData extends AbstractData
 {

@@ -13,7 +13,7 @@ use AndyDefer\LaravelChronos\Tests\IntegrationTestCase;
 use AndyDefer\LaravelChronos\Validation\Context\ValidationContext;
 use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 use AndyDefer\LaravelChronos\Validation\Rules\Shared\MinSlotSearchDurationRule;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 
 final class MinSlotSearchDurationRuleTest extends IntegrationTestCase

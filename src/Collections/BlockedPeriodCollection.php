@@ -7,7 +7,7 @@ namespace AndyDefer\LaravelChronos\Collections;
 use AndyDefer\DomainStructures\Abstracts\AbstractTypedCollection;
 use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
 use AndyDefer\LaravelChronos\ValueObjects\BlockedPeriodVO;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 
 /**
  * Collection of BlockedPeriodVO objects.

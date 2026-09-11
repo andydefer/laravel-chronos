@@ -12,7 +12,7 @@ use AndyDefer\LaravelChronos\Records\ImpedimentRecord;
 use AndyDefer\LaravelChronos\Records\ScheduleRecord;
 use AndyDefer\LaravelChronos\Validation\Context\ValidationContext;
 use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 
 /**
  * Validates that a slot search duration meets the minimum required duration.

@@ -13,7 +13,7 @@ use AndyDefer\LaravelChronos\Validation\Context\ValidationContext;
 use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 use AndyDefer\LaravelChronos\Validation\Rules\Shared\MaxDurationRule;
 use AndyDefer\LaravelChronos\Validation\Services\ValidationHelperService;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 
 final class MaxDurationRuleTest extends IntegrationTestCase

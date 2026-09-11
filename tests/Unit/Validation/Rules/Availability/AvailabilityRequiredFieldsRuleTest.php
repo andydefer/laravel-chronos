@@ -10,7 +10,7 @@ use AndyDefer\LaravelChronos\Tests\Fixtures\Models\TestCar;
 use AndyDefer\LaravelChronos\Validation\Context\ValidationContext;
 use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 use AndyDefer\LaravelChronos\Validation\Rules\Availability\AvailabilityRequiredFieldsRule;
-use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\TimeZuluVO;
 use PHPUnit\Framework\TestCase;
 
 final class AvailabilityRequiredFieldsRuleTest extends TestCase

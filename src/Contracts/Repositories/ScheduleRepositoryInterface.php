@@ -8,7 +8,7 @@ use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
 use AndyDefer\LaravelChronos\Models\Availability;
 use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\ScheduleRecord;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use AndyDefer\Repository\AbstractRepositoryInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;

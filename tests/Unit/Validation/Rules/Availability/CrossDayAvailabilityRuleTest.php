@@ -11,7 +11,7 @@ use AndyDefer\LaravelChronos\Validation\Context\ValidationContext;
 use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 use AndyDefer\LaravelChronos\Validation\Rules\Availability\CrossDayAvailabilityRule;
 use AndyDefer\LaravelChronos\Validation\Services\ValidationHelperService;
-use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\TimeZuluVO;
 use PHPUnit\Framework\TestCase;
 
 final class CrossDayAvailabilityRuleTest extends TestCase

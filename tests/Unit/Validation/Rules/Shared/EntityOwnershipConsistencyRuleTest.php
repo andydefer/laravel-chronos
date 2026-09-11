@@ -13,7 +13,7 @@ use AndyDefer\LaravelChronos\Tests\IntegrationTestCase;
 use AndyDefer\LaravelChronos\Validation\Context\ValidationContext;
 use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 use AndyDefer\LaravelChronos\Validation\Rules\Shared\EntityOwnershipConsistencyRule;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 
 final class EntityOwnershipConsistencyRuleTest extends IntegrationTestCase
 {

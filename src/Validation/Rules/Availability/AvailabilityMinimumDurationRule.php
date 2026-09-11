@@ -12,7 +12,7 @@ use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
 use AndyDefer\LaravelChronos\Validation\Context\ValidationContext;
 use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 use AndyDefer\LaravelChronos\Validation\Services\ValidationHelperService;
-use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\TimeZuluVO;
 
 /**
  * Validates that the availability duration meets the minimum required duration.

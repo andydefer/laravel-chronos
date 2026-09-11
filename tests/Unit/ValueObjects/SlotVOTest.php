@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace AndyDefer\LaravelChronos\Tests\Unit\ValueObjects;
 
 use AndyDefer\DomainStructures\Utils\Associative;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use AndyDefer\LaravelChronos\ValueObjects\SlotVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 

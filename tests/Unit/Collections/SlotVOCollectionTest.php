@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace AndyDefer\LaravelChronos\Tests\Unit\Collections;
 
 use AndyDefer\LaravelChronos\Collections\SlotVOCollection;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use AndyDefer\LaravelChronos\ValueObjects\SlotVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use Illuminate\Support\Collection;
 use PHPUnit\Framework\TestCase;
 

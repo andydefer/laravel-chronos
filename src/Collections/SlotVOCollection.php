@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace AndyDefer\LaravelChronos\Collections;
 
 use AndyDefer\DomainStructures\Abstracts\AbstractTypedCollection;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use AndyDefer\LaravelChronos\ValueObjects\SlotVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use Illuminate\Support\Collection;
 
 /**

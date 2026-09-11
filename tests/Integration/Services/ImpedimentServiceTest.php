@@ -16,7 +16,7 @@ use AndyDefer\LaravelChronos\Records\ImpedimentRecord;
 use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
 use AndyDefer\LaravelChronos\Tests\Fixtures\Models\TestCar;
 use AndyDefer\LaravelChronos\Tests\IntegrationTestCase;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 
 final class ImpedimentServiceTest extends IntegrationTestCase
 {

@@ -9,7 +9,7 @@ use AndyDefer\LaravelChronos\Contracts\Repositories\ImpedimentRepositoryInterfac
 use AndyDefer\LaravelChronos\Models\Impediment;
 use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\ImpedimentRecord;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;

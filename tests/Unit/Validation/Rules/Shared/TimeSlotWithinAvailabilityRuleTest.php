@@ -14,7 +14,7 @@ use AndyDefer\LaravelChronos\Validation\Context\ValidationContext;
 use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 use AndyDefer\LaravelChronos\Validation\Rules\Shared\TimeSlotWithinAvailabilityRule;
 use AndyDefer\LaravelChronos\Validation\Services\ValidationHelperService;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 
 final class TimeSlotWithinAvailabilityRuleTest extends IntegrationTestCase
 {

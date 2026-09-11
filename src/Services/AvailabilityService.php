@@ -15,7 +15,7 @@ use AndyDefer\LaravelChronos\Models\Availability;
 use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
 use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
 use AndyDefer\LaravelChronos\Support\ServiceContext;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 

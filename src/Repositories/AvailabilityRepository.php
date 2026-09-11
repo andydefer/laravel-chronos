@@ -9,8 +9,8 @@ use AndyDefer\LaravelChronos\Contracts\Repositories\AvailabilityRepositoryInterf
 use AndyDefer\LaravelChronos\Enums\WeekDay;
 use AndyDefer\LaravelChronos\Models\Availability;
 use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
-use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\TimeZuluVO;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;

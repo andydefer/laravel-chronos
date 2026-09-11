@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\LaravelChronos\Models;
 
 use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;

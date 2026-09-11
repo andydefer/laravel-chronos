@@ -6,8 +6,8 @@ namespace AndyDefer\LaravelChronos\Records;
 
 use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 use AndyDefer\LaravelChronos\Collections\WeekDayCollection;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
-use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\TimeZuluVO;
 
 final class AvailabilityRecord extends AbstractRecord
 {

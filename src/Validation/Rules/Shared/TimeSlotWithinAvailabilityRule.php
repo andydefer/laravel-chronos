@@ -13,8 +13,8 @@ use AndyDefer\LaravelChronos\Records\ScheduleRecord;
 use AndyDefer\LaravelChronos\Validation\Context\ValidationContext;
 use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 use AndyDefer\LaravelChronos\Validation\Services\ValidationHelperService;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
-use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\TimeZuluVO;
 
 /**
  * Validates that a time slot is within the parent availability's constraints.

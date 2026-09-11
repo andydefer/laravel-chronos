@@ -12,8 +12,8 @@ use AndyDefer\LaravelChronos\Repositories\AvailabilityRepository;
 use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
 use AndyDefer\LaravelChronos\Tests\Fixtures\Models\TestCar;
 use AndyDefer\LaravelChronos\Tests\IntegrationTestCase;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
-use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\TimeZuluVO;
 use Illuminate\Support\Facades\DB;
 
 final class AvailabilityRepositoryTest extends IntegrationTestCase

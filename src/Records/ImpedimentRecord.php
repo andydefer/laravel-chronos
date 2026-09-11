@@ -6,7 +6,7 @@ namespace AndyDefer\LaravelChronos\Records;
 
 use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 use AndyDefer\DomainStructures\Utils\Associative;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 
 final class ImpedimentRecord extends AbstractRecord
 {

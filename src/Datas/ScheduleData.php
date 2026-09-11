@@ -7,7 +7,7 @@ namespace AndyDefer\LaravelChronos\Datas;
 use AndyDefer\DomainStructures\Abstracts\AbstractData;
 use AndyDefer\DomainStructures\Utils\StrictAssociative;
 use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 
 final class ScheduleData extends AbstractData
 {

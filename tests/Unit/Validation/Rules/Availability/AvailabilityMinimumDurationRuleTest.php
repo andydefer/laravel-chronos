@@ -15,7 +15,7 @@ use AndyDefer\LaravelChronos\Validation\Context\ValidationContext;
 use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 use AndyDefer\LaravelChronos\Validation\Rules\Availability\AvailabilityMinimumDurationRule;
 use AndyDefer\LaravelChronos\Validation\Services\ValidationHelperService;
-use AndyDefer\LaravelChronos\ValueObjects\TimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\TimeZuluVO;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 
 final class AvailabilityMinimumDurationRuleTest extends IntegrationTestCase

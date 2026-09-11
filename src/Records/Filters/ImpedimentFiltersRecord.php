@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\LaravelChronos\Records\Filters;
 
 use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 
 final class ImpedimentFiltersRecord extends AbstractRecord
 {

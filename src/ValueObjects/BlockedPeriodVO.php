@@ -7,6 +7,7 @@ namespace AndyDefer\LaravelChronos\ValueObjects;
 use AndyDefer\DomainStructures\Abstracts\AbstractValueObject;
 use AndyDefer\DomainStructures\Interfaces\Transformable;
 use AndyDefer\DomainStructures\Utils\StrictAssociative;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use UnitEnum;
 
 /**

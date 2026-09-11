@@ -6,7 +6,7 @@ namespace AndyDefer\LaravelChronos\Records\Filters;
 
 use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 use AndyDefer\LaravelChronos\Collections\WeekDayCollection;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 
 final class AvailabilityFiltersRecord extends AbstractRecord
 {

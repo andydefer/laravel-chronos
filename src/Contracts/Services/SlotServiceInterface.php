@@ -6,8 +6,8 @@ namespace AndyDefer\LaravelChronos\Contracts\Services;
 
 use AndyDefer\LaravelChronos\Collections\BlockedPeriodCollection;
 use AndyDefer\LaravelChronos\Collections\SlotVOCollection;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
 use AndyDefer\LaravelChronos\ValueObjects\SlotVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use Illuminate\Database\Eloquent\Model;
 
 /**

@@ -10,7 +10,7 @@ use AndyDefer\LaravelChronos\Enums\EntityType;
 use AndyDefer\LaravelChronos\Models\Availability;
 use AndyDefer\LaravelChronos\Validation\Context\ValidationContext;
 use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 
 /**
  * Prevents deletion of availabilities that have future bookings.

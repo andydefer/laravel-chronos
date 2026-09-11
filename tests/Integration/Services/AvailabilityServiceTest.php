@@ -12,7 +12,7 @@ use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
 use AndyDefer\LaravelChronos\Support\ChronosMutationContext;
 use AndyDefer\LaravelChronos\Tests\Fixtures\Models\TestCar;
 use AndyDefer\LaravelChronos\Tests\IntegrationTestCase;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use Illuminate\Support\Facades\DB;
 
 final class AvailabilityServiceTest extends IntegrationTestCase

@@ -6,7 +6,7 @@ namespace AndyDefer\LaravelChronos\Datas;
 
 use AndyDefer\DomainStructures\Abstracts\AbstractData;
 use AndyDefer\DomainStructures\Utils\StrictAssociative;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 
 final class ImpedimentData extends AbstractData
 {

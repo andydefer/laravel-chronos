@@ -6,6 +6,7 @@ namespace AndyDefer\LaravelChronos\ValueObjects;
 
 use AndyDefer\DomainStructures\Abstracts\AbstractValueObject;
 use AndyDefer\DomainStructures\Utils\Associative;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use InvalidArgumentException;
 
 /**

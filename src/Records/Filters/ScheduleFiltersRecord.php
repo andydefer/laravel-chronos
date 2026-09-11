@@ -6,7 +6,7 @@ namespace AndyDefer\LaravelChronos\Records\Filters;
 
 use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
-use AndyDefer\LaravelChronos\ValueObjects\DateTimeZuluVO;
+use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 
 final class ScheduleFiltersRecord extends AbstractRecord
 {
