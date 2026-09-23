@@ -42,7 +42,8 @@ final class SlotVO extends AbstractValueObject
             throw new InvalidArgumentException('Slot start must be before end.');
         }
 
-        $actualDuration = (int) $start->diffInMinutes($end);
+        $actualDuration = (int) round($start->diffInMinutes($end));
+
         if ($actualDuration !== $durationInMinutes) {
             throw new InvalidArgumentException(
                 sprintf(
@@ -165,7 +166,7 @@ final class SlotVO extends AbstractValueObject
 
         $start = $this->start->isBefore($slot->getStart()) ? $this->start : $slot->getStart();
         $end = $this->end->isAfter($slot->getEnd()) ? $this->end : $slot->getEnd();
-        $duration = (int) $start->diffInMinutes($end);
+        $duration = (int) round($start->diffInMinutes($end));
 
         return new self($start, $end, $duration);
     }
@@ -195,7 +196,7 @@ final class SlotVO extends AbstractValueObject
         }
 
         // Add remaining time as a slot if any
-        $remainingMinutes = (int) $currentStart->diffInMinutes($this->end);
+        $remainingMinutes = (int) round($currentStart->diffInMinutes($this->end));
         if ($remainingMinutes > 0) {
             $slots[] = self::fromDuration($currentStart, $remainingMinutes);
         }
