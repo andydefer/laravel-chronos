@@ -12,13 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('schedules', function (Blueprint $table): void {
-            $table->id();
+            $table->uuid('id')->primary();
 
-            $table->foreignId('availability_id')
+            $table->foreignUuid('availability_id')
                 ->constrained('availabilities')
                 ->onDelete('cascade');
 
-            $table->morphs('schedulable');
+            $table->string('schedulable_type', 191);
+            $table->string('schedulable_id', 191);
 
             $table->string('title')->comment('Title of the scheduled item');
             $table->text('description')->nullable()->comment('Description of the scheduled item');
@@ -33,6 +34,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
+            $table->index(['schedulable_type', 'schedulable_id']);
             $table->index('availability_id');
             $table->index('status');
             $table->index(['start_datetime', 'end_datetime']);

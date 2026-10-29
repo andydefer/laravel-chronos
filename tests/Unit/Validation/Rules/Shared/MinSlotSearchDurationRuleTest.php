@@ -26,7 +26,6 @@ final class MinSlotSearchDurationRuleTest extends IntegrationTestCase
     {
         parent::setUp();
 
-        // Set configuration
         config()->set('chronos.min_durations.slot_search', 5);
         config()->set('chronos.max_duration', 240);
         config()->set('chronos.buffer_time', 0);
@@ -59,10 +58,10 @@ final class MinSlotSearchDurationRuleTest extends IntegrationTestCase
 
     public function test_returns_null_when_time_data_is_missing(): void
     {
-        $record = new ScheduleRecord(
-            availability_id: 1,
-            title: 'Test Schedule'
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => '1',
+            'title' => 'Test Schedule',
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);
@@ -73,14 +72,14 @@ final class MinSlotSearchDurationRuleTest extends IntegrationTestCase
     public function test_returns_error_when_duration_is_below_minimum(): void
     {
         $startDatetime = DateTimeZuluVO::from('2024-01-15T09:00:00Z');
-        $endDatetime = DateTimeZuluVO::from('2024-01-15T09:01:00Z'); // 1 minute
+        $endDatetime = DateTimeZuluVO::from('2024-01-15T09:01:00Z');
 
-        $record = new ScheduleRecord(
-            availability_id: 1,
-            title: 'Test Schedule',
-            start_datetime: $startDatetime,
-            end_datetime: $endDatetime
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => '1',
+            'title' => 'Test Schedule',
+            'start_datetime' => $startDatetime,
+            'end_datetime' => $endDatetime,
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);
@@ -94,14 +93,14 @@ final class MinSlotSearchDurationRuleTest extends IntegrationTestCase
     public function test_passes_validation_when_duration_meets_minimum(): void
     {
         $startDatetime = DateTimeZuluVO::from('2024-01-15T09:00:00Z');
-        $endDatetime = DateTimeZuluVO::from('2024-01-15T09:30:00Z'); // 30 minutes
+        $endDatetime = DateTimeZuluVO::from('2024-01-15T09:30:00Z');
 
-        $record = new ScheduleRecord(
-            availability_id: 1,
-            title: 'Test Schedule',
-            start_datetime: $startDatetime,
-            end_datetime: $endDatetime
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => '1',
+            'title' => 'Test Schedule',
+            'start_datetime' => $startDatetime,
+            'end_datetime' => $endDatetime,
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);
@@ -112,14 +111,14 @@ final class MinSlotSearchDurationRuleTest extends IntegrationTestCase
     public function test_passes_validation_when_duration_exceeds_minimum(): void
     {
         $startDatetime = DateTimeZuluVO::from('2024-01-15T09:00:00Z');
-        $endDatetime = DateTimeZuluVO::from('2024-01-15T17:00:00Z'); // 480 minutes
+        $endDatetime = DateTimeZuluVO::from('2024-01-15T17:00:00Z');
 
-        $record = new ScheduleRecord(
-            availability_id: 1,
-            title: 'Test Schedule',
-            start_datetime: $startDatetime,
-            end_datetime: $endDatetime
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => '1',
+            'title' => 'Test Schedule',
+            'start_datetime' => $startDatetime,
+            'end_datetime' => $endDatetime,
+        ]);
         $context = new ValidationContext($record, OperationType::UPDATE);
 
         $result = $this->rule->validate($context);
@@ -129,21 +128,20 @@ final class MinSlotSearchDurationRuleTest extends IntegrationTestCase
 
     public function test_respects_configuration_changes(): void
     {
-        // Change min duration to 30 minutes
         config()->set('chronos.min_durations.slot_search', 30);
 
         $config = new ChronosConfig(app(ConfigRepository::class));
         $rule = new MinSlotSearchDurationRule($config);
 
         $startDatetime = DateTimeZuluVO::from('2024-01-15T09:00:00Z');
-        $endDatetime = DateTimeZuluVO::from('2024-01-15T09:15:00Z'); // 15 minutes < 30 min
+        $endDatetime = DateTimeZuluVO::from('2024-01-15T09:15:00Z');
 
-        $record = new ScheduleRecord(
-            availability_id: 1,
-            title: 'Test Schedule',
-            start_datetime: $startDatetime,
-            end_datetime: $endDatetime
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => '1',
+            'title' => 'Test Schedule',
+            'start_datetime' => $startDatetime,
+            'end_datetime' => $endDatetime,
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $rule->validate($context);
@@ -152,21 +150,20 @@ final class MinSlotSearchDurationRuleTest extends IntegrationTestCase
         $this->assertStringContainsString('Slot duration (15 minutes) is too short', $result->message);
         $this->assertStringContainsString('Minimum allowed duration for slot search is 30 minutes', $result->message);
 
-        // Restore configuration for other tests
         config()->set('chronos.min_durations.slot_search', 5);
     }
 
     public function test_applies_to_impediment_records(): void
     {
         $startDatetime = DateTimeZuluVO::from('2024-01-15T09:00:00Z');
-        $endDatetime = DateTimeZuluVO::from('2024-01-15T09:01:00Z'); // 1 minute
+        $endDatetime = DateTimeZuluVO::from('2024-01-15T09:01:00Z');
 
-        $record = new ImpedimentRecord(
-            availability_id: 1,
-            reason: 'Test Impediment',
-            start_datetime: $startDatetime,
-            end_datetime: $endDatetime
-        );
+        $record = ImpedimentRecord::from([
+            'availability_id' => '1',
+            'reason' => 'Test Impediment',
+            'start_datetime' => $startDatetime,
+            'end_datetime' => $endDatetime,
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);

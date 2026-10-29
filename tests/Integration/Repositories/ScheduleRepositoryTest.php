@@ -16,6 +16,7 @@ use AndyDefer\LaravelChronos\Tests\Fixtures\Models\TestCar;
 use AndyDefer\LaravelChronos\Tests\IntegrationTestCase;
 use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class ScheduleRepositoryTest extends IntegrationTestCase
 {
@@ -41,7 +42,6 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $this->repository = $this->app->make(ScheduleRepository::class);
         $this->availabilityRepository = $this->app->make(AvailabilityRepository::class);
 
-        // Désactiver l'enforcement du service layer pour les tests
         $this->repository->withoutServiceEnforcement();
         $this->availabilityRepository->withoutServiceEnforcement();
     }
@@ -135,7 +135,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
     {
         $availability = $this->createAvailability();
         $schedule1 = $this->createSchedule($availability);
-        $schedule2 = $this->createSchedule($availability);
+        $this->createSchedule($availability);
 
         $results = $this->repository->findByAvailability($availability->id);
 
@@ -169,7 +169,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
     public function test_can_find_by_schedulable(): void
     {
         $schedule1 = $this->createSchedule();
-        $schedule2 = $this->createSchedule();
+        $this->createSchedule();
 
         $results = $this->repository->findBySchedulable($this->testCar);
 
@@ -234,7 +234,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $availability2 = $this->createAvailability();
 
         $schedule1 = $this->createSchedule($availability1);
-        $schedule2 = $this->createSchedule($availability2);
+        $this->createSchedule($availability2);
 
         $results = $this->repository->findByStatus(ScheduleStatus::AVAILABLE, $availability1->id);
 
@@ -279,7 +279,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $availability2 = $this->createAvailability();
 
         $schedule1 = $this->createSchedule($availability1);
-        $schedule2 = $this->createSchedule($availability2);
+        $this->createSchedule($availability2);
 
         $results = $this->repository->searchByTitle('Test Schedule', $availability1->id);
 
@@ -514,6 +514,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $availability = $this->createAvailability();
 
         DB::table('schedules')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
             'schedulable_id' => $this->testCar->id,
@@ -536,6 +537,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
 
         for ($i = 1; $i <= 5; $i++) {
             DB::table('schedules')->insert([
+                'id' => (string) Str::uuid(),
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
                 'schedulable_id' => $this->testCar->id,
@@ -557,6 +559,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $availability = $this->createAvailability();
 
         DB::table('schedules')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
             'schedulable_id' => $this->testCar->id,
@@ -568,6 +571,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         ]);
 
         DB::table('schedules')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
             'schedulable_id' => $this->testCar->id,
@@ -590,6 +594,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
 
         for ($i = 1; $i <= 5; $i++) {
             DB::table('schedules')->insert([
+                'id' => (string) Str::uuid(),
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
                 'schedulable_id' => $this->testCar->id,
@@ -611,6 +616,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $availability = $this->createAvailability();
 
         DB::table('schedules')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
             'schedulable_id' => $this->testCar->id,
@@ -622,6 +628,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         ]);
 
         DB::table('schedules')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
             'schedulable_id' => $this->testCar->id,
@@ -644,6 +651,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
 
         for ($i = 1; $i <= 3; $i++) {
             DB::table('schedules')->insert([
+                'id' => (string) Str::uuid(),
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
                 'schedulable_id' => $this->testCar->id,
@@ -655,6 +663,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
             ]);
 
             DB::table('schedules')->insert([
+                'id' => (string) Str::uuid(),
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
                 'schedulable_id' => $this->testCar->id,
@@ -676,6 +685,7 @@ final class ScheduleRepositoryTest extends IntegrationTestCase
         $availability = $this->createAvailability();
 
         DB::table('schedules')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
             'schedulable_id' => $this->testCar->id,

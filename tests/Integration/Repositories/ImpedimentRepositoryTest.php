@@ -17,6 +17,7 @@ use AndyDefer\LaravelChronos\Tests\IntegrationTestCase;
 use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class ImpedimentRepositoryTest extends IntegrationTestCase
 {
@@ -42,7 +43,6 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         $this->repository = $this->app->make(ImpedimentRepository::class);
         $this->availabilityRepository = $this->app->make(AvailabilityRepository::class);
 
-        // Désactiver l'enforcement du service layer pour les tests
         $this->repository->withoutServiceEnforcement();
         $this->availabilityRepository->withoutServiceEnforcement();
     }
@@ -102,7 +102,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
     {
         $availability = $this->createAvailability();
         $impediment1 = $this->createImpediment($availability);
-        $impediment2 = $this->createImpediment($availability);
+        $this->createImpediment($availability);
 
         $results = $this->repository->findByAvailability($availability->id);
 
@@ -275,10 +275,10 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
     public function test_can_find_active(): void
     {
         $availability = $this->createAvailability();
-
         $now = Carbon::now('UTC');
 
         DB::table('impediments')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability->id,
             'reason' => 'Active',
             'start_datetime' => $now->copy()->subHour()->format('Y-m-d H:i:s'),
@@ -288,6 +288,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         ]);
 
         DB::table('impediments')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability->id,
             'reason' => 'Expired',
             'start_datetime' => $now->copy()->subDays(2)->format('Y-m-d H:i:s'),
@@ -297,6 +298,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         ]);
 
         DB::table('impediments')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability->id,
             'reason' => 'Future',
             'start_datetime' => $now->copy()->addDays(1)->format('Y-m-d H:i:s'),
@@ -318,6 +320,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
 
         for ($i = 1; $i <= 5; $i++) {
             DB::table('impediments')->insert([
+                'id' => (string) Str::uuid(),
                 'availability_id' => $availability->id,
                 'reason' => "Active $i",
                 'start_datetime' => $now->copy()->subHour()->format('Y-m-d H:i:s'),
@@ -338,10 +341,10 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
     {
         $availability1 = $this->createAvailability();
         $availability2 = $this->createAvailability();
-
         $now = Carbon::now('UTC');
 
         DB::table('impediments')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability1->id,
             'reason' => 'Active 1',
             'start_datetime' => $now->copy()->subHour()->format('Y-m-d H:i:s'),
@@ -351,6 +354,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         ]);
 
         DB::table('impediments')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability2->id,
             'reason' => 'Active 2',
             'start_datetime' => $now->copy()->subHour()->format('Y-m-d H:i:s'),
@@ -360,6 +364,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         ]);
 
         DB::table('impediments')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability1->id,
             'reason' => 'Expired',
             'start_datetime' => $now->copy()->subDays(2)->format('Y-m-d H:i:s'),
@@ -491,6 +496,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         $availability = $this->createAvailability();
 
         DB::table('impediments')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability->id,
             'reason' => 'Invalid Chronology',
             'start_datetime' => '2024-01-15 11:00:00',
@@ -511,6 +517,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
 
         for ($i = 1; $i <= 5; $i++) {
             DB::table('impediments')->insert([
+                'id' => (string) Str::uuid(),
                 'availability_id' => $availability->id,
                 'reason' => "Invalid Chronology $i",
                 'start_datetime' => '2024-01-15 11:00:00',
@@ -530,6 +537,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         $availability = $this->createAvailability();
 
         DB::table('impediments')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability->id,
             'reason' => 'Long Impediment',
             'start_datetime' => '2024-01-15 10:00:00',
@@ -539,6 +547,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         ]);
 
         DB::table('impediments')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability->id,
             'reason' => 'Short Impediment',
             'start_datetime' => '2024-01-15 13:00:00',
@@ -559,6 +568,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
 
         for ($i = 1; $i <= 5; $i++) {
             DB::table('impediments')->insert([
+                'id' => (string) Str::uuid(),
                 'availability_id' => $availability->id,
                 'reason' => "Long Impediment $i",
                 'start_datetime' => '2024-01-15 10:00:00',
@@ -578,6 +588,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         $availability = $this->createAvailability();
 
         DB::table('impediments')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability->id,
             'reason' => 'Impediment 1',
             'start_datetime' => '2024-01-15 10:00:00',
@@ -587,6 +598,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
         ]);
 
         DB::table('impediments')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability->id,
             'reason' => 'Impediment 2',
             'start_datetime' => '2024-01-15 11:15:00',
@@ -607,6 +619,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
 
         for ($i = 1; $i <= 3; $i++) {
             DB::table('impediments')->insert([
+                'id' => (string) Str::uuid(),
                 'availability_id' => $availability->id,
                 'reason' => "Impediment A$i",
                 'start_datetime' => '2024-01-15 10:00:00',
@@ -616,6 +629,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
             ]);
 
             DB::table('impediments')->insert([
+                'id' => (string) Str::uuid(),
                 'availability_id' => $availability->id,
                 'reason' => "Impediment B$i",
                 'start_datetime' => '2024-01-15 10:35:00',
@@ -740,7 +754,7 @@ final class ImpedimentRepositoryTest extends IntegrationTestCase
     }
 
     // ============================================================
-    // NEW TESTS FOR BLOCKED SCHEDULES
+    // BLOCKED SCHEDULES TESTS
     // ============================================================
 
     public function test_get_blocked_schedules_returns_schedules_that_overlap(): void

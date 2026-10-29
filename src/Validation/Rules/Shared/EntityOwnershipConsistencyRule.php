@@ -13,50 +13,19 @@ use AndyDefer\LaravelChronos\Records\ScheduleRecord;
 use AndyDefer\LaravelChronos\Validation\Context\ValidationContext;
 use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 
-/**
- * Ensures that a schedule or impediment belongs to the same entity as its parent availability.
- *
- * Validates that the schedulable_type and schedulable_id of a child record
- * match those of its parent availability to maintain data consistency.
- * This prevents cross-entity data corruption.
- *
- * @example
- * $rule = new EntityOwnershipConsistencyRule();
- * $context = new ValidationContext($record, OperationType::CREATE);
- * $error = $rule->validate($context);
- *
- * if ($error !== null) {
- *     // Handle ownership inconsistency
- * }
- */
 final class EntityOwnershipConsistencyRule implements ValidationRule
 {
-    /**
-     * {@inheritDoc}
-     */
     public function getDescription(): string
     {
         return 'Ensures that schedules and impediments belong to the same entity as their parent availability.';
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * This rule applies to Schedule and Impediment entity types.
-     */
     public function supports(ValidationContext $context): bool
     {
         return $context->getEntityType() === EntityType::SCHEDULE
             || $context->getEntityType() === EntityType::IMPEDIMENT;
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * Validates that the child entity matches the parent availability's owner.
-     *
-     * @throws \RuntimeException If the record is not a ScheduleRecord or ImpedimentRecord
-     */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
         $record = $context->getRecord();
@@ -100,13 +69,7 @@ final class EntityOwnershipConsistencyRule implements ValidationRule
         return null;
     }
 
-    /**
-     * Extracts availability ID from the record.
-     *
-     * @param  mixed  $record  The record to extract from
-     * @return int|null The availability ID or null
-     */
-    private function extractAvailabilityId(mixed $record): ?int
+    private function extractAvailabilityId(mixed $record): int|string|null
     {
         return match (true) {
             $record instanceof ScheduleRecord => $record->availability_id,
@@ -115,42 +78,25 @@ final class EntityOwnershipConsistencyRule implements ValidationRule
         };
     }
 
-    /**
-     * Checks if there is an ownership mismatch.
-     *
-     * @param  Availability  $availability  The parent availability
-     * @param  string  $recordType  The record's schedulable type
-     * @param  int  $recordId  The record's schedulable ID
-     * @return bool True if there is a mismatch
-     */
     private function isOwnershipMismatch(
         Availability $availability,
         string $recordType,
-        int $recordId
+        int|string $recordId
     ): bool {
         return $recordType !== $availability->schedulable_type
             || $recordId !== $availability->schedulable_id;
     }
 
-    /**
-     * Creates an error for ownership mismatch.
-     *
-     * @param  string  $recordType  The record's schedulable type
-     * @param  int  $recordId  The record's schedulable ID
-     * @param  Availability  $availability  The parent availability
-     * @param  int  $availabilityId  The availability ID
-     * @return ValidationErrorRecord The error record
-     */
     private function createOwnershipMismatchError(
         string $recordType,
-        int $recordId,
+        int|string $recordId,
         Availability $availability,
-        int $availabilityId
+        int|string $availabilityId
     ): ValidationErrorRecord {
         return new ValidationErrorRecord(
             rule: self::class,
             message: sprintf(
-                'The schedule entity (%s#%d) does not match the parent availability entity (%s#%d).',
+                'The schedule entity (%s#%s) does not match the parent availability entity (%s#%s).',
                 $recordType,
                 $recordId,
                 $availability->schedulable_type,

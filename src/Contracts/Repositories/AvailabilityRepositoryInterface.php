@@ -46,7 +46,7 @@ interface AvailabilityRepositoryInterface extends AbstractRepositoryInterface
      * @param  TimeZuluVO  $endTime  The end time
      * @param  DateTimeZuluVO  $validityStart  The start of validity period
      * @param  DateTimeZuluVO  $validityEnd  The end of validity period
-     * @param  int|null  $excludeId  Optional ID to exclude
+     * @param  int|string|null  $excludeId  Optional ID to exclude
      * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Availability> Collection of overlapping availabilities
      */
@@ -57,7 +57,7 @@ interface AvailabilityRepositoryInterface extends AbstractRepositoryInterface
         TimeZuluVO $endTime,
         DateTimeZuluVO $validityStart,
         DateTimeZuluVO $validityEnd,
-        ?int $excludeId = null,
+        int|string|null $excludeId = null,
         ?int $limit = null,
     ): Collection;
 
@@ -77,7 +77,7 @@ interface AvailabilityRepositoryInterface extends AbstractRepositoryInterface
      * @param  Model  $schedulable  The schedulable entity
      * @param  DateTimeZuluVO  $start  The start of the range
      * @param  DateTimeZuluVO  $end  The end of the range
-     * @param  int|null  $excludeId  Optional ID to exclude
+     * @param  int|string|null  $excludeId  Optional ID to exclude
      * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Availability> Collection of availabilities in range
      */
@@ -85,7 +85,7 @@ interface AvailabilityRepositoryInterface extends AbstractRepositoryInterface
         Model $schedulable,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $excludeId = null,
+        int|string|null $excludeId = null,
         ?int $limit = null,
     ): Collection;
 
@@ -120,11 +120,11 @@ interface AvailabilityRepositoryInterface extends AbstractRepositoryInterface
     /**
      * Find availabilities with future schedules.
      *
-     * @param  int  $availabilityId  The availability ID
+     * @param  int|string  $availabilityId  The availability ID
      * @param  DateTimeZuluVO  $now  The current time
      * @return bool True if future schedules exist
      */
-    public function findWithFutureSchedules(int $availabilityId, DateTimeZuluVO $now): bool;
+    public function findWithFutureSchedules(int|string $availabilityId, DateTimeZuluVO $now): bool;
 
     /**
      * Find availabilities by type.

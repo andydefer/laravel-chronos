@@ -86,7 +86,7 @@ final class ImpedimentService implements ImpedimentServiceInterface
      * @throws ValidationException When the record fails validation
      * @throws Throwable When the repository operation fails
      */
-    public function update(int $id, ImpedimentRecord $record): Impediment
+    public function update(int|string $id, ImpedimentRecord $record): Impediment
     {
         return ServiceContext::within(
             ImpedimentService::class,
@@ -109,7 +109,7 @@ final class ImpedimentService implements ImpedimentServiceInterface
      * @throws ValidationException When validation fails
      * @throws Throwable When the repository operation fails
      */
-    public function delete(int $id): bool
+    public function delete(int|string $id): bool
     {
         $schedulable = $this->scope->getScopedSchedulable();
         $this->scope->clearScope();
@@ -119,7 +119,7 @@ final class ImpedimentService implements ImpedimentServiceInterface
             function () use ($id, $schedulable): bool {
                 $existing = $this->findOrFail($id, $schedulable);
                 $this->validateOperation(
-                    new ImpedimentRecord,
+                    ImpedimentRecord::from([]),
                     OperationType::DELETE,
                     $existing
                 );
@@ -135,7 +135,7 @@ final class ImpedimentService implements ImpedimentServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function find(int $id): ?Impediment
+    public function find(int|string $id): ?Impediment
     {
         $schedulable = $this->scope->getScopedSchedulable();
         $this->scope->clearScope();
@@ -149,7 +149,7 @@ final class ImpedimentService implements ImpedimentServiceInterface
                     $availability = $impediment->availability;
                     if ($availability === null ||
                         $availability->schedulable_type !== $schedulable->getMorphClass() ||
-                        $availability->schedulable_id !== $schedulable->getKey()) {
+                        (string) $availability->schedulable_id !== (string) $schedulable->getKey()) {
                         return null;
                     }
                 }
@@ -163,7 +163,7 @@ final class ImpedimentService implements ImpedimentServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findByAvailability(int $availabilityId, ?int $limit = null): Collection
+    public function findByAvailability(int|string $availabilityId, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ImpedimentService::class,
@@ -206,7 +206,7 @@ final class ImpedimentService implements ImpedimentServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null, ?int $limit = null): Collection
+    public function findByDate(DateTimeZuluVO $date, int|string|null $availabilityId = null, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ImpedimentService::class,
@@ -226,7 +226,7 @@ final class ImpedimentService implements ImpedimentServiceInterface
     public function findInDateRange(
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $availabilityId = null,
+        int|string|null $availabilityId = null,
         ?int $limit = null
     ): Collection {
         return ServiceContext::within(
@@ -245,7 +245,7 @@ final class ImpedimentService implements ImpedimentServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function findActive(?int $availabilityId = null, ?int $limit = null): Collection
+    public function findActive(int|string|null $availabilityId = null, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ImpedimentService::class,
@@ -261,7 +261,7 @@ final class ImpedimentService implements ImpedimentServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function searchByReason(string $search, ?int $availabilityId = null, ?int $limit = null): Collection
+    public function searchByReason(string $search, int|string|null $availabilityId = null, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ImpedimentService::class,
@@ -345,13 +345,13 @@ final class ImpedimentService implements ImpedimentServiceInterface
     /**
      * Finds an impediment or throws an exception if not found.
      *
-     * @param  int  $id  The impediment ID
+     * @param  int|string  $id  The impediment ID
      * @param  Model|null  $schedulable  Optional schedulable entity for ownership verification
      * @return Impediment The found impediment
      *
      * @throws ModelNotFoundException When the impediment does not exist or does not belong to the entity
      */
-    private function findOrFail(int $id, ?Model $schedulable = null): Impediment
+    private function findOrFail(int|string $id, ?Model $schedulable = null): Impediment
     {
         $impediment = $this->repository->find($id);
 
@@ -363,7 +363,7 @@ final class ImpedimentService implements ImpedimentServiceInterface
             $availability = $impediment->availability;
             if ($availability === null ||
                 $availability->schedulable_type !== $schedulable->getMorphClass() ||
-                $availability->schedulable_id !== $schedulable->getKey()) {
+                (string) $availability->schedulable_id !== (string) $schedulable->getKey()) {
                 throw ModelNotFoundException::create(Impediment::class, $id);
             }
         }

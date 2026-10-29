@@ -15,6 +15,7 @@ use AndyDefer\LaravelChronos\Tests\IntegrationTestCase;
 use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use AndyDefer\PhpVo\ValueObjects\TimeZuluVO;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class AvailabilityRepositoryTest extends IntegrationTestCase
 {
@@ -837,6 +838,7 @@ final class AvailabilityRepositoryTest extends IntegrationTestCase
         $now = DateTimeZuluVO::from('2024-01-15T09:00:00Z');
 
         DB::table('schedules')->insert([
+            'id' => (string) Str::uuid(),
             'availability_id' => $availability->id,
             'schedulable_type' => TestCar::class,
             'schedulable_id' => $this->testCar->id,

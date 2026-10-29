@@ -19,17 +19,10 @@ use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
-/**
- * Service for managing availability operations.
- */
 final class AvailabilityService implements AvailabilityServiceInterface
 {
     private ScopedServiceInterface $scope;
 
-    /**
-     * @param  AvailabilityRepositoryInterface  $repository  The repository for persistence operations
-     * @param  ValidatorInterface  $validator  The validator for business rule validation
-     */
     public function __construct(
         private readonly AvailabilityRepositoryInterface $repository,
         private readonly ValidatorInterface $validator,
@@ -37,9 +30,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
         $this->scope = new ScopedService;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function for(Model $schedulable): self
     {
         $this->scope->for($schedulable);
@@ -47,9 +37,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
         return $this;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function create(AvailabilityRecord $record): Availability
     {
         $record = $this->injectScopedDataIntoRecord($record);
@@ -67,10 +54,7 @@ final class AvailabilityService implements AvailabilityServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function update(int $id, AvailabilityRecord $record): Availability
+    public function update(int|string $id, AvailabilityRecord $record): Availability
     {
         $record = $this->injectScopedDataIntoRecord($record);
 
@@ -88,10 +72,7 @@ final class AvailabilityService implements AvailabilityServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function delete(int $id, bool $force = false): bool
+    public function delete(int|string $id, bool $force = false): bool
     {
         $schedulable = $this->scope->getScopedSchedulable();
         $this->scope->clearScope();
@@ -119,10 +100,7 @@ final class AvailabilityService implements AvailabilityServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function find(int $id): ?Availability
+    public function find(int|string $id): ?Availability
     {
         $schedulable = $this->scope->getScopedSchedulable();
         $this->scope->clearScope();
@@ -134,7 +112,7 @@ final class AvailabilityService implements AvailabilityServiceInterface
 
                 if ($availability !== null && $schedulable !== null) {
                     if ($availability->schedulable_type !== $schedulable->getMorphClass() ||
-                        $availability->schedulable_id !== $schedulable->getKey()) {
+                        (string) $availability->schedulable_id !== (string) $schedulable->getKey()) {
                         return null;
                     }
                 }
@@ -145,9 +123,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function findBySchedulable(?Model $schedulable = null, ?int $limit = null): Collection
     {
         $schedulable = $schedulable ?? $this->scope->getScopedSchedulable();
@@ -172,9 +147,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function findByType(string $type, ?int $limit = null): Collection
     {
         return ServiceContext::within(
@@ -184,9 +156,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function findActiveAtDate(
         Model $schedulable,
         DateTimeZuluVO $date,
@@ -205,9 +174,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function findActiveInDateRange(
         Model $schedulable,
         DateTimeZuluVO $start,
@@ -228,9 +194,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function schedulableExists(Model $schedulable): bool
     {
         return ServiceContext::within(
@@ -244,9 +207,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function getSchedulableModel(Model $schedulable): ?string
     {
         return ServiceContext::within(
@@ -259,9 +219,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
         );
     }
 
-    /**
-     * Injects scoped entity data into the record if scoped.
-     */
     private function injectScopedDataIntoRecord(AvailabilityRecord $record): AvailabilityRecord
     {
         if (! $this->scope->isScoped()) {
@@ -277,10 +234,7 @@ final class AvailabilityService implements AvailabilityServiceInterface
         return AvailabilityRecord::from($data);
     }
 
-    /**
-     * Finds an availability or throws an exception if not found.
-     */
-    private function findOrFail(int $id, ?Model $schedulable = null): Availability
+    private function findOrFail(int|string $id, ?Model $schedulable = null): Availability
     {
         $availability = $this->repository->find($id);
 
@@ -290,7 +244,7 @@ final class AvailabilityService implements AvailabilityServiceInterface
 
         if ($schedulable !== null) {
             if ($availability->schedulable_type !== $schedulable->getMorphClass() ||
-                $availability->schedulable_id !== $schedulable->getKey()) {
+                (string) $availability->schedulable_id !== (string) $schedulable->getKey()) {
                 throw ModelNotFoundException::create(Availability::class, $id);
             }
         }
@@ -298,9 +252,6 @@ final class AvailabilityService implements AvailabilityServiceInterface
         return $availability;
     }
 
-    /**
-     * Validates an operation against business rules.
-     */
     private function validateOperation(
         AvailabilityRecord $record,
         OperationType $operation,

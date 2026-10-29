@@ -8,7 +8,6 @@ use AndyDefer\LaravelChronos\Collections\WeekDayCollection;
 use AndyDefer\LaravelChronos\Contracts\Validation\ValidatorInterface;
 use AndyDefer\LaravelChronos\Enums\OperationType;
 use AndyDefer\LaravelChronos\Models\Availability;
-use AndyDefer\LaravelChronos\Models\Impediment;
 use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\AvailabilityRecord;
 use AndyDefer\LaravelChronos\Records\ImpedimentRecord;
@@ -41,16 +40,16 @@ final class ValidatorTest extends IntegrationTestCase
 
     private function createFullAvailabilityRecord(): AvailabilityRecord
     {
-        return new AvailabilityRecord(
-            name: 'Test Availability',
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('17:00:00'),
-            validity_start: DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        return AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('17:00:00'),
+            'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
     }
 
     // ============================================================
@@ -68,12 +67,12 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_availability_required_fields_validation_fails_when_name_missing(): void
     {
-        $record = new AvailabilityRecord(
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('17:00:00'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('17:00:00'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -84,9 +83,9 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_availability_required_fields_validation_skips_on_update(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Updated Name',
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Updated Name',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::UPDATE);
 
@@ -110,14 +109,14 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_availability_days_format_validation_fails_with_empty_days(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            days: new WeekDayCollection,
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('17:00:00'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'days' => new WeekDayCollection,
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('17:00:00'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -127,14 +126,14 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_availability_days_format_validation_fails_with_duplicate_days(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            days: WeekDayCollection::fromStrings(['monday', 'tuesday', 'monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('17:00:00'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'days' => WeekDayCollection::fromStrings(['monday', 'tuesday', 'monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('17:00:00'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -148,16 +147,16 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_days_within_validity_period_validation_passes(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            days: WeekDayCollection::fromStrings(['monday', 'tuesday', 'wednesday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('17:00:00'),
-            validity_start: DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-01-07T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'days' => WeekDayCollection::fromStrings(['monday', 'tuesday', 'wednesday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('17:00:00'),
+            'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-01-07T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -166,16 +165,16 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_days_within_validity_period_validation_fails(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            days: WeekDayCollection::fromStrings(['saturday', 'sunday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('17:00:00'),
-            validity_start: DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-01-05T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'days' => WeekDayCollection::fromStrings(['saturday', 'sunday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('17:00:00'),
+            'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-01-05T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -186,21 +185,17 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_days_within_validity_period_validation_skips_when_no_validity_dates(): void
     {
-        // Ce test est en UPDATE, car pour CREATE les dates de validité sont obligatoires
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('17:00:00'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('17:00:00'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
-        // Utiliser UPDATE pour que la règle AvailabilityValidDateRangeRule n'impose pas les dates
         $result = $this->validator->validateRecord($record, OperationType::UPDATE);
 
-        // La règle DaysWithinValidityPeriodRule s'arrête si validity_start est null
-        // Donc pas d'erreur
         $this->assertFalse($result->hasErrors());
     }
 
@@ -229,20 +224,20 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        $record = new AvailabilityRecord(
-            name: 'Overlapping Availability',
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('10:00:00'),
-            daily_end: TimeZuluVO::from('12:00:00'),
-            validity_start: DateTimeZuluVO::from('2024-06-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-06-30T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Overlapping Availability',
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('10:00:00'),
+            'daily_end' => TimeZuluVO::from('12:00:00'),
+            'validity_start' => DateTimeZuluVO::from('2024-06-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-06-30T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -263,20 +258,20 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        $record = new AvailabilityRecord(
-            name: 'Updated Availability',
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('10:00:00'),
-            daily_end: TimeZuluVO::from('12:00:00'),
-            validity_start: DateTimeZuluVO::from('2024-06-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-06-30T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Updated Availability',
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('10:00:00'),
+            'daily_end' => TimeZuluVO::from('12:00:00'),
+            'validity_start' => DateTimeZuluVO::from('2024-06-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-06-30T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::UPDATE, $existing);
 
@@ -289,16 +284,16 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_availability_minimum_duration_validation_passes(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('09:30:00'),
-            validity_start: DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('09:30:00'),
+            'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -307,16 +302,16 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_availability_minimum_duration_validation_fails(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('09:05:00'),
-            validity_start: DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('09:05:00'),
+            'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -339,26 +334,22 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_availability_valid_date_range_validation_fails_when_daily_start_after_end(): void
     {
-        // Ce test n'a plus de sens car cross-day est autorisé
-        // On le modifie pour tester un cas de cross-day invalide avec days = ['monday'] (un seul jour)
-        // La règle CrossDayAvailabilityRule va détecter que c'est invalide
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            days: WeekDayCollection::fromStrings(['monday']), // Un seul jour
-            daily_start: TimeZuluVO::from('22:00:00'),
-            daily_end: TimeZuluVO::from('06:00:00'), // Cross-day
-            validity_start: DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('22:00:00'),
+            'daily_end' => TimeZuluVO::from('06:00:00'),
+            'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
         $this->assertTrue($result->hasErrors());
         $messages = $result->getMessages();
 
-        // La règle CrossDayAvailabilityRule détecte que 1 seul jour n'est pas valide
         $found = false;
         foreach ($messages as $message) {
             if (str_contains($message, 'Availability crosses midnight but days array is not consecutive')) {
@@ -371,16 +362,16 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_availability_valid_date_range_validation_fails_when_validity_start_after_end(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('17:00:00'),
-            validity_start: DateTimeZuluVO::from('2024-01-08T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-01-01T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('17:00:00'),
+            'validity_start' => DateTimeZuluVO::from('2024-01-08T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-01-01T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -413,11 +404,11 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        $record = new AvailabilityRecord;
+        $record = AvailabilityRecord::from([]);
         $result = $this->validator->validateRecord($record, OperationType::DELETE, $availability);
 
         $this->assertFalse($result->hasErrors());
@@ -435,13 +426,13 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
 
             Schedule::create([
                 'availability_id' => $avail->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
                 'title' => 'Future Schedule',
                 'start_datetime' => now()->addDays(10),
                 'end_datetime' => now()->addDays(10)->addHour(),
@@ -450,7 +441,7 @@ final class ValidatorTest extends IntegrationTestCase
             return $avail;
         });
 
-        $record = new AvailabilityRecord;
+        $record = AvailabilityRecord::from([]);
         $result = $this->validator->validateRecord($record, OperationType::DELETE, $availability);
 
         $this->assertTrue($result->hasErrors());
@@ -463,44 +454,34 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_cross_day_availability_validation_passes_with_consecutive_days(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            daily_start: TimeZuluVO::from('22:00:00'),
-            daily_end: TimeZuluVO::from('06:00:00'),
-            days: WeekDayCollection::fromStrings(['monday', 'tuesday']),
-            validity_start: DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'daily_start' => TimeZuluVO::from('22:00:00'),
+            'daily_end' => TimeZuluVO::from('06:00:00'),
+            'days' => WeekDayCollection::fromStrings(['monday', 'tuesday']),
+            'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
-
-        // DEBUG: Afficher les erreurs
-        if ($result->hasErrors()) {
-            echo "\n=== DEBUG test_cross_day_availability_validation_passes_with_consecutive_days ===\n";
-            echo "Erreurs trouvées:\n";
-            foreach ($result->getMessages() as $message) {
-                echo '- '.$message."\n";
-            }
-            echo "==========================================\n";
-        }
 
         $this->assertFalse($result->hasErrors());
     }
 
     public function test_cross_day_availability_validation_fails_with_single_day(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            daily_start: TimeZuluVO::from('22:00:00'),
-            daily_end: TimeZuluVO::from('06:00:00'),
-            days: WeekDayCollection::fromStrings(['monday']),
-            validity_start: DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'daily_start' => TimeZuluVO::from('22:00:00'),
+            'daily_end' => TimeZuluVO::from('06:00:00'),
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -519,16 +500,16 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_cross_day_availability_validation_fails_with_non_consecutive_days(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            daily_start: TimeZuluVO::from('22:00:00'),
-            daily_end: TimeZuluVO::from('06:00:00'),
-            days: WeekDayCollection::fromStrings(['monday', 'wednesday']),
-            validity_start: DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'daily_start' => TimeZuluVO::from('22:00:00'),
+            'daily_end' => TimeZuluVO::from('06:00:00'),
+            'days' => WeekDayCollection::fromStrings(['monday', 'wednesday']),
+            'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -551,16 +532,16 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_schedulable_exists_validation_passes_when_entity_exists(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('17:00:00'),
-            validity_start: DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('17:00:00'),
+            'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -569,16 +550,16 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_schedulable_exists_validation_fails_when_entity_not_exists(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('17:00:00'),
-            validity_start: DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 99999,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('17:00:00'),
+            'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '99999',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -597,16 +578,16 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_schedulable_exists_validation_fails_when_class_not_exists(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('17:00:00'),
-            validity_start: DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
-            schedulable_type: 'Invalid\\Class\\That\\Does\\Not\\Exist',
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('17:00:00'),
+            'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+            'schedulable_type' => 'Invalid\\Class\\That\\Does\\Not\\Exist',
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -639,17 +620,17 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -668,17 +649,17 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: 'App\\Models\\DifferentEntity',
-            schedulable_id: 2,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => 'App\\Models\\DifferentEntity',
+            'schedulable_id' => '2',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -702,17 +683,17 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -721,13 +702,13 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_availability_ownership_validation_fails_when_availability_not_exists(): void
     {
-        $record = new ScheduleRecord(
-            availability_id: 99999,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => '99999',
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -747,17 +728,17 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: 'App\\Models\\DifferentEntity',
-            schedulable_id: 2,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => 'App\\Models\\DifferentEntity',
+            'schedulable_id' => '2',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -791,17 +772,17 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -820,17 +801,17 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-01-16T10:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-16T11:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-16T10:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-16T11:00:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -850,17 +831,17 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-01-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-02-15T10:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-02-15T11:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-02-15T10:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-02-15T11:00:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -884,13 +865,13 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
 
             Schedule::create([
                 'availability_id' => $avail->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
                 'title' => 'Existing Schedule',
                 'start_datetime' => '2024-01-15 10:00:00',
                 'end_datetime' => '2024-01-15 11:00:00',
@@ -899,13 +880,13 @@ final class ValidatorTest extends IntegrationTestCase
             return $avail;
         });
 
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T11:30:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T12:30:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T11:30:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T12:30:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -924,13 +905,13 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
 
             Schedule::create([
                 'availability_id' => $avail->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
                 'title' => 'Existing Schedule',
                 'start_datetime' => '2024-01-15 10:00:00',
                 'end_datetime' => '2024-01-15 11:00:00',
@@ -939,13 +920,13 @@ final class ValidatorTest extends IntegrationTestCase
             return $avail;
         });
 
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:30:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:30:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:30:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:30:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -965,7 +946,7 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
@@ -973,20 +954,20 @@ final class ValidatorTest extends IntegrationTestCase
             return Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
                 'title' => 'Existing Schedule',
                 'start_datetime' => '2024-01-15 10:00:00',
                 'end_datetime' => '2024-01-15 11:00:00',
             ]);
         });
 
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:30:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:30:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:30:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:30:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::UPDATE, $existing);
 
@@ -999,10 +980,10 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_time_slot_chronology_validation_passes(): void
     {
-        $record = new ScheduleRecord(
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -1011,10 +992,10 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_time_slot_chronology_validation_fails_when_start_after_end(): void
     {
-        $record = new ScheduleRecord(
-            start_datetime: DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -1024,10 +1005,10 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_time_slot_chronology_validation_fails_when_start_equal_end(): void
     {
-        $record = new ScheduleRecord(
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -1053,13 +1034,13 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
 
             Schedule::create([
                 'availability_id' => $avail->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
                 'title' => 'Previous Schedule',
                 'start_datetime' => '2024-01-15 09:00:00',
                 'end_datetime' => '2024-01-15 10:00:00',
@@ -1068,13 +1049,13 @@ final class ValidatorTest extends IntegrationTestCase
             return $avail;
         });
 
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:30:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:30:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:30:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:30:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -1095,13 +1076,13 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
 
             Schedule::create([
                 'availability_id' => $avail->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
                 'title' => 'Previous Schedule',
                 'start_datetime' => '2024-01-15 09:00:00',
                 'end_datetime' => '2024-01-15 10:00:00',
@@ -1110,13 +1091,13 @@ final class ValidatorTest extends IntegrationTestCase
             return $avail;
         });
 
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:15:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:15:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:15:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:15:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -1130,10 +1111,10 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_max_duration_validation_passes(): void
     {
-        $record = new ScheduleRecord(
-            start_datetime: DateTimeZuluVO::from('2024-01-15T09:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T12:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T09:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T12:00:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -1142,10 +1123,10 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_max_duration_validation_fails(): void
     {
-        $record = new ScheduleRecord(
-            start_datetime: DateTimeZuluVO::from('2024-01-15T09:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T15:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T09:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T15:00:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -1159,11 +1140,11 @@ final class ValidatorTest extends IntegrationTestCase
 
     public function test_combined_validation_returns_multiple_errors(): void
     {
-        $record = new AvailabilityRecord(
-            daily_start: TimeZuluVO::from('17:00:00'),
-            daily_end: TimeZuluVO::from('09:00:00'),
-            days: WeekDayCollection::fromStrings(['invalid_day']),
-        );
+        $record = AvailabilityRecord::from([
+            'daily_start' => TimeZuluVO::from('17:00:00'),
+            'daily_end' => TimeZuluVO::from('09:00:00'),
+            'days' => WeekDayCollection::fromStrings(['invalid_day']),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -1189,20 +1170,20 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        $record = new AvailabilityRecord(
-            name: 'Updated Name',
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('17:00:00'),
-            validity_start: DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Updated Name',
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('17:00:00'),
+            'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::UPDATE, $existing);
 
@@ -1221,11 +1202,11 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        $availability2 = ChronosMutationContext::withAllowed(function () {
+        ChronosMutationContext::withAllowed(function () {
             return Availability::create([
                 'name' => 'Availability 2',
                 'type' => 'test',
@@ -1235,20 +1216,20 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        $record = new AvailabilityRecord(
-            name: 'Updated Availability 1',
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('10:00:00'),
-            daily_end: TimeZuluVO::from('14:00:00'),
-            validity_start: DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
-            validity_end: DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Updated Availability 1',
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('10:00:00'),
+            'daily_end' => TimeZuluVO::from('14:00:00'),
+            'validity_start' => DateTimeZuluVO::from('2024-01-01T00:00:00Z'),
+            'validity_end' => DateTimeZuluVO::from('2024-12-31T23:59:59Z'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::UPDATE, $availability1);
 
@@ -1272,16 +1253,16 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        $record = new ImpedimentRecord(
-            availability_id: $availability->id,
-            reason: 'Test Impediment',
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T12:00:00Z'),
-        );
+        $record = ImpedimentRecord::from([
+            'availability_id' => (string) $availability->id,
+            'reason' => 'Test Impediment',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T12:00:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 
@@ -1300,16 +1281,16 @@ final class ValidatorTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        $record = new ImpedimentRecord(
-            availability_id: $availability->id,
-            reason: 'Test Impediment',
-            start_datetime: DateTimeZuluVO::from('2024-01-16T10:00:00Z'), // Tuesday
-            end_datetime: DateTimeZuluVO::from('2024-01-16T12:00:00Z'),
-        );
+        $record = ImpedimentRecord::from([
+            'availability_id' => (string) $availability->id,
+            'reason' => 'Test Impediment',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-16T10:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-16T12:00:00Z'),
+        ]);
 
         $result = $this->validator->validateRecord($record, OperationType::CREATE);
 

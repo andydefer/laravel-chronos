@@ -17,46 +17,18 @@ use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 use AndyDefer\LaravelChronos\Validation\Services\ValidationHelperService;
 use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 
-/**
- * Enforces buffer time between consecutive events on the same availability.
- *
- * Ensures that there is a minimum gap between the end of one event and
- * the start of the next event, preventing back-to-back bookings and
- * allowing for preparation or cleanup time.
- *
- * @example
- * $rule = new BufferTimeRule($helper, $config);
- * $context = new ValidationContext($record, OperationType::CREATE);
- * $error = $rule->validate($context);
- *
- * if ($error !== null) {
- *     // Handle buffer time violation
- * }
- */
 final class BufferTimeRule implements ValidationRule
 {
-    /**
-     * @param  ValidationHelperService  $helper  Helper service for validation utilities
-     * @param  ChronosConfigInterface  $config  Configuration containing buffer time
-     */
     public function __construct(
         private readonly ValidationHelperService $helper,
         private readonly ChronosConfigInterface $config
     ) {}
 
-    /**
-     * {@inheritDoc}
-     */
     public function getDescription(): string
     {
         return 'Enforces buffer time between consecutive events on the same availability.';
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * This rule applies to Schedule and Impediment entity types during create or update operations.
-     */
     public function supports(ValidationContext $context): bool
     {
         return ($context->getEntityType() === EntityType::SCHEDULE
@@ -64,13 +36,6 @@ final class BufferTimeRule implements ValidationRule
             && ($context->isCreate() || $context->isUpdate());
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * Validates that buffer time is respected.
-     *
-     * @throws \RuntimeException If the record is not a ScheduleRecord or ImpedimentRecord
-     */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
         $record = $context->getRecord();
@@ -109,11 +74,7 @@ final class BufferTimeRule implements ValidationRule
     }
 
     /**
-     * Extracts buffer data from the record.
-     *
-     * @param  mixed  $record  The record to extract from
-     * @param  ValidationContext  $context  The validation context
-     * @return array{int, DateTimeZuluVO, DateTimeZuluVO, int|null}|null
+     * @return array{int|string, DateTimeZuluVO, DateTimeZuluVO, int|string|null}|null
      */
     private function extractBufferData(mixed $record, ValidationContext $context): ?array
     {
@@ -139,26 +100,20 @@ final class BufferTimeRule implements ValidationRule
         return [$availabilityId, $startDatetime, $endDatetime, $excludeId];
     }
 
-    /**
-     * Validates buffer with previous schedule.
-     *
-     * @param  int  $availabilityId  The availability ID
-     * @param  DateTimeZuluVO  $startDatetime  The start datetime
-     * @param  int|null  $excludeId  The ID to exclude
-     * @param  int  $bufferMinutes  The required buffer in minutes
-     * @return ValidationErrorRecord|null Error if validation fails
-     */
     private function validatePreviousSchedule(
-        int $availabilityId,
+        int|string $availabilityId,
         DateTimeZuluVO $startDatetime,
-        ?int $excludeId,
+        int|string|null $excludeId,
         int $bufferMinutes
     ): ?ValidationErrorRecord {
-        $previous = Schedule::where('availability_id', $availabilityId)
-            ->where('end_datetime', '<=', $startDatetime->toDateTimeString())
-            ->where('id', '!=', $excludeId ?? 0)
-            ->orderBy('end_datetime', 'desc')
-            ->first();
+        $query = Schedule::where('availability_id', $availabilityId)
+            ->where('end_datetime', '<=', $startDatetime->toDateTimeString());
+
+        if ($excludeId !== null) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        $previous = $query->orderBy('end_datetime', 'desc')->first();
 
         if ($previous === null) {
             return null;
@@ -180,26 +135,20 @@ final class BufferTimeRule implements ValidationRule
         return null;
     }
 
-    /**
-     * Validates buffer with previous impediment.
-     *
-     * @param  int  $availabilityId  The availability ID
-     * @param  DateTimeZuluVO  $startDatetime  The start datetime
-     * @param  int|null  $excludeId  The ID to exclude
-     * @param  int  $bufferMinutes  The required buffer in minutes
-     * @return ValidationErrorRecord|null Error if validation fails
-     */
     private function validatePreviousImpediment(
-        int $availabilityId,
+        int|string $availabilityId,
         DateTimeZuluVO $startDatetime,
-        ?int $excludeId,
+        int|string|null $excludeId,
         int $bufferMinutes
     ): ?ValidationErrorRecord {
-        $previous = Impediment::where('availability_id', $availabilityId)
-            ->where('end_datetime', '<=', $startDatetime->toDateTimeString())
-            ->where('id', '!=', $excludeId ?? 0)
-            ->orderBy('end_datetime', 'desc')
-            ->first();
+        $query = Impediment::where('availability_id', $availabilityId)
+            ->where('end_datetime', '<=', $startDatetime->toDateTimeString());
+
+        if ($excludeId !== null) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        $previous = $query->orderBy('end_datetime', 'desc')->first();
 
         if ($previous === null) {
             return null;
@@ -221,19 +170,9 @@ final class BufferTimeRule implements ValidationRule
         return null;
     }
 
-    /**
-     * Creates an error for buffer violation.
-     *
-     * @param  string  $type  The event type ('schedule' or 'impediment')
-     * @param  int  $previousId  The previous event ID
-     * @param  DateTimeZuluVO  $prevEnd  The previous end time
-     * @param  int  $bufferMinutes  The required buffer
-     * @param  float  $actualBuffer  The actual buffer
-     * @return ValidationErrorRecord The error record
-     */
     private function createBufferError(
         string $type,
-        int $previousId,
+        int|string $previousId,
         DateTimeZuluVO $prevEnd,
         int $bufferMinutes,
         float $actualBuffer
@@ -241,7 +180,7 @@ final class BufferTimeRule implements ValidationRule
         return new ValidationErrorRecord(
             rule: self::class,
             message: sprintf(
-                'Buffer time of %d minutes not respected between previous %s #%d (ending at %s) and the new slot.',
+                'Buffer time of %d minutes not respected between previous %s #%s (ending at %s) and the new slot.',
                 $bufferMinutes,
                 $type,
                 $previousId,

@@ -55,13 +55,6 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
         }
     }
 
-    /**
-     * Apply limit to a query builder.
-     *
-     * @param  Builder  $query  The query builder
-     * @param  int|null  $limit  The maximum number of records to return
-     * @return Builder The query builder with limit applied
-     */
     private function applyLimitToQuery(Builder $query, ?int $limit): Builder
     {
         if ($limit !== null) {
@@ -74,7 +67,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
     public function findBySchedulable(Model $schedulable, ?int $limit = null): Collection
     {
         $schedulableType = $schedulable->getMorphClass();
-        $schedulableId = (int) $schedulable->getKey();
+        $schedulableId = (string) $schedulable->getKey();
 
         $query = $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
@@ -86,7 +79,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
     public function findByDay(Model $schedulable, WeekDay $day, ?int $limit = null): Collection
     {
         $schedulableType = $schedulable->getMorphClass();
-        $schedulableId = (int) $schedulable->getKey();
+        $schedulableId = (string) $schedulable->getKey();
 
         $query = $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
@@ -103,11 +96,11 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
         TimeZuluVO $endTime,
         DateTimeZuluVO $validityStart,
         DateTimeZuluVO $validityEnd,
-        ?int $excludeId = null,
+        int|string|null $excludeId = null,
         ?int $limit = null,
     ): Collection {
         $schedulableType = $schedulable->getMorphClass();
-        $schedulableId = (int) $schedulable->getKey();
+        $schedulableId = (string) $schedulable->getKey();
 
         $query = $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
@@ -136,7 +129,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
     public function findActiveAtDate(Model $schedulable, DateTimeZuluVO $date, ?int $limit = null): Collection
     {
         $schedulableType = $schedulable->getMorphClass();
-        $schedulableId = (int) $schedulable->getKey();
+        $schedulableId = (string) $schedulable->getKey();
 
         $query = $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
@@ -157,11 +150,11 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
         Model $schedulable,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $excludeId = null,
+        int|string|null $excludeId = null,
         ?int $limit = null,
     ): Collection {
         $schedulableType = $schedulable->getMorphClass();
-        $schedulableId = (int) $schedulable->getKey();
+        $schedulableId = (string) $schedulable->getKey();
 
         $query = $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
@@ -183,7 +176,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
     public function findCrossDayAvailabilities(Model $schedulable, ?int $limit = null): Collection
     {
         $schedulableType = $schedulable->getMorphClass();
-        $schedulableId = (int) $schedulable->getKey();
+        $schedulableId = (string) $schedulable->getKey();
 
         $query = $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
@@ -196,7 +189,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
     public function findShortDurations(Model $schedulable, int $minMinutes, ?int $limit = null): Collection
     {
         $schedulableType = $schedulable->getMorphClass();
-        $schedulableId = (int) $schedulable->getKey();
+        $schedulableId = (string) $schedulable->getKey();
         $minSeconds = $minMinutes * 60;
 
         $query = $this->model->newQuery()
@@ -215,7 +208,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
     public function findInvalidDateRanges(Model $schedulable, ?int $limit = null): Collection
     {
         $schedulableType = $schedulable->getMorphClass();
-        $schedulableId = (int) $schedulable->getKey();
+        $schedulableId = (string) $schedulable->getKey();
 
         $query = $this->model->newQuery()
             ->where('schedulable_type', $schedulableType)
@@ -230,7 +223,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
         return $this->applyLimitToQuery($query, $limit)->get();
     }
 
-    public function findWithFutureSchedules(int $availabilityId, DateTimeZuluVO $now): bool
+    public function findWithFutureSchedules(int|string $availabilityId, DateTimeZuluVO $now): bool
     {
         return $this->model->newQuery()
             ->where('id', $availabilityId)
@@ -251,7 +244,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
     public function schedulableExists(Model $schedulable): bool
     {
         $schedulableType = $schedulable->getMorphClass();
-        $schedulableId = (int) $schedulable->getKey();
+        $schedulableId = (string) $schedulable->getKey();
 
         if (! class_exists($schedulableType)) {
             return false;
@@ -263,7 +256,7 @@ final class AvailabilityRepository extends AbstractChronosRepository implements 
     public function getSchedulableModel(Model $schedulable): ?string
     {
         $schedulableType = $schedulable->getMorphClass();
-        $schedulableId = (int) $schedulable->getKey();
+        $schedulableId = (string) $schedulable->getKey();
 
         if (! class_exists($schedulableType)) {
             return null;

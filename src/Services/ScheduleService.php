@@ -19,31 +19,11 @@ use AndyDefer\LaravelChronos\Support\ServiceContext;
 use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
-use Throwable;
 
-/**
- * Service for managing schedule operations.
- *
- * This service implements the business logic for schedule management,
- * including creation, validation, status transitions (cancel/complete),
- * and mutation tracking. All operations are wrapped in context managers
- * for consistent error handling and auditing.
- *
- * @example
- * $service = new ScheduleService($repository, $validator);
- * $schedule = $service->for($doctor)->create(new ScheduleRecord(...));
- * $cancelled = $service->cancel($schedule->id);
- *
- * @see ScheduleServiceInterface
- */
 final class ScheduleService implements ScheduleServiceInterface
 {
     private ScopedServiceInterface $scope;
 
-    /**
-     * @param  ScheduleRepositoryInterface  $repository  The repository for persistence operations
-     * @param  ValidatorInterface  $validator  The validator for business rule validation
-     */
     public function __construct(
         private readonly ScheduleRepositoryInterface $repository,
         private readonly ValidatorInterface $validator,
@@ -51,9 +31,6 @@ final class ScheduleService implements ScheduleServiceInterface
         $this->scope = new ScopedService;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function for(Model $schedulable): self
     {
         $this->scope->for($schedulable);
@@ -61,12 +38,6 @@ final class ScheduleService implements ScheduleServiceInterface
         return $this;
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws ValidationException When the record fails validation
-     * @throws Throwable When the repository operation fails
-     */
     public function create(ScheduleRecord $record): Schedule
     {
         $record = $this->injectScopedDataIntoRecord($record);
@@ -84,14 +55,7 @@ final class ScheduleService implements ScheduleServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws ModelNotFoundException When the schedule does not exist
-     * @throws ValidationException When the record fails validation
-     * @throws Throwable When the repository operation fails
-     */
-    public function update(int $id, ScheduleRecord $record): Schedule
+    public function update(int|string $id, ScheduleRecord $record): Schedule
     {
         $record = $this->injectScopedDataIntoRecord($record);
 
@@ -109,14 +73,7 @@ final class ScheduleService implements ScheduleServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws ModelNotFoundException When the schedule does not exist
-     * @throws ValidationException When validation fails
-     * @throws Throwable When the repository operation fails
-     */
-    public function delete(int $id): bool
+    public function delete(int|string $id): bool
     {
         $schedulable = $this->scope->getScopedSchedulable();
         $this->scope->clearScope();
@@ -139,10 +96,7 @@ final class ScheduleService implements ScheduleServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function find(int $id): ?Schedule
+    public function find(int|string $id): ?Schedule
     {
         $schedulable = $this->scope->getScopedSchedulable();
         $this->scope->clearScope();
@@ -154,7 +108,7 @@ final class ScheduleService implements ScheduleServiceInterface
 
                 if ($schedule !== null && $schedulable !== null) {
                     if ($schedule->schedulable_type !== $schedulable->getMorphClass() ||
-                        $schedule->schedulable_id !== $schedulable->getKey()) {
+                        $schedule->schedulable_id !== (string) $schedulable->getKey()) {
                         return null;
                     }
                 }
@@ -165,10 +119,7 @@ final class ScheduleService implements ScheduleServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function findByAvailability(int $availabilityId, ?int $limit = null): Collection
+    public function findByAvailability(int|string $availabilityId, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ScheduleService::class,
@@ -181,9 +132,6 @@ final class ScheduleService implements ScheduleServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function findBySchedulable(?Model $schedulable = null, ?int $limit = null): Collection
     {
         $schedulable = $schedulable ?? $this->scope->getScopedSchedulable();
@@ -208,10 +156,7 @@ final class ScheduleService implements ScheduleServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function findByStatus(ScheduleStatus $status, ?int $availabilityId = null, ?int $limit = null): Collection
+    public function findByStatus(ScheduleStatus $status, int|string|null $availabilityId = null, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ScheduleService::class,
@@ -225,10 +170,7 @@ final class ScheduleService implements ScheduleServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null, ?int $limit = null): Collection
+    public function findByDate(DateTimeZuluVO $date, int|string|null $availabilityId = null, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ScheduleService::class,
@@ -242,13 +184,10 @@ final class ScheduleService implements ScheduleServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function findInDateRange(
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $availabilityId = null,
+        int|string|null $availabilityId = null,
         ?int $limit = null
     ): Collection {
         return ServiceContext::within(
@@ -264,10 +203,7 @@ final class ScheduleService implements ScheduleServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function searchByTitle(string $search, ?int $availabilityId = null, ?int $limit = null): Collection
+    public function searchByTitle(string $search, int|string|null $availabilityId = null, ?int $limit = null): Collection
     {
         return ServiceContext::within(
             ScheduleService::class,
@@ -281,14 +217,7 @@ final class ScheduleService implements ScheduleServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws ModelNotFoundException When the schedule does not exist
-     * @throws ValidationException When the schedule cannot be cancelled due to business rules
-     * @throws Throwable When the update operation fails
-     */
-    public function cancel(int $id): Schedule
+    public function cancel(int|string $id): Schedule
     {
         $schedulable = $this->scope->getScopedSchedulable();
         $this->scope->clearScope();
@@ -315,14 +244,7 @@ final class ScheduleService implements ScheduleServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws ModelNotFoundException When the schedule does not exist
-     * @throws ValidationException When the schedule cannot be completed due to business rules
-     * @throws Throwable When the update operation fails
-     */
-    public function complete(int $id): Schedule
+    public function complete(int|string $id): Schedule
     {
         $schedulable = $this->scope->getScopedSchedulable();
         $this->scope->clearScope();
@@ -349,28 +271,16 @@ final class ScheduleService implements ScheduleServiceInterface
         );
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function canBeCancelled(Schedule $schedule): bool
     {
         return $schedule->can_be_cancelled;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function canBeCompleted(Schedule $schedule): bool
     {
         return $schedule->can_be_completed;
     }
 
-    /**
-     * Injects scoped entity data into the record if scoped.
-     *
-     * @param  ScheduleRecord  $record  The record to inject data into
-     * @return ScheduleRecord The modified record
-     */
     private function injectScopedDataIntoRecord(ScheduleRecord $record): ScheduleRecord
     {
         if (! $this->scope->isScoped()) {
@@ -386,16 +296,7 @@ final class ScheduleService implements ScheduleServiceInterface
         return ScheduleRecord::from($data);
     }
 
-    /**
-     * Finds a schedule or throws an exception if not found.
-     *
-     * @param  int  $id  The schedule ID
-     * @param  Model|null  $schedulable  Optional schedulable entity for ownership verification
-     * @return Schedule The found schedule
-     *
-     * @throws ModelNotFoundException When the schedule does not exist or does not belong to the entity
-     */
-    private function findOrFail(int $id, ?Model $schedulable = null): Schedule
+    private function findOrFail(int|string $id, ?Model $schedulable = null): Schedule
     {
         $schedule = $this->repository->find($id);
 
@@ -405,7 +306,7 @@ final class ScheduleService implements ScheduleServiceInterface
 
         if ($schedulable !== null) {
             if ($schedule->schedulable_type !== $schedulable->getMorphClass() ||
-                $schedule->schedulable_id !== $schedulable->getKey()) {
+                $schedule->schedulable_id !== (string) $schedulable->getKey()) {
                 throw ModelNotFoundException::create(Schedule::class, $id);
             }
         }
@@ -413,15 +314,6 @@ final class ScheduleService implements ScheduleServiceInterface
         return $schedule;
     }
 
-    /**
-     * Validates an operation against business rules.
-     *
-     * @param  ScheduleRecord  $record  The record to validate
-     * @param  OperationType  $operation  The operation type
-     * @param  Schedule|null  $existing  The existing schedule for update/delete operations
-     *
-     * @throws ValidationException When validation fails
-     */
     private function validateOperation(
         ScheduleRecord $record,
         OperationType $operation,

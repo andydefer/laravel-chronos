@@ -38,7 +38,7 @@ final class SlotService implements SlotServiceInterface
         Model $schedulable,
         DateTimeZuluVO $after,
         int $durationInMinutes,
-        ?int $availabilityId = null
+        int|string|null $availabilityId = null
     ): ?SlotVO {
         $this->validateDuration($durationInMinutes);
 
@@ -53,7 +53,7 @@ final class SlotService implements SlotServiceInterface
                     $searchEnd,
                     $durationInMinutes,
                     $availabilityId,
-                    1  // Limit to 1 slot
+                    1
                 );
 
                 return $slots->firstSlot();
@@ -76,7 +76,7 @@ final class SlotService implements SlotServiceInterface
         Model $schedulable,
         DateTimeZuluVO $before,
         int $durationInMinutes,
-        ?int $availabilityId = null
+        int|string|null $availabilityId = null
     ): ?SlotVO {
         $this->validateDuration($durationInMinutes);
 
@@ -91,7 +91,7 @@ final class SlotService implements SlotServiceInterface
                     $before,
                     $durationInMinutes,
                     $availabilityId,
-                    1  // Limit to 1 slot
+                    1
                 );
 
                 return $slots->lastSlot();
@@ -115,7 +115,7 @@ final class SlotService implements SlotServiceInterface
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
         int $durationInMinutes,
-        ?int $availabilityId = null,
+        int|string|null $availabilityId = null,
         ?int $limit = null
     ): SlotVOCollection {
         $this->validateDuration($durationInMinutes);
@@ -155,7 +155,6 @@ final class SlotService implements SlotServiceInterface
 
                 $sortedSlots = $slots->sortByStart();
 
-                // Apply limit if specified
                 if ($limit !== null && $limit > 0) {
                     $limitedSlots = new SlotVOCollection;
                     $count = 0;
@@ -192,7 +191,7 @@ final class SlotService implements SlotServiceInterface
         Model $schedulable,
         DateTimeZuluVO $date,
         int $durationInMinutes,
-        ?int $availabilityId = null,
+        int|string|null $availabilityId = null,
         ?int $limit = null
     ): SlotVOCollection {
         $this->validateDuration($durationInMinutes);
@@ -231,7 +230,7 @@ final class SlotService implements SlotServiceInterface
         Model $schedulable,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $availabilityId = null
+        int|string|null $availabilityId = null
     ): bool {
         $durationInMinutes = (int) $start->diffInMinutes($end);
         $this->validateDuration($durationInMinutes);
@@ -272,7 +271,7 @@ final class SlotService implements SlotServiceInterface
         Model $schedulable,
         DateTimeZuluVO $after,
         int $durationInMinutes,
-        ?int $availabilityId = null
+        int|string|null $availabilityId = null
     ): ?DateTimeZuluVO {
         $this->validateDuration($durationInMinutes);
 
@@ -332,7 +331,7 @@ final class SlotService implements SlotServiceInterface
         Model $schedulable,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $availabilityId = null,
+        int|string|null $availabilityId = null,
         ?int $limit = null
     ): BlockedPeriodCollection {
         return ServiceContext::within(
@@ -364,7 +363,6 @@ final class SlotService implements SlotServiceInterface
 
                 $sortedCollection = $collection->sortByStart();
 
-                // Apply limit if specified
                 if ($limit !== null && $limit > 0) {
                     $limitedCollection = new BlockedPeriodCollection;
                     $count = 0;
@@ -456,7 +454,7 @@ final class SlotService implements SlotServiceInterface
         Model $schedulable,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $availabilityId = null
+        int|string|null $availabilityId = null
     ): Collection {
         if ($availabilityId !== null) {
             $availability = $this->availabilityService->find($availabilityId);
@@ -478,7 +476,7 @@ final class SlotService implements SlotServiceInterface
      */
     private function fetchScheduleBlockers(
         Model $schedulable,
-        ?int $availabilityId,
+        int|string|null $availabilityId,
         DateTimeZuluVO $rangeStart,
         DateTimeZuluVO $rangeEnd
     ): BlockedPeriodCollection {
@@ -512,7 +510,7 @@ final class SlotService implements SlotServiceInterface
      */
     private function fetchImpedimentBlockers(
         Model $schedulable,
-        ?int $availabilityId,
+        int|string|null $availabilityId,
         DateTimeZuluVO $rangeStart,
         DateTimeZuluVO $rangeEnd
     ): BlockedPeriodCollection {

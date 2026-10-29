@@ -14,7 +14,7 @@ final class AvailabilityFiltersRecord extends AbstractRecord
         public readonly ?string $type = null,
         public readonly ?string $name = null,
         public readonly ?string $schedulable_type = null,
-        public readonly ?int $schedulable_id = null,
+        public readonly ?string $schedulable_id = null,
         public readonly ?WeekDayCollection $days = null,
         public readonly ?DateTimeZuluVO $validity_start = null,
         public readonly ?DateTimeZuluVO $validity_end = null,

@@ -34,14 +34,14 @@ interface SlotServiceInterface
      * @param  Model  $schedulable  The schedulable entity
      * @param  DateTimeZuluVO  $after  The time after which to search
      * @param  int  $durationInMinutes  The required duration of the slot in minutes
-     * @param  int|null  $availabilityId  Optional specific availability to search within
+     * @param  int|string|null  $availabilityId  Optional specific availability to search within
      * @return SlotVO|null The next available slot or null if none found
      */
     public function findNextSlot(
         Model $schedulable,
         DateTimeZuluVO $after,
         int $durationInMinutes,
-        ?int $availabilityId = null
+        int|string|null $availabilityId = null
     ): ?SlotVO;
 
     /**
@@ -50,14 +50,14 @@ interface SlotServiceInterface
      * @param  Model  $schedulable  The schedulable entity
      * @param  DateTimeZuluVO  $before  The time before which to search
      * @param  int  $durationInMinutes  The required duration of the slot in minutes
-     * @param  int|null  $availabilityId  Optional specific availability to search within
+     * @param  int|string|null  $availabilityId  Optional specific availability to search within
      * @return SlotVO|null The previous available slot or null if none found
      */
     public function findPreviousSlot(
         Model $schedulable,
         DateTimeZuluVO $before,
         int $durationInMinutes,
-        ?int $availabilityId = null
+        int|string|null $availabilityId = null
     ): ?SlotVO;
 
     /**
@@ -67,7 +67,7 @@ interface SlotServiceInterface
      * @param  DateTimeZuluVO  $start  The start of the search range
      * @param  DateTimeZuluVO  $end  The end of the search range
      * @param  int  $durationInMinutes  The required duration of each slot in minutes
-     * @param  int|null  $availabilityId  Optional specific availability to search within
+     * @param  int|string|null  $availabilityId  Optional specific availability to search within
      * @param  int|null  $limit  Maximum number of slots to return
      * @return SlotVOCollection Collection of available slots sorted by start time
      */
@@ -76,7 +76,7 @@ interface SlotServiceInterface
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
         int $durationInMinutes,
-        ?int $availabilityId = null,
+        int|string|null $availabilityId = null,
         ?int $limit = null
     ): SlotVOCollection;
 
@@ -86,7 +86,7 @@ interface SlotServiceInterface
      * @param  Model  $schedulable  The schedulable entity
      * @param  DateTimeZuluVO  $date  The date to search
      * @param  int  $durationInMinutes  The required duration of each slot in minutes
-     * @param  int|null  $availabilityId  Optional specific availability to search within
+     * @param  int|string|null  $availabilityId  Optional specific availability to search within
      * @param  int|null  $limit  Maximum number of slots to return
      * @return SlotVOCollection Collection of available slots for the day
      */
@@ -94,7 +94,7 @@ interface SlotServiceInterface
         Model $schedulable,
         DateTimeZuluVO $date,
         int $durationInMinutes,
-        ?int $availabilityId = null,
+        int|string|null $availabilityId = null,
         ?int $limit = null
     ): SlotVOCollection;
 
@@ -104,14 +104,14 @@ interface SlotServiceInterface
      * @param  Model  $schedulable  The schedulable entity
      * @param  DateTimeZuluVO  $start  The start of the slot to check
      * @param  DateTimeZuluVO  $end  The end of the slot to check
-     * @param  int|null  $availabilityId  Optional specific availability to check
+     * @param  int|string|null  $availabilityId  Optional specific availability to check
      * @return bool True if the exact slot is available
      */
     public function isSlotAvailable(
         Model $schedulable,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $availabilityId = null
+        int|string|null $availabilityId = null
     ): bool;
 
     /**
@@ -120,14 +120,14 @@ interface SlotServiceInterface
      * @param  Model  $schedulable  The schedulable entity
      * @param  DateTimeZuluVO  $after  The time after which to search
      * @param  int  $durationInMinutes  The required duration in minutes
-     * @param  int|null  $availabilityId  Optional specific availability to search within
+     * @param  int|string|null  $availabilityId  Optional specific availability to search within
      * @return DateTimeZuluVO|null The next available start time or null if none found
      */
     public function getNextAvailableStart(
         Model $schedulable,
         DateTimeZuluVO $after,
         int $durationInMinutes,
-        ?int $availabilityId = null
+        int|string|null $availabilityId = null
     ): ?DateTimeZuluVO;
 
     /**
@@ -148,7 +148,7 @@ interface SlotServiceInterface
      * @param  Model  $schedulable  The schedulable entity
      * @param  DateTimeZuluVO  $start  The start of the range
      * @param  DateTimeZuluVO  $end  The end of the range
-     * @param  int|null  $availabilityId  Optional specific availability to analyze
+     * @param  int|string|null  $availabilityId  Optional specific availability to analyze
      * @param  int|null  $limit  Maximum number of blocked periods to return
      * @return BlockedPeriodCollection Collection of blocked periods
      */
@@ -156,7 +156,7 @@ interface SlotServiceInterface
         Model $schedulable,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $availabilityId = null,
+        int|string|null $availabilityId = null,
         ?int $limit = null
     ): BlockedPeriodCollection;
 

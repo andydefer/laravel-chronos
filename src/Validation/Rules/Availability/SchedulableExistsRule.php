@@ -38,8 +38,6 @@ final class SchedulableExistsRule implements ValidationRule
 
     /**
      * {@inheritDoc}
-     *
-     * This rule applies to create and update operations.
      */
     public function supports(ValidationContext $context): bool
     {
@@ -48,8 +46,6 @@ final class SchedulableExistsRule implements ValidationRule
 
     /**
      * {@inheritDoc}
-     *
-     * Validates that the schedulable entity exists.
      */
     public function validate(ValidationContext $context): ?ValidationErrorRecord
     {
@@ -78,7 +74,7 @@ final class SchedulableExistsRule implements ValidationRule
      * Extracts schedulable type and ID from the record.
      *
      * @param  mixed  $record  The record to extract from
-     * @return array{string, int}|null Array of [type, id] or null if not applicable
+     * @return array{string, int|string}|null Array of [type, id] or null if not applicable
      */
     private function extractSchedulableInfo(mixed $record): ?array
     {
@@ -97,7 +93,7 @@ final class SchedulableExistsRule implements ValidationRule
      * Extracts from AvailabilityRecord.
      *
      * @param  AvailabilityRecord  $record  The record
-     * @return array{string, int}|null
+     * @return array{string, int|string}|null
      */
     private function extractFromAvailability(AvailabilityRecord $record): ?array
     {
@@ -112,7 +108,7 @@ final class SchedulableExistsRule implements ValidationRule
      * Extracts from ScheduleRecord.
      *
      * @param  ScheduleRecord  $record  The record
-     * @return array{string, int}|null
+     * @return array{string, int|string}|null
      */
     private function extractFromSchedule(ScheduleRecord $record): ?array
     {
@@ -138,10 +134,10 @@ final class SchedulableExistsRule implements ValidationRule
      * Checks if an entity exists in the database.
      *
      * @param  string  $type  The entity type class
-     * @param  int  $id  The entity ID
+     * @param  int|string  $id  The entity ID
      * @return bool True if the entity exists
      */
-    private function isEntityExists(string $type, int $id): bool
+    private function isEntityExists(string $type, int|string $id): bool
     {
         return $type::where('id', $id)->exists();
     }
@@ -170,17 +166,17 @@ final class SchedulableExistsRule implements ValidationRule
      * Creates an error for non-existent entity.
      *
      * @param  string  $schedulableType  The entity type
-     * @param  int  $schedulableId  The entity ID
+     * @param  int|string  $schedulableId  The entity ID
      * @return ValidationErrorRecord The error record
      */
     private function createEntityNotExistsError(
         string $schedulableType,
-        int $schedulableId
+        int|string $schedulableId
     ): ValidationErrorRecord {
         return new ValidationErrorRecord(
             rule: self::class,
             message: sprintf(
-                'Schedulable entity #%d of type "%s" does not exist.',
+                'Schedulable entity #%s of type "%s" does not exist.',
                 $schedulableId,
                 $schedulableType
             ),

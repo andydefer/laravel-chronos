@@ -93,7 +93,7 @@ interface ImpedimentServiceInterface
      * Finds the existing record, validates the updated data, and applies the
      * changes. The operation is atomic and includes mutation tracking.
      *
-     * @param  int  $id  The ID of the impediment to update
+     * @param  int|string  $id  The ID of the impediment to update
      * @param  ImpedimentRecord  $record  The updated impediment data
      * @return Impediment The updated impediment model
      *
@@ -101,21 +101,21 @@ interface ImpedimentServiceInterface
      * @throws ValidationException When the updated data fails validation
      * @throws Throwable When an unexpected error occurs during update
      */
-    public function update(int $id, ImpedimentRecord $record): Impediment;
+    public function update(int|string $id, ImpedimentRecord $record): Impediment;
 
     /**
      * Deletes an impediment record.
      *
      * Performs validation before deletion to ensure business rules are respected.
      *
-     * @param  int  $id  The ID of the impediment to delete
+     * @param  int|string  $id  The ID of the impediment to delete
      * @return bool True if the deletion was successful
      *
      * @throws ModelNotFoundException When no impediment exists with the given ID
      * @throws ValidationException When validation fails
      * @throws Throwable When an unexpected error occurs during deletion
      */
-    public function delete(int $id): bool;
+    public function delete(int|string $id): bool;
 
     /**
      * Finds an impediment by its ID.
@@ -123,19 +123,19 @@ interface ImpedimentServiceInterface
      * If the service is scoped via for(), only impediments belonging to
      * that entity will be returned.
      *
-     * @param  int  $id  The impediment ID to find
+     * @param  int|string  $id  The impediment ID to find
      * @return Impediment|null The impediment model or null if not found
      */
-    public function find(int $id): ?Impediment;
+    public function find(int|string $id): ?Impediment;
 
     /**
      * Finds all impediments associated with a specific availability.
      *
-     * @param  int  $availabilityId  The availability ID to filter by
+     * @param  int|string  $availabilityId  The availability ID to filter by
      * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Impediment> Collection of impediment models
      */
-    public function findByAvailability(int $availabilityId, ?int $limit = null): Collection;
+    public function findByAvailability(int|string $availabilityId, ?int $limit = null): Collection;
 
     /**
      * Finds all impediments for a given schedulable entity.
@@ -161,25 +161,25 @@ interface ImpedimentServiceInterface
      * Finds impediments that occur on a specific date.
      *
      * @param  DateTimeZuluVO  $date  The date to search for impediments
-     * @param  int|null  $availabilityId  Optional availability filter
+     * @param  int|string|null  $availabilityId  Optional availability filter
      * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Impediment> Collection of impediment models
      */
-    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null, ?int $limit = null): Collection;
+    public function findByDate(DateTimeZuluVO $date, int|string|null $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Finds impediments that fall within a date range.
      *
      * @param  DateTimeZuluVO  $start  The start of the date range
      * @param  DateTimeZuluVO  $end  The end of the date range
-     * @param  int|null  $availabilityId  Optional availability filter
+     * @param  int|string|null  $availabilityId  Optional availability filter
      * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Impediment> Collection of impediment models
      */
     public function findInDateRange(
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $availabilityId = null,
+        int|string|null $availabilityId = null,
         ?int $limit = null
     ): Collection;
 
@@ -189,11 +189,11 @@ interface ImpedimentServiceInterface
      * Active impediments are those that are currently running based on
      * the current system time.
      *
-     * @param  int|null  $availabilityId  Optional availability filter
+     * @param  int|string|null  $availabilityId  Optional availability filter
      * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Impediment> Collection of active impediment models
      */
-    public function findActive(?int $availabilityId = null, ?int $limit = null): Collection;
+    public function findActive(int|string|null $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Searches for impediments by reason text.
@@ -201,11 +201,11 @@ interface ImpedimentServiceInterface
      * Performs a case-insensitive search on the reason field.
      *
      * @param  string  $search  The search term to look for in the reason
-     * @param  int|null  $availabilityId  Optional availability filter
+     * @param  int|string|null  $availabilityId  Optional availability filter
      * @param  int|null  $limit  Maximum number of results to return
      * @return Collection<int, Impediment> Collection of matching impediment models
      */
-    public function searchByReason(string $search, ?int $availabilityId = null, ?int $limit = null): Collection;
+    public function searchByReason(string $search, int|string|null $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Checks if an impediment is currently active.

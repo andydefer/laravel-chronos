@@ -17,7 +17,7 @@ final class AvailabilityRecord extends AbstractRecord
         public readonly ?TimeZuluVO $daily_start = null,
         public readonly ?TimeZuluVO $daily_end = null,
         public readonly ?string $schedulable_type = null,
-        public readonly ?int $schedulable_id = null,
+        public readonly ?string $schedulable_id = null,
         public readonly ?WeekDayCollection $days = null,
         public readonly ?DateTimeZuluVO $validity_start = null,
         public readonly ?DateTimeZuluVO $validity_end = null,

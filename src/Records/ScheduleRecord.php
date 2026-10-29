@@ -12,9 +12,9 @@ use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 final class ScheduleRecord extends AbstractRecord
 {
     public function __construct(
-        public readonly ?int $availability_id = null,
+        public readonly ?string $availability_id = null,
         public readonly ?string $schedulable_type = null,
-        public readonly ?int $schedulable_id = null,
+        public readonly ?string $schedulable_id = null,
         public readonly ?string $title = null,
         public readonly ?string $description = null,
         public readonly ?DateTimeZuluVO $start_datetime = null,

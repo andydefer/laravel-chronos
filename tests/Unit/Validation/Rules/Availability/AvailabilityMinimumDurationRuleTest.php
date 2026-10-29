@@ -48,17 +48,17 @@ final class AvailabilityMinimumDurationRuleTest extends IntegrationTestCase
     public function test_supports_availability_create_and_update_operations(): void
     {
         $createContext = new ValidationContext(
-            new AvailabilityRecord,
+            AvailabilityRecord::from([]),
             OperationType::CREATE
         );
 
         $updateContext = new ValidationContext(
-            new AvailabilityRecord,
+            AvailabilityRecord::from([]),
             OperationType::UPDATE
         );
 
         $deleteContext = new ValidationContext(
-            new AvailabilityRecord,
+            AvailabilityRecord::from([]),
             OperationType::DELETE
         );
 
@@ -69,11 +69,11 @@ final class AvailabilityMinimumDurationRuleTest extends IntegrationTestCase
 
     public function test_returns_null_when_daily_times_are_missing(): void
     {
-        $record = new AvailabilityRecord(
-            days: WeekDayCollection::fromStrings(['monday']),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);
@@ -83,13 +83,13 @@ final class AvailabilityMinimumDurationRuleTest extends IntegrationTestCase
 
     public function test_returns_error_when_duration_is_below_minimum(): void
     {
-        $record = new AvailabilityRecord(
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('09:05:00'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('09:05:00'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);
@@ -102,13 +102,13 @@ final class AvailabilityMinimumDurationRuleTest extends IntegrationTestCase
 
     public function test_returns_error_when_duration_is_zero(): void
     {
-        $record = new AvailabilityRecord(
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('09:00:00'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('09:00:00'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);
@@ -120,13 +120,13 @@ final class AvailabilityMinimumDurationRuleTest extends IntegrationTestCase
 
     public function test_passes_validation_when_duration_meets_minimum(): void
     {
-        $record = new AvailabilityRecord(
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('09:30:00'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('09:30:00'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);
@@ -136,13 +136,13 @@ final class AvailabilityMinimumDurationRuleTest extends IntegrationTestCase
 
     public function test_passes_validation_when_duration_exceeds_minimum(): void
     {
-        $record = new AvailabilityRecord(
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('17:00:00'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('17:00:00'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
         $context = new ValidationContext($record, OperationType::UPDATE);
 
         $result = $this->rule->validate($context);
@@ -159,13 +159,13 @@ final class AvailabilityMinimumDurationRuleTest extends IntegrationTestCase
         $config = new ChronosConfig(app(ConfigRepository::class));
         $rule = new AvailabilityMinimumDurationRule($helper, $config);
 
-        $record = new AvailabilityRecord(
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('09:30:00'), // 30 minutes < 60 min
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('09:30:00'), // 30 minutes < 60 min
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $rule->validate($context);
@@ -192,13 +192,13 @@ final class AvailabilityMinimumDurationRuleTest extends IntegrationTestCase
         $rule = new AvailabilityMinimumDurationRule($helper, $config);
 
         // Availability duration = 20 minutes should fail (min 30 for availability)
-        $record = new AvailabilityRecord(
-            days: WeekDayCollection::fromStrings(['monday']),
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('09:20:00'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'days' => WeekDayCollection::fromStrings(['monday']),
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('09:20:00'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $rule->validate($context);

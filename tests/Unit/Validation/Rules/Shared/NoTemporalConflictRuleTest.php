@@ -64,7 +64,7 @@ final class NoTemporalConflictRuleTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
@@ -72,20 +72,20 @@ final class NoTemporalConflictRuleTest extends IntegrationTestCase
             Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
                 'title' => 'Existing Schedule',
                 'start_datetime' => '2024-01-15 10:00:00',
                 'end_datetime' => '2024-01-15 11:00:00',
             ]);
         });
 
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:30:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:30:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:30:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:30:00Z'),
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);
@@ -106,7 +106,7 @@ final class NoTemporalConflictRuleTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
@@ -114,20 +114,20 @@ final class NoTemporalConflictRuleTest extends IntegrationTestCase
             Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
                 'title' => 'Existing Schedule',
                 'start_datetime' => '2024-01-15 10:00:00',
                 'end_datetime' => '2024-01-15 11:00:00',
             ]);
         });
 
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T11:30:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T12:30:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T11:30:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T12:30:00Z'),
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);
@@ -147,7 +147,7 @@ final class NoTemporalConflictRuleTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
@@ -155,20 +155,20 @@ final class NoTemporalConflictRuleTest extends IntegrationTestCase
             return Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
                 'title' => 'Existing Schedule',
                 'start_datetime' => '2024-01-15 10:00:00',
                 'end_datetime' => '2024-01-15 11:00:00',
             ]);
         });
 
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:30:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:30:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:30:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:30:00Z'),
+        ]);
         $context = new ValidationContext($record, OperationType::UPDATE, $existing);
 
         $result = $this->rule->validate($context);

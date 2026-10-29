@@ -237,7 +237,7 @@ final class AvailabilityNoOverlapRule implements ValidationRule
         return new ValidationErrorRecord(
             rule: self::class,
             message: sprintf(
-                'Availability overlaps with existing availability #%d for the same schedulable entity.',
+                'Availability overlaps with existing availability #%s for the same schedulable entity.',
                 $conflicting->id
             ),
             context: Associative::from([

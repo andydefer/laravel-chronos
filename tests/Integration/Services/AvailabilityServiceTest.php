@@ -14,6 +14,7 @@ use AndyDefer\LaravelChronos\Tests\Fixtures\Models\TestCar;
 use AndyDefer\LaravelChronos\Tests\IntegrationTestCase;
 use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class AvailabilityServiceTest extends IntegrationTestCase
 {
@@ -68,7 +69,6 @@ final class AvailabilityServiceTest extends IntegrationTestCase
 
     public function test_create_with_for_auto_resets_context(): void
     {
-        // First call with for()
         $availability1 = $this->service->for($this->testCar)->create(AvailabilityRecord::from([
             'name' => 'Availability 1',
             'days' => ['monday'],
@@ -80,7 +80,6 @@ final class AvailabilityServiceTest extends IntegrationTestCase
 
         $this->assertEquals(TestCar::class, $availability1->schedulable_type);
 
-        // Second call without for() should work normally
         $availability2 = $this->service->create(AvailabilityRecord::from([
             'name' => 'Availability 2',
             'days' => ['tuesday'],
@@ -115,7 +114,6 @@ final class AvailabilityServiceTest extends IntegrationTestCase
 
     public function test_find_by_schedulable_with_limit(): void
     {
-        // Arrange - Create 5 availabilities with different days to avoid overlap
         $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
         for ($i = 0; $i < 5; $i++) {
             $this->service->for($this->testCar)->create(AvailabilityRecord::from([
@@ -128,10 +126,8 @@ final class AvailabilityServiceTest extends IntegrationTestCase
             ]));
         }
 
-        // Act
         $availabilities = $this->service->for($this->testCar)->findBySchedulable(null, 3);
 
-        // Assert
         $this->assertCount(3, $availabilities);
         $this->assertEquals('Availability 0', $availabilities->first()->name);
         $this->assertEquals('Availability 2', $availabilities->last()->name);
@@ -148,7 +144,6 @@ final class AvailabilityServiceTest extends IntegrationTestCase
             ]);
         });
 
-        // Create availability for anotherCar
         $this->service->for($anotherCar)->create(AvailabilityRecord::from([
             'name' => 'Another Availability',
             'days' => ['tuesday'],
@@ -158,7 +153,6 @@ final class AvailabilityServiceTest extends IntegrationTestCase
             'validity_end' => '2024-12-31T23:59:59Z',
         ]));
 
-        // Search with explicit entity
         $availabilities = $this->service->for($this->testCar)->findBySchedulable($anotherCar);
 
         $this->assertCount(1, $availabilities);
@@ -184,12 +178,10 @@ final class AvailabilityServiceTest extends IntegrationTestCase
             'validity_end' => '2024-12-31T23:59:59Z',
         ]));
 
-        // Find with for() - should return own availability
         $found = $this->service->for($this->testCar)->find($availability1->id);
         $this->assertNotNull($found);
         $this->assertEquals($availability1->id, $found->id);
 
-        // Should not find availability with wrong ID
         $notFound = $this->service->for($this->testCar)->find(99999);
         $this->assertNull($notFound);
     }
@@ -214,7 +206,6 @@ final class AvailabilityServiceTest extends IntegrationTestCase
             'validity_end' => '2024-12-31T23:59:59Z',
         ]));
 
-        // Find with for() for testCar - should not find anotherCar's availability
         $notFound = $this->service->for($this->testCar)->find($availability2->id);
         $this->assertNull($notFound);
     }
@@ -238,7 +229,6 @@ final class AvailabilityServiceTest extends IntegrationTestCase
 
     public function test_chained_methods_with_for_work_correctly(): void
     {
-        // Create with chained for()
         $availability = $this->service
             ->for($this->testCar)
             ->create(AvailabilityRecord::from([
@@ -253,7 +243,6 @@ final class AvailabilityServiceTest extends IntegrationTestCase
         $this->assertEquals(TestCar::class, $availability->schedulable_type);
         $this->assertEquals($this->testCar->id, $availability->schedulable_id);
 
-        // Update with chained for() - specifying all fields to avoid validation errors
         $updated = $this->service
             ->for($this->testCar)
             ->update($availability->id, AvailabilityRecord::from([
@@ -268,7 +257,6 @@ final class AvailabilityServiceTest extends IntegrationTestCase
         $this->assertEquals('Updated Chain Test', $updated->name);
         $this->assertEquals('18:00:00', $updated->daily_end->format('H:i:s'));
 
-        // Find by schedulable with chained for()
         $availabilities = $this->service
             ->for($this->testCar)
             ->findBySchedulable();
@@ -283,7 +271,6 @@ final class AvailabilityServiceTest extends IntegrationTestCase
 
     public function test_find_by_type_with_limit(): void
     {
-        // Arrange - Create 5 availabilities with type 'test' and different days
         $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
         for ($i = 0; $i < 5; $i++) {
             $this->service->for($this->testCar)->create(AvailabilityRecord::from([
@@ -297,17 +284,14 @@ final class AvailabilityServiceTest extends IntegrationTestCase
             ]));
         }
 
-        // Act
         $availabilities = $this->service->findByType('test', 3);
 
-        // Assert
         $this->assertCount(3, $availabilities);
         $this->assertEquals('Availability 0', $availabilities->first()->name);
     }
 
     public function test_find_active_at_date_with_limit(): void
     {
-        // Arrange - Create 5 availabilities active on date with different days
         $date = DateTimeZuluVO::from('2024-06-15T12:00:00Z');
         $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
         for ($i = 0; $i < 5; $i++) {
@@ -321,16 +305,13 @@ final class AvailabilityServiceTest extends IntegrationTestCase
             ]));
         }
 
-        // Act
         $availabilities = $this->service->findActiveAtDate($this->testCar, $date, 3);
 
-        // Assert
         $this->assertCount(3, $availabilities);
     }
 
     public function test_find_active_in_date_range_with_limit(): void
     {
-        // Arrange - Create 5 availabilities in date range with different days
         $start = DateTimeZuluVO::from('2024-01-01T00:00:00Z');
         $end = DateTimeZuluVO::from('2024-12-31T23:59:59Z');
         $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
@@ -345,10 +326,8 @@ final class AvailabilityServiceTest extends IntegrationTestCase
             ]));
         }
 
-        // Act
         $availabilities = $this->service->findActiveInDateRange($this->testCar, $start, $end, 3);
 
-        // Assert
         $this->assertCount(3, $availabilities);
     }
 
@@ -375,9 +354,9 @@ final class AvailabilityServiceTest extends IntegrationTestCase
     {
         $this->expectException(ValidationException::class);
 
-        $record = new AvailabilityRecord(
-            name: 'Test',
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test',
+        ]);
 
         $this->service->create($record);
     }
@@ -433,6 +412,7 @@ final class AvailabilityServiceTest extends IntegrationTestCase
 
         ChronosMutationContext::withAllowed(function () use ($availability) {
             DB::table('schedules')->insert([
+                'id' => (string) Str::uuid(),
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
                 'schedulable_id' => $this->testCar->id,
@@ -455,6 +435,7 @@ final class AvailabilityServiceTest extends IntegrationTestCase
 
         ChronosMutationContext::withAllowed(function () use ($availability) {
             DB::table('schedules')->insert([
+                'id' => (string) Str::uuid(),
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
                 'schedulable_id' => $this->testCar->id,

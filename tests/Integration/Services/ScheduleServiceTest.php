@@ -296,14 +296,14 @@ final class ScheduleServiceTest extends IntegrationTestCase
         $record1 = $this->createScheduleRecord($availability);
         $this->scheduleService->create($record1);
 
-        $record2 = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: $this->testCar->id,
-            title: 'Overlapping Schedule',
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:15:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T10:45:00Z'),
-        );
+        $record2 = ScheduleRecord::from([
+            'availability_id' => $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => (string) $this->testCar->id,
+            'title' => 'Overlapping Schedule',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:15:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T10:45:00Z'),
+        ]);
 
         $this->expectException(ValidationException::class);
         $this->scheduleService->create($record2);

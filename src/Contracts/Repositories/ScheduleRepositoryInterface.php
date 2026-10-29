@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AndyDefer\LaravelChronos\Contracts\Repositories;
 
 use AndyDefer\LaravelChronos\Enums\ScheduleStatus;
-use AndyDefer\LaravelChronos\Models\Availability;
 use AndyDefer\LaravelChronos\Models\Schedule;
 use AndyDefer\LaravelChronos\Records\ScheduleRecord;
 use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
@@ -21,56 +20,51 @@ interface ScheduleRepositoryInterface extends AbstractRepositoryInterface
     /**
      * Find schedules for a specific availability.
      */
-    public function findByAvailability(int $availabilityId, ?int $limit = null): Collection;
+    public function findByAvailability(int|string $availabilityId, ?int $limit = null): Collection;
 
     /**
      * Find schedules that overlap with a given time slot.
-     * Utilisé par: NoTemporalConflictRule, TimeSlotWithinAvailabilityRule
      */
     public function findOverlapping(
-        int $availabilityId,
+        int|string $availabilityId,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $excludeId = null,
+        int|string|null $excludeId = null,
         ?int $limit = null,
     ): Collection;
 
     /**
      * Find schedules with a specific status.
      */
-    public function findByStatus(ScheduleStatus $status, ?int $availabilityId = null, ?int $limit = null): Collection;
+    public function findByStatus(ScheduleStatus $status, int|string|null $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Find schedules by title.
      */
-    public function searchByTitle(string $search, ?int $availabilityId = null, ?int $limit = null): Collection;
+    public function searchByTitle(string $search, int|string|null $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Find schedules for a specific date.
-     * Utilisé par: TimeSlotWithinAvailabilityRule
      */
-    public function findByDate(DateTimeZuluVO $date, ?int $availabilityId = null, ?int $limit = null): Collection;
+    public function findByDate(DateTimeZuluVO $date, int|string|null $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Find schedules in a date range.
-     * Utilisé par: TimeSlotWithinAvailabilityRule
      */
     public function findInDateRange(
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $availabilityId = null,
+        int|string|null $availabilityId = null,
         ?int $limit = null
     ): Collection;
 
     /**
      * Find schedules by day of week.
-     * Utilisé par: TimeSlotWithinAvailabilityRule
      */
-    public function findByDayOfWeek(int $dayOfWeek, ?int $availabilityId = null, ?int $limit = null): Collection;
+    public function findByDayOfWeek(int $dayOfWeek, int|string|null $availabilityId = null, ?int $limit = null): Collection;
 
     /**
      * Find schedules for a specific schedulable entity.
-     * Utilisé par: EntityOwnershipConsistencyRule
      *
      * @param  Model  $schedulable  The schedulable entity
      * @return Collection<int, Schedule> Collection of schedules
@@ -79,27 +73,24 @@ interface ScheduleRepositoryInterface extends AbstractRepositoryInterface
 
     /**
      * Find schedules with invalid chronology.
-     * Utilisé par: TimeSlotChronologyRule
      */
     public function findWithInvalidChronology(?int $limit = null): Collection;
 
     /**
      * Find schedules with duration exceeding max.
-     * Utilisé par: MaxDurationRule
      */
-    public function findWithExceedingDuration(int $availabilityId, int $maxDurationMinutes, ?int $limit = null): Collection;
+    public function findWithExceedingDuration(int|string $availabilityId, int $maxDurationMinutes, ?int $limit = null): Collection;
 
     /**
      * Find schedules violating buffer time.
-     * Utilisé par: BufferTimeRule
      */
-    public function findViolatingBufferTime(int $availabilityId, int $bufferMinutes, ?int $limit = null): Collection;
+    public function findViolatingBufferTime(int|string $availabilityId, int $bufferMinutes, ?int $limit = null): Collection;
 
     /**
      * Find schedules for a specific availability with a date range.
      */
     public function findByAvailabilityInDateRange(
-        int $availabilityId,
+        int|string $availabilityId,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
         ?int $limit = null,
@@ -107,19 +98,17 @@ interface ScheduleRepositoryInterface extends AbstractRepositoryInterface
 
     /**
      * Find schedules that conflict with a time slot.
-     * Utilisé par: NoTemporalConflictRule
      */
     public function findConflicting(
-        int $availabilityId,
+        int|string $availabilityId,
         DateTimeZuluVO $start,
         DateTimeZuluVO $end,
-        ?int $excludeId = null,
+        int|string|null $excludeId = null,
         ?int $limit = null,
     ): Collection;
 
     /**
      * Check if a schedule has overlapping days.
-     * Utilisé par: CrossDayAvailabilityRule
      */
-    public function hasCrossDaySchedule(int $availabilityId): bool;
+    public function hasCrossDaySchedule(int|string $availabilityId): bool;
 }

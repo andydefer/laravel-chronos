@@ -59,9 +59,9 @@ interface ScopedServiceInterface
     /**
      * Gets the schedulable ID from the scoped entity.
      *
-     * @return int|null The entity ID or null if not scoped
+     * @return int|string|null The entity ID (int or UUID) or null if not scoped
      */
-    public function getScopedSchedulableId(): ?int;
+    public function getScopedSchedulableId(): int|string|null;
 
     /**
      * Injects the scoped entity data into an array.

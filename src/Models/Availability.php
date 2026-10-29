@@ -11,37 +11,32 @@ use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 use AndyDefer\PhpVo\ValueObjects\TimeZuluVO;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * Availability model representing time slots and scheduling availability.
- *
- * @property int $id
+ * @property string $id
  * @property string|null $type
  * @property string|null $name
- * @property Carbon|null $daily_start Start time of the availability
- * @property Carbon|null $daily_end End time of the availability
- * @property array $days Days of the week this availability applies to
- * @property Carbon|null $validity_start Start date of validity period
- * @property Carbon|null $validity_end End date of validity period
+ * @property Carbon|null $daily_start
+ * @property Carbon|null $daily_end
+ * @property array $days
+ * @property Carbon|null $validity_start
+ * @property Carbon|null $validity_end
  * @property string $schedulable_type
  * @property string $schedulable_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
- *
- * // Computed attributes
- * @property-read bool $has_schedules Whether this availability has any schedules
- * @property-read bool $has_impediments Whether this availability has any impediments
- * @property-read bool $is_cross_day Whether the availability spans across midnight
- * @property-read bool $is_same_day Whether the availability is within the same day
- * @property-read bool $is_same_hour Whether start and end are at the same hour
- * @property-read int|null $duration_in_minutes Duration in minutes
- *
- * // Relations
+ * @property-read bool $has_schedules
+ * @property-read bool $has_impediments
+ * @property-read bool $is_cross_day
+ * @property-read bool $is_same_day
+ * @property-read bool $is_same_hour
+ * @property-read int|null $duration_in_minutes
  * @property-read Model|null $schedulable
  * @property-read HasMany<Schedule> $schedules
  * @property-read HasMany<Impediment> $impediments
@@ -51,7 +46,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 final class Availability extends Model
 {
+    use HasUuids;
     use SoftDeletes;
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
 
     protected $table = 'availabilities';
 
@@ -96,33 +96,21 @@ final class Availability extends Model
     // RELATIONS
     // ============================================================
 
-    /**
-     * Get the schedulable entity (polymorphic).
-     */
     public function schedulable(): MorphTo
     {
         return $this->morphTo();
     }
 
-    /**
-     * Get the schedules for this availability.
-     */
     public function schedules(): HasMany
     {
         return $this->hasMany(Schedule::class);
     }
 
-    /**
-     * Get the impediments for this availability.
-     */
     public function impediments(): HasMany
     {
         return $this->hasMany(Impediment::class);
     }
 
-    /**
-     * Get active schedules (not cancelled or completed).
-     */
     public function activeSchedules(): HasMany
     {
         return $this->schedules()
@@ -132,9 +120,6 @@ final class Availability extends Model
             ]);
     }
 
-    /**
-     * Get upcoming schedules (start_datetime > now).
-     */
     public function upcomingSchedules(): HasMany
     {
         return $this->schedules()
@@ -142,9 +127,6 @@ final class Availability extends Model
             ->orderBy('start_datetime', 'asc');
     }
 
-    /**
-     * Get active impediments (currently running).
-     */
     public function activeImpediments(): HasMany
     {
         return $this->impediments()
@@ -156,9 +138,6 @@ final class Availability extends Model
     // ACCESSORS
     // ============================================================
 
-    /**
-     * Get daily start time as TimeZuluVO.
-     */
     public function getDailyStart(): ?TimeZuluVO
     {
         if ($this->daily_start === null) {
@@ -168,9 +147,6 @@ final class Availability extends Model
         return TimeZuluVO::from($this->daily_start->format('H:i:s'));
     }
 
-    /**
-     * Get daily end time as TimeZuluVO.
-     */
     public function getDailyEnd(): ?TimeZuluVO
     {
         if ($this->daily_end === null) {
@@ -180,9 +156,6 @@ final class Availability extends Model
         return TimeZuluVO::from($this->daily_end->format('H:i:s'));
     }
 
-    /**
-     * Get validity start as DateTimeZuluVO.
-     */
     public function getValidityStart(): ?DateTimeZuluVO
     {
         if ($this->validity_start === null) {
@@ -192,9 +165,6 @@ final class Availability extends Model
         return DateTimeZuluVO::fromCarbon($this->validity_start);
     }
 
-    /**
-     * Get validity end as DateTimeZuluVO.
-     */
     public function getValidityEnd(): ?DateTimeZuluVO
     {
         if ($this->validity_end === null) {
@@ -204,9 +174,6 @@ final class Availability extends Model
         return DateTimeZuluVO::fromCarbon($this->validity_end);
     }
 
-    /**
-     * Get days as WeekDayCollection.
-     */
     public function getDays(): WeekDayCollection
     {
         $collection = new WeekDayCollection;
@@ -225,9 +192,6 @@ final class Availability extends Model
         return $collection;
     }
 
-    /**
-     * Get created at as DateTimeZuluVO.
-     */
     public function getCreatedAt(): ?DateTimeZuluVO
     {
         if ($this->created_at === null) {
@@ -237,9 +201,6 @@ final class Availability extends Model
         return DateTimeZuluVO::fromCarbon($this->created_at);
     }
 
-    /**
-     * Get updated at as DateTimeZuluVO.
-     */
     public function getUpdatedAt(): ?DateTimeZuluVO
     {
         if ($this->updated_at === null) {
@@ -249,9 +210,6 @@ final class Availability extends Model
         return DateTimeZuluVO::fromCarbon($this->updated_at);
     }
 
-    /**
-     * Get deleted at as DateTimeZuluVO.
-     */
     public function getDeletedAt(): ?DateTimeZuluVO
     {
         if ($this->deleted_at === null) {
@@ -265,12 +223,8 @@ final class Availability extends Model
     // HELPERS
     // ============================================================
 
-    /**
-     * Check if the availability is active on a given date.
-     */
     public function isActiveOnDate(DateTimeZuluVO $date): bool
     {
-        // Check validity period
         if ($this->validity_start !== null) {
             $start = DateTimeZuluVO::fromCarbon($this->validity_start);
             if ($date->isBefore($start)) {
@@ -285,17 +239,11 @@ final class Availability extends Model
             }
         }
 
-        // Check day of week
         $dayOfWeek = strtolower($date->format('l'));
 
         return in_array($dayOfWeek, $this->days ?? [], true);
     }
 
-    /**
-     * Check if the availability has any impediments.
-     *
-     * @return Attribute<bool, never>
-     */
     protected function hasSchedules(): Attribute
     {
         return Attribute::make(
@@ -303,11 +251,6 @@ final class Availability extends Model
         );
     }
 
-    /**
-     * Check if the availability has any impediments.
-     *
-     * @return Attribute<bool, never>
-     */
     protected function hasImpediments(): Attribute
     {
         return Attribute::make(
@@ -315,12 +258,6 @@ final class Availability extends Model
         );
     }
 
-    /**
-     * Check if the availability is cross-day (daily_start > daily_end).
-     * Uses TimeZuluVO comparison.
-     *
-     * @return Attribute<bool, never>
-     */
     protected function isCrossDay(): Attribute
     {
         return Attribute::make(
@@ -337,11 +274,6 @@ final class Availability extends Model
         );
     }
 
-    /**
-     * Check if the availability is on the same day (daily_start <= daily_end).
-     *
-     * @return Attribute<bool, never>
-     */
     protected function isSameDay(): Attribute
     {
         return Attribute::make(
@@ -358,11 +290,6 @@ final class Availability extends Model
         );
     }
 
-    /**
-     * Check if the availability has the same start hour as end hour.
-     *
-     * @return Attribute<bool, never>
-     */
     protected function isSameHour(): Attribute
     {
         return Attribute::make(
@@ -379,11 +306,6 @@ final class Availability extends Model
         );
     }
 
-    /**
-     * Get the duration in minutes.
-     *
-     * @return Attribute<int|null, never>
-     */
     protected function durationInMinutes(): Attribute
     {
         return Attribute::make(

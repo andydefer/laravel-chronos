@@ -11,9 +11,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('impediments', function (Blueprint $table): void {
-            $table->id();
+            $table->uuid('id')->primary();
 
-            $table->foreignId('availability_id')
+            $table->foreignUuid('availability_id')
                 ->constrained('availabilities')
                 ->onDelete('cascade');
 

@@ -53,13 +53,13 @@ final class AvailabilityOwnershipValidationRuleTest extends IntegrationTestCase
 
     public function test_returns_error_when_availability_does_not_exist(): void
     {
-        $record = new ScheduleRecord(
-            availability_id: 99999,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => '99999',
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);
@@ -70,7 +70,6 @@ final class AvailabilityOwnershipValidationRuleTest extends IntegrationTestCase
 
     public function test_returns_error_when_availability_belongs_to_different_entity(): void
     {
-        // Créer une availability avec le contexte ouvert
         $availability = ChronosMutationContext::withAllowed(function () {
             return Availability::create([
                 'name' => 'Test Availability',
@@ -81,18 +80,17 @@ final class AvailabilityOwnershipValidationRuleTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        // Créer un schedule pour un entity différent (schedulable_id = 2)
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: 2,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '2',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);
@@ -103,7 +101,6 @@ final class AvailabilityOwnershipValidationRuleTest extends IntegrationTestCase
 
     public function test_passes_when_availability_belongs_to_correct_entity(): void
     {
-        // Créer une availability avec le contexte ouvert
         $availability = ChronosMutationContext::withAllowed(function () {
             return Availability::create([
                 'name' => 'Test Availability',
@@ -114,18 +111,17 @@ final class AvailabilityOwnershipValidationRuleTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        // Créer un schedule pour le même entity (schedulable_id = 1)
-        $record = new ScheduleRecord(
-            availability_id: $availability->id,
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-            start_datetime: DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
-            end_datetime: DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
-        );
+        $record = ScheduleRecord::from([
+            'availability_id' => (string) $availability->id,
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+            'start_datetime' => DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
+            'end_datetime' => DateTimeZuluVO::from('2024-01-15T11:00:00Z'),
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);

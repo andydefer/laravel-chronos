@@ -15,6 +15,7 @@ use AndyDefer\LaravelChronos\Validation\Result\ValidationErrorRecord;
 use AndyDefer\LaravelChronos\Validation\Rules\Availability\NoFutureBookingsOnDeleteRule;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class NoFutureBookingsOnDeleteRuleTest extends IntegrationTestCase
 {
@@ -50,7 +51,6 @@ final class NoFutureBookingsOnDeleteRuleTest extends IntegrationTestCase
 
     public function test_returns_error_when_availability_has_future_schedules(): void
     {
-        // Créer une availability avec le contexte ouvert
         $availability = ChronosMutationContext::withAllowed(function () {
             return Availability::create([
                 'name' => 'Test Availability',
@@ -61,16 +61,16 @@ final class NoFutureBookingsOnDeleteRuleTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        // Créer un schedule futur avec le contexte ouvert
         ChronosMutationContext::withAllowed(function () use ($availability) {
             DB::table('schedules')->insert([
+                'id' => (string) Str::uuid(),
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
                 'title' => 'Future Schedule',
                 'start_datetime' => Carbon::now('UTC')->addDays(1)->format('Y-m-d H:i:s'),
                 'end_datetime' => Carbon::now('UTC')->addDays(1)->addHours(1)->format('Y-m-d H:i:s'),
@@ -91,7 +91,6 @@ final class NoFutureBookingsOnDeleteRuleTest extends IntegrationTestCase
 
     public function test_passes_when_availability_has_no_future_schedules(): void
     {
-        // Créer une availability avec le contexte ouvert
         $availability = ChronosMutationContext::withAllowed(function () {
             return Availability::create([
                 'name' => 'Test Availability',
@@ -102,16 +101,16 @@ final class NoFutureBookingsOnDeleteRuleTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 
-        // Créer un schedule passé avec le contexte ouvert
         ChronosMutationContext::withAllowed(function () use ($availability) {
             DB::table('schedules')->insert([
+                'id' => (string) Str::uuid(),
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
                 'title' => 'Past Schedule',
                 'start_datetime' => Carbon::now('UTC')->subDays(2)->format('Y-m-d H:i:s'),
                 'end_datetime' => Carbon::now('UTC')->subDays(2)->addHours(1)->format('Y-m-d H:i:s'),
@@ -130,7 +129,6 @@ final class NoFutureBookingsOnDeleteRuleTest extends IntegrationTestCase
 
     public function test_passes_when_availability_has_no_schedules(): void
     {
-        // Créer une availability avec le contexte ouvert
         $availability = ChronosMutationContext::withAllowed(function () {
             return Availability::create([
                 'name' => 'Test Availability',
@@ -141,7 +139,7 @@ final class NoFutureBookingsOnDeleteRuleTest extends IntegrationTestCase
                 'validity_start' => '2024-01-01 00:00:00',
                 'validity_end' => '2024-12-31 23:59:59',
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
             ]);
         });
 

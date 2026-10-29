@@ -11,7 +11,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('availabilities', function (Blueprint $table): void {
-            $table->id();
+            $table->uuid('id')->primary();
 
             $table->string('type')->nullable()->comment('Grouping type for availability (e.g., "office", "remote", "consultation")');
             $table->string('name')->comment('Display name for this availability');
@@ -19,7 +19,8 @@ return new class extends Migration
             $table->time('daily_start')->comment('Start time within the day');
             $table->time('daily_end')->comment('End time within the day');
 
-            $table->morphs('schedulable');
+            $table->string('schedulable_type', 191);
+            $table->string('schedulable_id', 191);
 
             $table->json('days')->nullable()->comment('Recurring days of the week (e.g., ["monday", "wednesday", "friday"])');
 
@@ -29,6 +30,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
+            $table->index(['schedulable_type', 'schedulable_id']);
             $table->index('type');
             $table->index(['validity_start', 'validity_end']);
         });

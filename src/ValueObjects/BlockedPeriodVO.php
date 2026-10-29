@@ -21,7 +21,7 @@ use UnitEnum;
  *     DateTimeZuluVO::from('2024-01-15T09:30:00Z'),
  *     DateTimeZuluVO::from('2024-01-15T10:00:00Z'),
  *     'schedule',
- *     42
+ *     '42'
  * );
  *
  * echo $period->getType(); // 'schedule'
@@ -33,13 +33,13 @@ final class BlockedPeriodVO extends AbstractValueObject
      * @param  DateTimeZuluVO  $start  The start of the blocked period
      * @param  DateTimeZuluVO  $end  The end of the blocked period
      * @param  string  $type  The type of blocker ('schedule' or 'impediment')
-     * @param  int  $id  The ID of the blocker entity
+     * @param  int|string  $id  The ID of the blocker entity
      */
     public function __construct(
         public readonly DateTimeZuluVO $start,
         public readonly DateTimeZuluVO $end,
         public readonly string $type,
-        public readonly int $id,
+        public readonly int|string $id,
     ) {}
 
     /**
@@ -75,9 +75,9 @@ final class BlockedPeriodVO extends AbstractValueObject
     /**
      * Gets the ID of the blocker entity.
      *
-     * @return int The entity ID
+     * @return int|string The entity ID
      */
-    public function getId(): int
+    public function getId(): int|string
     {
         return $this->id;
     }
@@ -144,7 +144,7 @@ final class BlockedPeriodVO extends AbstractValueObject
     /**
      * Converts the blocked period to an array.
      *
-     * @return array{start: string, end: string, type: string, id: int, duration: int}
+     * @return array{start: string, end: string, type: string, id: int|string, duration: int}
      */
     public function toArray(): array
     {

@@ -26,17 +26,17 @@ final class AvailabilityRequiredFieldsRuleTest extends TestCase
     public function test_supports_only_availability_create_operations(): void
     {
         $createContext = new ValidationContext(
-            new AvailabilityRecord,
+            AvailabilityRecord::from([]),
             OperationType::CREATE
         );
 
         $updateContext = new ValidationContext(
-            new AvailabilityRecord,
+            AvailabilityRecord::from([]),
             OperationType::UPDATE
         );
 
         $deleteContext = new ValidationContext(
-            new AvailabilityRecord,
+            AvailabilityRecord::from([]),
             OperationType::DELETE
         );
 
@@ -47,12 +47,12 @@ final class AvailabilityRequiredFieldsRuleTest extends TestCase
 
     public function test_returns_error_when_name_is_missing(): void
     {
-        $record = new AvailabilityRecord(
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('17:00:00'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('17:00:00'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);
@@ -65,10 +65,10 @@ final class AvailabilityRequiredFieldsRuleTest extends TestCase
 
     public function test_returns_error_when_multiple_fields_are_missing(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Test',
-            daily_start: TimeZuluVO::from('09:00:00'),
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test',
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);
@@ -81,13 +81,13 @@ final class AvailabilityRequiredFieldsRuleTest extends TestCase
 
     public function test_passes_validation_when_all_fields_are_present(): void
     {
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            daily_start: TimeZuluVO::from('09:00:00'),
-            daily_end: TimeZuluVO::from('17:00:00'),
-            schedulable_type: TestCar::class,
-            schedulable_id: 1,
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+            'daily_start' => TimeZuluVO::from('09:00:00'),
+            'daily_end' => TimeZuluVO::from('17:00:00'),
+            'schedulable_type' => TestCar::class,
+            'schedulable_id' => '1',
+        ]);
         $context = new ValidationContext($record, OperationType::CREATE);
 
         $result = $this->rule->validate($context);
@@ -97,20 +97,11 @@ final class AvailabilityRequiredFieldsRuleTest extends TestCase
 
     public function test_does_not_support_update_operation(): void
     {
-        // La règle ne supporte pas UPDATE
-        // On vérifie que supports() retourne false
-        $record = new AvailabilityRecord(
-            name: 'Test Availability',
-            // Les autres champs sont manquants mais cela n'a pas d'importance
-            // car la règle n'est pas supportée pour UPDATE
-        );
+        $record = AvailabilityRecord::from([
+            'name' => 'Test Availability',
+        ]);
         $context = new ValidationContext($record, OperationType::UPDATE);
 
-        // Vérifier que supports() retourne false
         $this->assertFalse($this->rule->supports($context));
-
-        // Si la règle n'est pas supportée, on ne doit pas appeler validate()
-        // Le Validator ne l'appellera pas non plus
-        // Donc le comportement attendu est que la règle ne soit pas exécutée
     }
 }

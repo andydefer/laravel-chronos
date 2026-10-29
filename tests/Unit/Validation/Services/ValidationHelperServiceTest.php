@@ -330,20 +330,22 @@ final class ValidationHelperServiceTest extends IntegrationTestCase
         // Arrange
         $availability = $this->createAvailability();
 
-        ChronosMutationContext::withAllowed(function () use ($availability) {
-            Schedule::create([
+        $schedule1 = ChronosMutationContext::withAllowed(function () use ($availability) {
+            return Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
                 'title' => 'Test Schedule 1',
                 'start_datetime' => '2024-01-15 10:00:00',
                 'end_datetime' => '2024-01-15 11:00:00',
             ]);
+        });
 
+        ChronosMutationContext::withAllowed(function () use ($availability) {
             Schedule::create([
                 'availability_id' => $availability->id,
                 'schedulable_type' => TestCar::class,
-                'schedulable_id' => 1,
+                'schedulable_id' => '1',
                 'title' => 'Test Schedule 2',
                 'start_datetime' => '2024-01-15 10:30:00',
                 'end_datetime' => '2024-01-15 11:30:00',
@@ -353,12 +355,12 @@ final class ValidationHelperServiceTest extends IntegrationTestCase
         $start = DateTimeZuluVO::from('2024-01-15T10:30:00Z');
         $end = DateTimeZuluVO::from('2024-01-15T11:30:00Z');
 
-        // Act
+        // Act — exclure Schedule 1 (qui chevauche la plage)
         $conflicts = $this->helper->getConflictingSchedules(
             $availability->id,
             $start,
             $end,
-            $availability->id
+            $schedule1->id
         );
 
         // Assert

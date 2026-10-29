@@ -68,7 +68,7 @@ final class ScopedService implements ScopedServiceInterface
     /**
      * {@inheritDoc}
      */
-    public function getScopedSchedulableId(): ?int
+    public function getScopedSchedulableId(): int|string|null
     {
         return $this->schedulable?->getKey();
     }

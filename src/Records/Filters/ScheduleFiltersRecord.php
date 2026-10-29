@@ -11,9 +11,9 @@ use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
 final class ScheduleFiltersRecord extends AbstractRecord
 {
     public function __construct(
-        public readonly ?int $availability_id = null,
+        public readonly ?string $availability_id = null,
         public readonly ?string $schedulable_type = null,
-        public readonly ?int $schedulable_id = null,
+        public readonly ?string $schedulable_id = null,
         public readonly ?string $title = null,
         public readonly ?ScheduleStatus $status = null,
         public readonly ?DateTimeZuluVO $start_datetime_from = null,
