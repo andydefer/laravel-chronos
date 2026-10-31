@@ -17,13 +17,24 @@ use AndyDefer\LaravelChronos\Support\ServiceContext;
 use AndyDefer\LaravelChronos\ValueObjects\BlockedPeriodVO;
 use AndyDefer\LaravelChronos\ValueObjects\SlotVO;
 use AndyDefer\PhpVo\ValueObjects\DateTimeZuluVO;
-use AndyDefer\PhpVo\ValueObjects\TimeZuluVO;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
 final class SlotService implements SlotServiceInterface
 {
+    private const WINDOW_MERGE_TOLERANCE_SECONDS = 1;
+
+    private const ISO_DAY_NAMES = [
+        1 => 'monday',
+        2 => 'tuesday',
+        3 => 'wednesday',
+        4 => 'thursday',
+        5 => 'friday',
+        6 => 'saturday',
+        7 => 'sunday',
+    ];
+
     public function __construct(
         private readonly AvailabilityServiceInterface $availabilityService,
         private readonly ScheduleServiceInterface $scheduleService,
@@ -425,13 +436,6 @@ final class SlotService implements SlotServiceInterface
         );
     }
 
-    /**
-     * Validates that the duration meets the minimum required duration.
-     *
-     * @param  int  $durationInMinutes  The duration to validate
-     *
-     * @throws InvalidArgumentException When the duration is too short
-     */
     private function validateDuration(int $durationInMinutes): void
     {
         $minDuration = $this->config->getMinSlotSearchDuration();
@@ -447,9 +451,6 @@ final class SlotService implements SlotServiceInterface
         }
     }
 
-    /**
-     * Fetches availabilities within the specified range.
-     */
     private function fetchAvailabilitiesInRange(
         Model $schedulable,
         DateTimeZuluVO $start,
@@ -471,9 +472,6 @@ final class SlotService implements SlotServiceInterface
         );
     }
 
-    /**
-     * Fetches schedule blockers within the range.
-     */
     private function fetchScheduleBlockers(
         Model $schedulable,
         int|string|null $availabilityId,
@@ -505,9 +503,6 @@ final class SlotService implements SlotServiceInterface
         return $collection;
     }
 
-    /**
-     * Fetches impediment blockers within the range.
-     */
     private function fetchImpedimentBlockers(
         Model $schedulable,
         int|string|null $availabilityId,
@@ -539,9 +534,6 @@ final class SlotService implements SlotServiceInterface
         return $collection;
     }
 
-    /**
-     * Checks if two time ranges overlap.
-     */
     private function doTimeRangesOverlap(
         DateTimeZuluVO $start1,
         DateTimeZuluVO $end1,
@@ -553,6 +545,11 @@ final class SlotService implements SlotServiceInterface
 
     /**
      * Generates all slots for a single availability within the range.
+     *
+     * Slots are produced as contiguous blocks across consecutive allowed
+     * days so that cross-day bookings (e.g. a 24h slot spanning two
+     * calendar days) are represented as a single SlotVO instead of being
+     * split at midnight.
      */
     private function generateSlotsForAvailability(
         Availability $availability,
@@ -572,39 +569,144 @@ final class SlotService implements SlotServiceInterface
         $validityStart = $availability->getValidityStart();
         $validityEnd = $availability->getValidityEnd();
 
+        $windows = $this->buildContiguousWindows(
+            $availability,
+            $rangeStart,
+            $rangeEnd,
+            $validityStart,
+            $validityEnd
+        );
+
         $slots = new SlotVOCollection;
-        $currentDate = $rangeStart->startOfDay();
 
-        while ($currentDate->isBeforeOrEqual($rangeEnd)) {
-            $dayName = strtolower($currentDate->format('l'));
+        foreach ($windows as $window) {
+            [$windowStart, $windowEnd] = $window;
 
-            if ($this->isDayAllowed($dayName, $days) &&
-                $this->isWithinValidityPeriod($currentDate, $validityStart, $validityEnd)
-            ) {
-                $daySlots = $this->generateSlotsForDay(
-                    $currentDate,
-                    $dailyStart,
-                    $dailyEnd,
-                    $durationInMinutes,
-                    $blockedPeriods,
-                    $rangeStart,
-                    $rangeEnd
-                );
+            $windowBlocked = $blockedPeriods->filterOverlapping($windowStart, $windowEnd);
 
-                foreach ($daySlots as $slot) {
-                    $slots->add($slot);
-                }
+            $windowSlots = $this->generateSlotsAroundBlockedPeriods(
+                $windowStart,
+                $windowEnd,
+                $windowBlocked,
+                $durationInMinutes
+            );
+
+            foreach ($windowSlots as $slot) {
+                $slots->add($slot);
             }
-
-            $currentDate = $currentDate->addDays(1);
         }
 
         return $slots;
     }
 
     /**
-     * Checks if a day is allowed by the availability configuration.
+     * Builds contiguous availability windows across consecutive days.
+     *
+     * @return array<int, array{0: DateTimeZuluVO, 1: DateTimeZuluVO}>
      */
+    private function buildContiguousWindows(
+        Availability $availability,
+        DateTimeZuluVO $rangeStart,
+        DateTimeZuluVO $rangeEnd,
+        ?DateTimeZuluVO $validityStart,
+        ?DateTimeZuluVO $validityEnd
+    ): array {
+        $dailyStart = $availability->getDailyStart();
+        $dailyEnd = $availability->getDailyEnd();
+        $days = $availability->getDays();
+
+        if ($dailyStart === null || $dailyEnd === null) {
+            return [];
+        }
+
+        $isFullDay = $dailyStart->toTimeString() === '00:00:00'
+            && $dailyEnd->toTimeString() === '23:59:59';
+
+        $windows = [];
+
+        $currentDate = $rangeStart->startOfDay();
+        $pendingStart = null;
+        $pendingEnd = null;
+
+        while ($currentDate->isBeforeOrEqual($rangeEnd)) {
+            $dayName = $this->resolveDayName($currentDate);
+
+            $allowed = $this->isDayAllowed($dayName, $days)
+                && $this->isWithinValidityPeriod($currentDate, $validityStart, $validityEnd);
+
+            if (! $allowed) {
+                if ($pendingStart !== null && $pendingEnd !== null) {
+                    $windows[] = [$pendingStart, $pendingEnd];
+                    $pendingStart = null;
+                    $pendingEnd = null;
+                }
+
+                $currentDate = $currentDate->addDays(1);
+
+                continue;
+            }
+
+            $dayStart = DateTimeZuluVO::from(
+                $currentDate->toDateString().'T'.$dailyStart->toTimeString().'Z'
+            );
+
+            $dayEnd = DateTimeZuluVO::from(
+                $currentDate->toDateString().'T'.$dailyEnd->toTimeString().'Z'
+            );
+
+            if ($isFullDay) {
+                $dayEnd = $currentDate->addDays(1)->startOfDay();
+            } elseif ($dailyStart->isAfter($dailyEnd)) {
+                $dayEnd = $dayEnd->addDays(1);
+            }
+
+            $clippedStart = $dayStart->isBefore($rangeStart) ? $rangeStart : $dayStart;
+            $clippedEnd = $dayEnd->isAfter($rangeEnd) ? $rangeEnd : $dayEnd;
+
+            if ($clippedStart->isAfter($clippedEnd) || $clippedStart->isEqual($clippedEnd)) {
+                $currentDate = $currentDate->addDays(1);
+
+                continue;
+            }
+
+            if ($pendingStart !== null && $pendingEnd !== null) {
+                $toleranceBoundary = DateTimeZuluVO::fromCarbon(
+                    $clippedStart->getCarbon()->copy()->subSecond()
+                );
+
+                $adjacent = $pendingEnd->isAfterOrEqual($toleranceBoundary);
+
+                if ($adjacent) {
+                    $pendingEnd = $pendingEnd->isAfter($clippedEnd) ? $pendingEnd : $clippedEnd;
+                } else {
+                    $windows[] = [$pendingStart, $pendingEnd];
+                    $pendingStart = $clippedStart;
+                    $pendingEnd = $clippedEnd;
+                }
+            } else {
+                $pendingStart = $clippedStart;
+                $pendingEnd = $clippedEnd;
+            }
+
+            $currentDate = $currentDate->addDays(1);
+        }
+
+        if ($pendingStart !== null && $pendingEnd !== null) {
+            $windows[] = [$pendingStart, $pendingEnd];
+        }
+
+        return $windows;
+    }
+
+    /**
+     * Resolves the lowercase English day name from a DateTimeZuluVO,
+     * independent of the locale configured on Carbon.
+     */
+    private function resolveDayName(DateTimeZuluVO $date): string
+    {
+        return self::ISO_DAY_NAMES[$date->getDayOfWeek()] ?? '';
+    }
+
     private function isDayAllowed(string $dayName, WeekDayCollection $days): bool
     {
         foreach ($days as $day) {
@@ -616,9 +718,6 @@ final class SlotService implements SlotServiceInterface
         return false;
     }
 
-    /**
-     * Checks if a date is within the validity period.
-     */
     private function isWithinValidityPeriod(
         DateTimeZuluVO $date,
         ?DateTimeZuluVO $validityStart,
@@ -633,47 +732,6 @@ final class SlotService implements SlotServiceInterface
         }
 
         return true;
-    }
-
-    /**
-     * Generates slots for a single day within the search range.
-     */
-    private function generateSlotsForDay(
-        DateTimeZuluVO $date,
-        TimeZuluVO $dailyStart,
-        TimeZuluVO $dailyEnd,
-        int $durationInMinutes,
-        BlockedPeriodCollection $blockedPeriods,
-        DateTimeZuluVO $rangeStart,
-        DateTimeZuluVO $rangeEnd
-    ): SlotVOCollection {
-        $dayStart = DateTimeZuluVO::from(
-            $date->toDateString().'T'.$dailyStart->toTimeString().'Z'
-        );
-
-        $dayEnd = DateTimeZuluVO::from(
-            $date->toDateString().'T'.$dailyEnd->toTimeString().'Z'
-        );
-
-        if ($dailyStart->isAfter($dailyEnd)) {
-            $dayEnd = $dayEnd->addDays(1);
-        }
-
-        $dayStart = $dayStart->isBefore($rangeStart) ? $rangeStart : $dayStart;
-        $dayEnd = $dayEnd->isAfter($rangeEnd) ? $rangeEnd : $dayEnd;
-
-        if ($dayStart->isAfter($dayEnd)) {
-            return new SlotVOCollection;
-        }
-
-        $dayBlocked = $blockedPeriods->filterOverlapping($dayStart, $dayEnd);
-
-        return $this->generateSlotsAroundBlockedPeriods(
-            $dayStart,
-            $dayEnd,
-            $dayBlocked,
-            $durationInMinutes
-        );
     }
 
     /**
